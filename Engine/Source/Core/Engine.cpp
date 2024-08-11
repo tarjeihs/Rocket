@@ -1,10 +1,9 @@
 #include "Engine.h"
 
 #include "Scene/Scene.h"
-#include "Core/Window.h"
-#include "Renderer/Renderer.h"
 
 #include "Platform/Windows/WindowsWindow.h"
+#include "Platform/Vulkan/VulkanRenderHardwareInterface.h"
 
 PEngine* PEngine::GEngine = nullptr;
 
@@ -14,9 +13,10 @@ void PEngine::Start()
 
 	Scene = new PScene();
 	Window = new PWindowsWindow(SWindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT } );
-	Renderer = new IRenderer();
+	RenderHardwareInterface = new PVulkanRenderHardwareInterface();
 
 	Window->CreateNativeWindow();
+	RenderHardwareInterface->CreateRHI();
 }
 
 void PEngine::Run()
@@ -31,10 +31,11 @@ void PEngine::Run()
 void PEngine::Stop()
 {
 	Window->DestroyNativeWindow();
+	RenderHardwareInterface->DestroyRHI();
 
 	delete Scene;
 	delete Window;
-	delete Renderer;
+	delete RenderHardwareInterface;
 
 	GEngine = nullptr;
 }

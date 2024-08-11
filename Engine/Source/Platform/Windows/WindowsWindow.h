@@ -10,9 +10,9 @@ public:
 	{
 	}
 
-	void CreateNativeWindow() override;
-	void DestroyNativeWindow() override;
-	void Poll() override;
-	void Swap() override;
-	bool ShouldClose() const override;
+	virtual void CreateNativeWindow() override;
+	virtual void DestroyNativeWindow() override;
+	virtual void Poll() override;
+	virtual void Swap() override;
+	virtual bool ShouldClose() const override;
 };

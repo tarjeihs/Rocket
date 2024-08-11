@@ -4,11 +4,11 @@
 
 class PScene;
 class IWindow;
-class IRenderer;
+class IRenderHardwareInterface;
 
 static constexpr char* VIEWPORT_NAME = "Rocket Engine";
-static constexpr uint32_t VIEWPORT_WIDTH = 1920;
-static constexpr uint32_t VIEWPORT_HEIGHT = 1080;
+static constexpr uint32_t VIEWPORT_WIDTH = 1280;
+static constexpr uint32_t VIEWPORT_HEIGHT = 720;
 
 class PEngine
 {
@@ -19,12 +19,12 @@ public:
 
 	inline PScene* GetScene() const;
 	inline IWindow* GetWindow() const;
-	inline IRenderer* GetRenderer() const;
+	inline IRenderHardwareInterface* GetRenderHardwareInterface() const;
 
 private:
 	PScene* Scene;
 	IWindow* Window;
-	IRenderer* Renderer;
+	IRenderHardwareInterface* RenderHardwareInterface;
 
 	static PEngine* GEngine;
 };
@@ -39,7 +39,7 @@ inline IWindow* PEngine::GetWindow() const
 	return Window;
 }
 
-inline IRenderer* PEngine::GetRenderer() const
+inline IRenderHardwareInterface* PEngine::GetRenderHardwareInterface() const
 {
-	return Renderer;
+	return RenderHardwareInterface;
 }
