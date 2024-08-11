@@ -6,6 +6,8 @@ public:
 	void Run();
 
 	void Exit();
+
+	class PEngine* Engine;
 };
 
 // Externally defined per application
