@@ -13,7 +13,9 @@
 	#define RK_DEBUGBREAK() __builtin_trap()
 #endif
 
-#define RK_ENABLE_ASSERTS
+#ifdef _DEBUG
+	#define RK_ENABLE_ASSERTS
+#endif
 
 #ifdef RK_ENABLE_ASSERTS
 	#define RK_INTERNAL_ASSERT_IMPL(type, check, msg, ...) { if(!(check)) { RK##type##ERROR(msg, __VA_ARGS__); RK_DEBUGBREAK(); } }

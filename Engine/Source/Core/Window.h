@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "Core/Engine.h"
+
 struct SWindowSpecification
 {
 	const char* Name;
@@ -32,6 +34,9 @@ public:
 	virtual void Swap() = 0;
 
 	virtual bool ShouldClose() const = 0;
+	virtual bool IsMinimized() const = 0;
+
+	virtual void SetIsMinimized(bool bMinimized) = 0;
 
 	inline void* GetNativeWindow() const;
 	inline const char* GetName() const;
@@ -44,6 +49,8 @@ protected:
 	SWindowUserData WindowUserData;
 
 	void* NativeWindow = nullptr;
+
+	bool bIsMinimized = false;
 };
 
 inline void* IWindow::GetNativeWindow() const
@@ -64,4 +71,9 @@ inline uint32_t IWindow::GetWidth() const
 inline uint32_t IWindow::GetHeight() const
 {
 	return WindowSpecification.Height;
+}
+
+static inline IWindow* GetWindow()
+{
+	return PEngine::Get()->GetWindow();
 }

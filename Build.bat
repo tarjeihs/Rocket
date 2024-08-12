@@ -1,2 +1,2 @@
-cmake -B Build
-pause
+set BUILD_DIR=Build
+cmake -B %BUILD_DIR%

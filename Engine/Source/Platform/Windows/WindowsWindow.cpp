@@ -4,6 +4,8 @@
 #include <glfw/glfw3.h>
 
 #include "Core/Assert.h"
+#include "Platform/Vulkan/VulkanRenderer.h"
+#include "Platform/Vulkan/VulkanSwapchain.h"
 
 void PWindowsWindow::CreateNativeWindow()
 {
@@ -19,6 +21,24 @@ void PWindowsWindow::CreateNativeWindow()
 
     glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
     glfwSwapInterval(1);
+
+	glfwSetFramebufferSizeCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* GlfwWindow, int Width, int Height)
+	{
+		IWindow* Window = GetWindow();
+
+		// Handle edgecase where framebuffer size is 0 (minimized)
+		if (Width == 0 || Height == 0)
+		{
+			if (!Window->IsMinimized()) Window->SetIsMinimized(true);
+		}
+		else
+		{
+			if (Window->IsMinimized()) Window->SetIsMinimized(false);
+		}
+
+		PVulkanRenderer* Renderer = GetRenderer<PVulkanRenderer>();
+		Renderer->GetSwapchain()->RegenerateSwapchain(Renderer->GetInstance().SurfaceInterface, Renderer->GetDevice().PhysicalDevice, Renderer->GetDevice().LogicalDevice, Renderer->GetAllocator());
+	});
 }
 
 void PWindowsWindow::DestroyNativeWindow()
@@ -40,4 +60,14 @@ void PWindowsWindow::Swap()
 bool PWindowsWindow::ShouldClose() const
 {
     return glfwWindowShouldClose((GLFWwindow*)NativeWindow);
+}
+
+bool PWindowsWindow::IsMinimized() const
+{
+    return bIsMinimized;
+}
+
+void PWindowsWindow::SetIsMinimized(bool bMinimized)
+{
+	bIsMinimized = bMinimized;
 }

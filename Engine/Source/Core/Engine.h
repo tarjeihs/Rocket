@@ -2,9 +2,12 @@
 
 #include <cstdint>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 class PScene;
 class IWindow;
-class IRenderHardwareInterface;
+class IRenderer;
 
 static constexpr char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1280;
@@ -19,12 +22,17 @@ public:
 
 	inline PScene* GetScene() const;
 	inline IWindow* GetWindow() const;
-	inline IRenderHardwareInterface* GetRenderHardwareInterface() const;
+	inline IRenderer* GetRenderer() const;
+
+	static PEngine* Get()
+	{
+		return GEngine;
+	}
 
 private:
 	PScene* Scene;
 	IWindow* Window;
-	IRenderHardwareInterface* RenderHardwareInterface;
+	IRenderer* Renderer;
 
 	static PEngine* GEngine;
 };
@@ -39,7 +47,7 @@ inline IWindow* PEngine::GetWindow() const
 	return Window;
 }
 
-inline IRenderHardwareInterface* PEngine::GetRenderHardwareInterface() const
+inline IRenderer* PEngine::GetRenderer() const
 {
-	return RenderHardwareInterface;
+	return Renderer;
 }
