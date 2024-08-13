@@ -534,7 +534,7 @@ void PVulkanRenderer::CreateBackgroundPipeline()
 	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
 
 	PVulkanShader* Shader = new PVulkanShader();
-	SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/gradient.comp", L"main", "cs_6_0");
+	SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/Gradient.compute", L"main", "cs_6_0");
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo{};
 	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
