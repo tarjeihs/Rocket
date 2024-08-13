@@ -6,6 +6,7 @@
 !/.git*
 
 # Do not ignore source, config and plugins dirs.
+!/Binaries/**
 !/Editor/**
 !/Engine/**
 !/Vendor/**
