@@ -149,7 +149,7 @@ void PVulkanRenderer::Draw()
 	// we will overwrite it all so we dont care about what was the older layout
 	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->RenderTarget.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	ClearBackground(CommandBuffer);
+	DrawCompute(CommandBuffer);
 
 	//transition the draw image and the swapchain image into their correct transfer layouts
 	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->RenderTarget.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -532,29 +532,39 @@ void PVulkanRenderer::CreatePipeline()
 
 void PVulkanRenderer::CreateBackgroundPipeline()
 {
-	VkPipelineLayoutCreateInfo computeLayout{};
-	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	computeLayout.pNext = nullptr;
-	computeLayout.pSetLayouts = &RenderTargetDescriptorSetLayout;
-	computeLayout.setLayoutCount = 1;
+    VkPipelineLayoutCreateInfo computeLayout{};
+    computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    computeLayout.pNext = nullptr;
+    computeLayout.pSetLayouts = &RenderTargetDescriptorSetLayout;
+    computeLayout.setLayoutCount = 1;
 
-	VkResult Result = vkCreatePipelineLayout(Device.LogicalDevice, &computeLayout, nullptr, &_gradientPipelineLayout);
-	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
+    // Include the push constant range for the compute shader stage
+    VkPushConstantRange pushConstant{};
+    pushConstant.offset = 0;
+    pushConstant.size = sizeof(SComputePushConstants);
+    pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	PVulkanShader* Shader = new PVulkanShader();
-	SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/Gradient.compute", L"main", "cs_6_0");
+    computeLayout.pPushConstantRanges = &pushConstant;
+    computeLayout.pushConstantRangeCount = 1;
 
-	VkComputePipelineCreateInfo computePipelineCreateInfo{};
-	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	computePipelineCreateInfo.pNext = nullptr;
-	computePipelineCreateInfo.layout = _gradientPipelineLayout;
-	computePipelineCreateInfo.stage = ShaderProgram.CreateInfo;
+    VkResult Result = vkCreatePipelineLayout(Device.LogicalDevice, &computeLayout, nullptr, &_gradientPipelineLayout);
+    RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
 
-	Result = vkCreateComputePipelines(Device.LogicalDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &_gradientPipeline);
-	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
+    PVulkanShader* Shader = new PVulkanShader();
+    SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/Gradient_PushConstant.compute", L"main", "cs_6_0");
 
-	Shader->Free(Device.LogicalDevice, ShaderProgram);
+    VkComputePipelineCreateInfo computePipelineCreateInfo{};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.layout = _gradientPipelineLayout;
+    computePipelineCreateInfo.stage = ShaderProgram.CreateInfo;
+
+    Result = vkCreateComputePipelines(Device.LogicalDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &_gradientPipeline);
+    RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
+
+    Shader->Free(Device.LogicalDevice, ShaderProgram);
 }
+
 
 void PVulkanRenderer::InitImGui()
 {
@@ -637,11 +647,8 @@ void PVulkanRenderer::DrawImGui(VkCommandBuffer CommandBuffer, VkClearValue* Cle
 	renderInfo.pStencilAttachment = nullptr;  // Set this if you have a stencil attachment
 	renderInfo.pNext = nullptr;
 
-
 	vkCmdBeginRendering(CommandBuffer, &renderInfo);
-
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
-
 	vkCmdEndRendering(CommandBuffer);
 }
 
@@ -650,13 +657,19 @@ void PVulkanRenderer::WaitUntilIdle()
 	vkDeviceWaitIdle(Device.LogicalDevice);
 }
 
-void PVulkanRenderer::ClearBackground(VkCommandBuffer CommandBuffer)
+void PVulkanRenderer::DrawCompute(VkCommandBuffer CommandBuffer)
 {
 	// bind the gradient drawing compute pipeline
 	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
 
 	// bind the descriptor set containing the draw image for the compute pipeline
 	vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &RenderTargetDescriptorSet, 0, nullptr);
+
+	SComputePushConstants pc;
+	pc.data1 = glm::vec4(0, 0, 0, 1);
+	pc.data2 = glm::vec4(0, 0, 1, 1);
+
+	vkCmdPushConstants(CommandBuffer, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SComputePushConstants), &pc);
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
 	vkCmdDispatch(CommandBuffer, std::ceil(Swapchain->RenderTargetExtent.width / 16.0), std::ceil(Swapchain->RenderTargetExtent.height / 16.0), 1);

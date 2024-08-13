@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_win32.h>
 #include <vk_mem_alloc.h>
 #include <optional>
+#include <glm/vec4.hpp>
 
 #include "Core/Assert.h"
 #include "Renderer/Renderer.h"
@@ -35,6 +36,23 @@ struct SFrameData
 	VkSemaphore RenderSemaphore;
 
 	VkFence RenderFence;
+};
+
+struct SComputePushConstants
+{
+	glm::vec4 data1;
+	glm::vec4 data2;
+	glm::vec4 data3;
+	glm::vec4 data4;
+};
+
+struct SComputeEffect
+{
+	const char* debugName;
+	SComputePushConstants data;
+
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
 };
 
 struct SVulkanInstance
@@ -99,6 +117,8 @@ public:
 	void CreateMemoryAllocator();
 	void CreateDescriptorSet();
 	void CreatePipeline();
+
+	void CreateColorGradientPipeline();
 	void CreateBackgroundPipeline();
 
 	void InitImGui();
@@ -108,7 +128,7 @@ public:
 	void WaitUntilIdle();
 
 protected:
-	void ClearBackground(VkCommandBuffer CommandBuffer);
+	void DrawCompute(VkCommandBuffer CommandBuffer);
 
 private:
 	PVulkanSwapchain* Swapchain;
