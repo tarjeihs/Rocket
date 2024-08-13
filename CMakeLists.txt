@@ -20,6 +20,7 @@ set(GLM_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/glm")
 set(SPDLOG_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/spdlog")
 set(VMA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/glfw")
+set(DXC_PATH "${CMAKE_SOURCE_DIR}/Binaries/dxc_2024_07_31")
 
 # Collect all source files for the Engine project
 file(GLOB_RECURSE ENGINE_FILES
@@ -47,11 +48,13 @@ target_include_directories(Engine PRIVATE
     ${SPDLOG_INCLUDE_DIR}/include
     ${VMA_INCLUDE_DIR}/include
     ${GLFW_INCLUDE_DIR}/include
+    ${DXC_PATH}/include
 )
 
 target_link_libraries(Engine PRIVATE
     glfw
     Vulkan::Vulkan
+    ${DXC_PATH}/lib/x64/dxcompiler.lib
 )
 
 target_compile_definitions(Engine PRIVATE
@@ -59,7 +62,7 @@ target_compile_definitions(Engine PRIVATE
     GLFW_INCLUDE_VULKAN
 )
 
-target_compile_options(Engine PRIVATE /std:c++17)
+target_compile_options(Engine PRIVATE /std:c++20)
 
 set_target_properties(Engine PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/$<CONFIG>/Engine
@@ -109,7 +112,7 @@ target_compile_definitions(Editor PRIVATE
     _CRT_SECURE_NO_WARNINGS
 )
 
-target_compile_options(Editor PRIVATE /std:c++17)
+target_compile_options(Editor PRIVATE /std:c++20)
 
 set_target_properties(Editor PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/$<CONFIG>/Editor

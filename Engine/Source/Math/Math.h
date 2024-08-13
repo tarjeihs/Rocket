@@ -82,7 +82,7 @@ namespace Math
     template<typename TNumeric>
     static TNumeric Sqrt(TNumeric Value)
     {
-        int32 I;
+        int32_t I;
         float X2, Y;
         constexpr float ThreeHalfs = 1.5f;
         X2 = Value * 0.5f;

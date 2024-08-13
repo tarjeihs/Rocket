@@ -192,8 +192,6 @@ void PVulkanSwapchain::CreateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhysical
 
 void PVulkanSwapchain::RegenerateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhysicalDevice PhysicalDevice, VkDevice LogicalDevice, VmaAllocator Allocator)
 {
-	vkDeviceWaitIdle(LogicalDevice);
-
 	while (GetWindow()->IsMinimized())
 	{
 		// Rough handling of window minimization.
@@ -207,11 +205,13 @@ void PVulkanSwapchain::RegenerateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhys
 
 void PVulkanSwapchain::DestroySwapchain(VkSurfaceKHR SurfaceInterface, VkPhysicalDevice PhysicalDevice, VkDevice LogicalDevice, VmaAllocator Allocator)
 {
+	vkDestroyImageView(LogicalDevice, RenderTarget.imageView, nullptr);
+	vmaDestroyImage(Allocator, RenderTarget.image, RenderTarget.allocation);
+
 	for (size_t i = 0; i < SwapchainImageViews.size(); i++)
 	{
 		vkDestroyImageView(LogicalDevice, SwapchainImageViews[i], nullptr);
 	}
-
 	vkDestroySwapchainKHR(LogicalDevice, SwapchainKHR, nullptr);
 }
 

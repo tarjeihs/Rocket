@@ -9,7 +9,7 @@ class PScene;
 class IWindow;
 class IRenderer;
 
-static constexpr char* VIEWPORT_NAME = "Rocket Engine";
+static const char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1280;
 static constexpr uint32_t VIEWPORT_HEIGHT = 720;
 

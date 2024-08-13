@@ -37,7 +37,9 @@ void PWindowsWindow::CreateNativeWindow()
 		}
 
 		PVulkanRenderer* Renderer = GetRenderer<PVulkanRenderer>();
+		Renderer->WaitUntilIdle();
 		Renderer->GetSwapchain()->RegenerateSwapchain(Renderer->GetInstance().SurfaceInterface, Renderer->GetDevice().PhysicalDevice, Renderer->GetDevice().LogicalDevice, Renderer->GetAllocator());
+		Renderer->CreateDescriptorSet();
 	});
 }
 

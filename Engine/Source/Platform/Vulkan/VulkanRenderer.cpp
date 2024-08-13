@@ -12,6 +12,8 @@
 
 #include "Core/Window.h"
 #include "Platform/Vulkan/VulkanSwapchain.h"
+#include "Platform/Vulkan/VulkanDescriptor.h"
+#include "Platform/Vulkan/VulkanShader.h"
 #include "VulkanUtility.h"
 
 namespace VkUtility
@@ -72,6 +74,9 @@ void PVulkanRenderer::Initialize()
 
 	CreateCommandPool();
 	CreateSynchronizationObjects();
+
+	CreateDescriptorSet();
+	CreatePipeline();
 }
 
 void PVulkanRenderer::DestroyRenderer()
@@ -88,11 +93,17 @@ void PVulkanRenderer::DestroyRenderer()
 
 		vkDestroyCommandPool(Device.LogicalDevice, Frames[Index].CommandPool, nullptr);
 	}
+
+	DescriptorAllocator.DeinitializePool(Device.LogicalDevice);
+	vkDestroyDescriptorSetLayout(Device.LogicalDevice, RenderTargetDescriptorSetLayout, nullptr);
 	
+	vkDestroyPipelineLayout(Device.LogicalDevice, _gradientPipelineLayout, nullptr);
+	vkDestroyPipeline(Device.LogicalDevice, _gradientPipeline, nullptr);
+
 	vmaDestroyAllocator(Allocator);
 	vkDestroyDevice(Device.LogicalDevice, nullptr);
 	vkDestroySurfaceKHR(Instance.Handle, Instance.SurfaceInterface, nullptr);
-	DestroyDebugMessenger();
+	DestroyDebugMessenger();	
 	vkDestroyInstance(Instance.Handle, nullptr);
 
 	delete Swapchain;
@@ -458,15 +469,98 @@ void PVulkanRenderer::CreateMemoryAllocator()
 	vmaCreateAllocator(&allocatorInfo, &Allocator);
 }
 
+void PVulkanRenderer::CreateDescriptorSet()
+{
+	// Cleanup old descriptor set and layout (if they exist)
+	if (RenderTargetDescriptorSetLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorSetLayout(Device.LogicalDevice, RenderTargetDescriptorSetLayout, nullptr);
+		RenderTargetDescriptorSetLayout = VK_NULL_HANDLE;
+	
+		// Reset the descriptor pool, which effectively frees all descriptor sets allocated from it
+		DescriptorAllocator.ClearDescriptors(Device.LogicalDevice);
+	}
+
+	// Create a descriptor pool that will hold 10 sets with 1 image each
+	std::vector<SDescriptorAllocator::SPoolSizeRatio> Sizes =
+	{
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+	};
+
+	// Initialize or reset the descriptor pool
+	DescriptorAllocator.InitializePool(Device.LogicalDevice, 10, Sizes);
+
+	// Create the descriptor set layout for the compute draw
+	{
+		SDescriptorLayoutBuilder builder;
+		builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+		RenderTargetDescriptorSetLayout = builder.Build(Device.LogicalDevice, VK_SHADER_STAGE_COMPUTE_BIT);
+	}
+
+	// Allocate a descriptor set for the draw image
+	RenderTargetDescriptorSet = DescriptorAllocator.Allocate(Device.LogicalDevice, RenderTargetDescriptorSetLayout);
+
+	// Update the descriptor set with the new image view from the swapchain
+	VkDescriptorImageInfo ImageInfo{};
+	ImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	ImageInfo.imageView = Swapchain->RenderTarget.imageView;  // Use the new image view after swapchain recreation
+
+	VkWriteDescriptorSet RenderTargetWrite = {};
+	RenderTargetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	RenderTargetWrite.pNext = nullptr;
+	RenderTargetWrite.dstBinding = 0;
+	RenderTargetWrite.dstSet = RenderTargetDescriptorSet;
+	RenderTargetWrite.descriptorCount = 1;
+	RenderTargetWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	RenderTargetWrite.pImageInfo = &ImageInfo;
+
+	vkUpdateDescriptorSets(Device.LogicalDevice, 1, &RenderTargetWrite, 0, nullptr);
+}
+
+void PVulkanRenderer::CreatePipeline()
+{
+	CreateBackgroundPipeline();
+}
+
+void PVulkanRenderer::CreateBackgroundPipeline()
+{
+	VkPipelineLayoutCreateInfo computeLayout{};
+	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	computeLayout.pNext = nullptr;
+	computeLayout.pSetLayouts = &RenderTargetDescriptorSetLayout;
+	computeLayout.setLayoutCount = 1;
+
+	VkResult Result = vkCreatePipelineLayout(Device.LogicalDevice, &computeLayout, nullptr, &_gradientPipelineLayout);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
+
+	PVulkanShader* Shader = new PVulkanShader();
+	SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/gradient.comp", L"main", "cs_6_0");
+
+	VkComputePipelineCreateInfo computePipelineCreateInfo{};
+	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	computePipelineCreateInfo.pNext = nullptr;
+	computePipelineCreateInfo.layout = _gradientPipelineLayout;
+	computePipelineCreateInfo.stage = ShaderProgram.CreateInfo;
+
+	Result = vkCreateComputePipelines(Device.LogicalDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &_gradientPipeline);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
+
+	Shader->Free(Device.LogicalDevice, ShaderProgram);
+}
+
+void PVulkanRenderer::WaitUntilIdle()
+{
+	vkDeviceWaitIdle(Device.LogicalDevice);
+}
+
 void PVulkanRenderer::ClearBackground(VkCommandBuffer CommandBuffer)
 {
-	// Make a clear-color from frame number. This will flash with a 120 frame period.
-	VkClearColorValue clearValue;
-	//float flash = std::abs(std::sin(CurrentFrameIndex / 120.f));
-	clearValue = { { 0.0f, 0.2f, 0.5f, 1.0f } };
+	// bind the gradient drawing compute pipeline
+	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
 
-	VkImageSubresourceRange clearRange = Vulkan::Utility::CreateSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+	// bind the descriptor set containing the draw image for the compute pipeline
+	vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &RenderTargetDescriptorSet, 0, nullptr);
 
-	// clear image
-	vkCmdClearColorImage(CommandBuffer, Swapchain->RenderTarget.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+	vkCmdDispatch(CommandBuffer, std::ceil(Swapchain->RenderTargetExtent.width / 16.0), std::ceil(Swapchain->RenderTargetExtent.height / 16.0), 1);
 }

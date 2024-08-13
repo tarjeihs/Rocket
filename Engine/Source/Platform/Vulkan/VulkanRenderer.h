@@ -7,6 +7,7 @@
 
 #include "Core/Assert.h"
 #include "Renderer/Renderer.h"
+#include "Platform/Vulkan/VulkanDescriptor.h"
 
 class SValidationLayer
 {
@@ -90,12 +91,18 @@ protected:
 		const VkDebugUtilsMessengerCallbackDataEXT* CallbackData,
 		void* UserData);
 
-protected:
+public:
 	void CreatePhysicalDevice();
 	void CreateLogicalDevice();
 	void CreateCommandPool();
 	void CreateSynchronizationObjects();
 	void CreateMemoryAllocator();
+	void CreateDescriptorSet();
+	void CreatePipeline();
+	void CreateBackgroundPipeline();
+
+public:
+	void WaitUntilIdle();
 
 protected:
 	void ClearBackground(VkCommandBuffer CommandBuffer);
@@ -110,6 +117,14 @@ private:
 	size_t CurrentFrameIndex = 0;
 
 	VmaAllocator Allocator;
+	SDescriptorAllocator DescriptorAllocator;
+
+	VkDescriptorSet RenderTargetDescriptorSet;
+	VkDescriptorSetLayout RenderTargetDescriptorSetLayout;
+
+	// Temp
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
 };
 
 inline PVulkanSwapchain* PVulkanRenderer::GetSwapchain() const
