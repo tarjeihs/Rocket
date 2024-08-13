@@ -20,6 +20,7 @@ set(GLM_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/glm")
 set(SPDLOG_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/spdlog")
 set(VMA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/glfw")
+set(IMGUI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/imgui")
 
 # Collect all source files for the Engine project
 file(GLOB_RECURSE ENGINE_FILES
@@ -30,15 +31,25 @@ file(GLOB_RECURSE ENGINE_FILES
 # Define source groups for Engine
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source PREFIX "Files" FILES ${ENGINE_FILES})
 
-# Target Vulkan SDK
+# Vulkan SDK
 find_package(Vulkan REQUIRED)
 
 # Add GLFW as a subdirectory to be compiled alongside this project
 add_subdirectory(Vendor/glfw)
-
-# Engine project
+# Collect ImGui source files
+set(IMGUI_SRC
+    ${IMGUI_INCLUDE_DIR}/imgui.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_draw.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_tables.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_demo.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_widgets.cpp
+    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_vulkan.cpp
+)
+# Target Engine project
 add_library(Engine STATIC 
     ${ENGINE_FILES}
+    ${IMGUI_SRC}  # Add ImGui source files to the Engine target
 )
 
 target_include_directories(Engine PRIVATE
@@ -47,6 +58,8 @@ target_include_directories(Engine PRIVATE
     ${SPDLOG_INCLUDE_DIR}/include
     ${VMA_INCLUDE_DIR}/include
     ${GLFW_INCLUDE_DIR}/include
+    ${IMGUI_INCLUDE_DIR}
+    ${IMGUI_INCLUDE_DIR}/backends
 )
 
 target_link_libraries(Engine PRIVATE

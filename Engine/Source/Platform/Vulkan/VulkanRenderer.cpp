@@ -5,6 +5,9 @@
 #include "EnginePCH.h"
 #include "VulkanRenderer.h"
 
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <set>
@@ -77,6 +80,8 @@ void PVulkanRenderer::Initialize()
 
 	CreateDescriptorSet();
 	CreatePipeline();
+
+	InitImGui();
 }
 
 void PVulkanRenderer::DestroyRenderer()
@@ -99,6 +104,9 @@ void PVulkanRenderer::DestroyRenderer()
 	
 	vkDestroyPipelineLayout(Device.LogicalDevice, _gradientPipelineLayout, nullptr);
 	vkDestroyPipeline(Device.LogicalDevice, _gradientPipeline, nullptr);
+
+	ImGui_ImplVulkan_Shutdown();
+	vkDestroyDescriptorPool(Device.LogicalDevice, ImGuiDescriptorPool, nullptr); // TODO: Use the pool allocator instead
 
 	vmaDestroyAllocator(Allocator);
 	vkDestroyDevice(Device.LogicalDevice, nullptr);
@@ -150,6 +158,8 @@ void PVulkanRenderer::Draw()
 	// execute a copy from the draw image into the swapchain
 	Vulkan::Utility::CopyImageToImage(CommandBuffer, Swapchain->RenderTarget.image, Swapchain->SwapchainImages[SwapchainImageIndex], Swapchain->RenderTargetExtent, Swapchain->SwapchainExtent);
 	
+	DrawImGui(CommandBuffer, nullptr, Swapchain->SwapchainImageViews[SwapchainImageIndex]);
+
 	// set swapchain image layout to Present so we can show it on the screen
 	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -200,8 +210,6 @@ void PVulkanRenderer::Draw()
 	// RenderFence will now block until the graphic commands finish execution
 	Result = vkQueueSubmit2(Device.GraphicsQueue, 1, &SubmitInfo, CurrentFrame.RenderFence);
 	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
-
-
 
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
@@ -546,6 +554,95 @@ void PVulkanRenderer::CreateBackgroundPipeline()
 	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
 
 	Shader->Free(Device.LogicalDevice, ShaderProgram);
+}
+
+void PVulkanRenderer::InitImGui()
+{
+	// 1: create descriptor pool for IMGUI
+	//  the size of the pool is very oversize, but it's copied from imgui demo
+	//  itself.
+	VkDescriptorPoolSize pool_sizes[] = { 
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } 
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = 1000;
+	pool_info.poolSizeCount = (uint32_t)std::size(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	VkResult Result = vkCreateDescriptorPool(Device.LogicalDevice, &pool_info, nullptr, &ImGuiDescriptorPool);
+
+	// Initialize the pool with the required sizes
+
+	// Initialize ImGui context and Vulkan integration
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindow()->GetNativeWindow(), true);
+
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = Instance.Handle;
+	init_info.PhysicalDevice = Device.PhysicalDevice;
+	init_info.Device = Device.LogicalDevice;
+	init_info.Queue = Device.GraphicsQueue;
+	init_info.DescriptorPool = ImGuiDescriptorPool;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
+	init_info.UseDynamicRendering = true;
+	init_info.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &Swapchain->SwapchainImageFormat;
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+	ImGui_ImplVulkan_Init(&init_info);
+	ImGui_ImplVulkan_CreateFontsTexture();
+}
+
+void PVulkanRenderer::DrawImGui(VkCommandBuffer CommandBuffer, VkClearValue* ClearValue, VkImageView ImageView)
+{
+	VkRenderingAttachmentInfo colorAttachment{};
+	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachment.pNext = nullptr;
+
+	colorAttachment.imageView = ImageView;
+	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.loadOp = ClearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	if (ClearValue)
+	{
+		colorAttachment.clearValue = *ClearValue;
+	}
+
+	VkRenderingInfo renderInfo = {};
+	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderInfo.pNext = nullptr;
+	renderInfo.flags = 0;
+	renderInfo.renderArea.offset = { 0, 0 };
+	renderInfo.renderArea.extent = Swapchain->SwapchainExtent;  // Assuming _swapchainExtent is of type VkExtent2D
+	renderInfo.layerCount = 1;
+	renderInfo.viewMask = 0;
+	renderInfo.colorAttachmentCount = 1;
+	renderInfo.pColorAttachments = &colorAttachment;
+	renderInfo.pDepthAttachment = nullptr;  // Set this if you have a depth attachment
+	renderInfo.pStencilAttachment = nullptr;  // Set this if you have a stencil attachment
+	renderInfo.pNext = nullptr;
+
+
+	vkCmdBeginRendering(CommandBuffer, &renderInfo);
+
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
+
+	vkCmdEndRendering(CommandBuffer);
 }
 
 void PVulkanRenderer::WaitUntilIdle()

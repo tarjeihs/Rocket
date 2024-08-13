@@ -6,6 +6,10 @@
 #include "Platform/Windows/WindowsWindow.h"
 #include "Platform/Vulkan/VulkanRenderer.h"
 
+#include <imgui.h>
+#include <imgui_impl_vulkan.h>
+#include <imgui_impl_glfw.h>
+
 PEngine* PEngine::GEngine = nullptr;
 
 void PEngine::Start()
@@ -29,6 +33,12 @@ void PEngine::Run()
 		Window->Poll();
 		Window->Swap();
 
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		ImGui::ShowDemoWindow();
+		ImGui::Render();
+		
 		Renderer->Draw();
 	}
 }

@@ -101,6 +101,9 @@ public:
 	void CreatePipeline();
 	void CreateBackgroundPipeline();
 
+	void InitImGui();
+	void DrawImGui(VkCommandBuffer CommandBuffer, VkClearValue* ClearValue, VkImageView ImageView);
+
 public:
 	void WaitUntilIdle();
 
@@ -118,6 +121,8 @@ private:
 
 	VmaAllocator Allocator;
 	SDescriptorAllocator DescriptorAllocator;
+
+	VkDescriptorPool ImGuiDescriptorPool;
 
 	VkDescriptorSet RenderTargetDescriptorSet;
 	VkDescriptorSetLayout RenderTargetDescriptorSetLayout;
