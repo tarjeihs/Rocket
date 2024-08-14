@@ -12,8 +12,6 @@ using Microsoft::WRL::ComPtr;
 
 SShaderProgram PVulkanShader::Compile(VkDevice LogicalDevice, EShaderType ShaderType, const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile)
 {
-	SShaderProgram ShaderProgram;
-
 	// Load the DXC DLL dynamically
 	HMODULE DxcDll = LoadLibrary("dxcompiler.dll");
 	RK_ENGINE_ASSERT(DxcDll, "Failed to load dxcompiler.dll!");
@@ -51,7 +49,8 @@ SShaderProgram PVulkanShader::Compile(VkDevice LogicalDevice, EShaderType Shader
 		Arguments.push_back(L"-T");
 		Arguments.push_back(TargetProfileW.c_str());
 		Arguments.push_back(L"-spirv");
-		Arguments.push_back(L"-fvk-use-dx-layout");
+		Arguments.push_back(L"-fspv-target-env=vulkan1.3");
+		Arguments.push_back(L"-fspv-extension=SPV_KHR_physical_storage_buffer");
 
 		// Compile HLSL into SPIR-V bytecode using DirectX Shader Compiler
 		DxcResult = Compiler->Compile(
@@ -111,7 +110,6 @@ SShaderProgram PVulkanShader::Compile(VkDevice LogicalDevice, EShaderType Shader
 		}
 
 		ShaderProgram = { ShaderCreateInfo, ShaderModule };
-		ShaderPrograms.push_back(ShaderProgram);
 	}
 
 	FreeLibrary(DxcDll);
@@ -119,11 +117,8 @@ SShaderProgram PVulkanShader::Compile(VkDevice LogicalDevice, EShaderType Shader
 	return ShaderProgram;
 }
 
-void PVulkanShader::Free(VkDevice LogicalDevice, SShaderProgram& ShaderProgram)
+void PVulkanShader::Free(VkDevice LogicalDevice, SShaderProgram& nothinglol)
 {
-	for (const auto& ShaderStage : ShaderPrograms)
-	{
-		// Memory for this shader module will be freed. It has been internally copied by Vulkan.
-		vkDestroyShaderModule(LogicalDevice, ShaderStage.ShaderModule, nullptr);
-	}
+	// Memory for this shader module will be freed. It has been internally copied by Vulkan.
+	vkDestroyShaderModule(LogicalDevice, ShaderProgram.ShaderModule, nullptr);
 }

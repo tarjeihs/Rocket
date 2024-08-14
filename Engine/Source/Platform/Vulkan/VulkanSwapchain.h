@@ -25,6 +25,6 @@ public:
 	std::vector<VkImageView> SwapchainImageViews;
 
 	// TODO: Should this RenderTarget not be cleaned up?
-	SVulkanImage RenderTarget;
-	VkExtent2D RenderTargetExtent;                                                     // Defines the width and height (in pixels) of the images in the render target.
+	SVulkanImage DrawImage; // render target
+	VkExtent2D DrawImageExtent;                                                     // Defines the width and height (in pixels) of the images in the render target.
 };

@@ -69,7 +69,10 @@ void SDescriptorAllocator::DeinitializePool(VkDevice LogicalDevice)
 
 void SDescriptorAllocator::ClearDescriptors(VkDevice LogicalDevice)
 {
-	vkResetDescriptorPool(LogicalDevice, Pool, 0);
+	if (Pool != VK_NULL_HANDLE)
+	{
+		vkResetDescriptorPool(LogicalDevice, Pool, 0);
+	}
 }
 
 VkDescriptorSet SDescriptorAllocator::Allocate(VkDevice LogicalDevice, VkDescriptorSetLayout Layout)

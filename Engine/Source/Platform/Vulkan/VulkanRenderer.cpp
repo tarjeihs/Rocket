@@ -18,6 +18,8 @@
 #include "Platform/Vulkan/VulkanDescriptor.h"
 #include "Platform/Vulkan/VulkanShader.h"
 #include "VulkanUtility.h"
+#include "VulkanTypes.h"
+#include "VulkanPipeline.h"
 
 namespace VkUtility
 {
@@ -70,15 +72,15 @@ void PVulkanRenderer::Initialize()
 
 	CreatePhysicalDevice();
 	CreateLogicalDevice();
-	CreateMemoryAllocator();
+	CreateGlobalMemoryAllocator();
 
 	Swapchain = new PVulkanSwapchain();
-	Swapchain->CreateSwapchain(Instance.SurfaceInterface, Device.PhysicalDevice, Device.LogicalDevice, Allocator);
+	Swapchain->CreateSwapchain(Instance.SurfaceInterface, Device.PhysicalDevice, Device.LogicalDevice, GlobalMemoryAllocator);
 
 	CreateCommandPool();
 	CreateSynchronizationObjects();
+	CreateGlobalDescriptorAllocator();
 
-	CreateDescriptorSet();
 	CreatePipeline();
 
 	InitImGui();
@@ -88,27 +90,30 @@ void PVulkanRenderer::DestroyRenderer()
 {
 	vkDeviceWaitIdle(Device.LogicalDevice);
 
-	Swapchain->DestroySwapchain(Instance.SurfaceInterface, Device.PhysicalDevice, Device.LogicalDevice, Allocator);
+	Swapchain->DestroySwapchain(Instance.SurfaceInterface, Device.PhysicalDevice, Device.LogicalDevice, GlobalMemoryAllocator);
 
 	for (size_t Index = 0; Index < FRAME_OVERLAP; Index++)
 	{
 		vkDestroySemaphore(Device.LogicalDevice, Frames[Index].RenderSemaphore, nullptr);
 		vkDestroySemaphore(Device.LogicalDevice, Frames[Index].SwapchainSemaphore, nullptr);
-		vkDestroyFence(Device.LogicalDevice, Frames[Index].RenderFence, nullptr);
 
+		vkDestroyFence(Device.LogicalDevice, Frames[Index].RenderFence, nullptr);
 		vkDestroyCommandPool(Device.LogicalDevice, Frames[Index].CommandPool, nullptr);
 	}
+	vkDestroyFence(Device.LogicalDevice, ImmediateFence, nullptr);
+	vkDestroyCommandPool(Device.LogicalDevice, ImmediateCommandPool, nullptr);
 
-	DescriptorAllocator.DeinitializePool(Device.LogicalDevice);
-	vkDestroyDescriptorSetLayout(Device.LogicalDevice, RenderTargetDescriptorSetLayout, nullptr);
+	GlobalDescriptorAllocator.DeinitializePool(Device.LogicalDevice);
 	
-	vkDestroyPipelineLayout(Device.LogicalDevice, _gradientPipelineLayout, nullptr);
-	vkDestroyPipeline(Device.LogicalDevice, _gradientPipeline, nullptr);
+	StandardGraphicsPipeline->Free(Device.LogicalDevice);
+	StandardGraphicsPipeline->Destroy(Device.LogicalDevice);
+	StandardComputePipeline->Free(Device.LogicalDevice);
+	StandardComputePipeline->Destroy(Device.LogicalDevice);
 
 	ImGui_ImplVulkan_Shutdown();
 	vkDestroyDescriptorPool(Device.LogicalDevice, ImGuiDescriptorPool, nullptr); // TODO: Use the pool allocator instead
 
-	vmaDestroyAllocator(Allocator);
+	vmaDestroyAllocator(GlobalMemoryAllocator);
 	vkDestroyDevice(Device.LogicalDevice, nullptr);
 	vkDestroySurfaceKHR(Instance.Handle, Instance.SurfaceInterface, nullptr);
 	DestroyDebugMessenger();	
@@ -147,16 +152,20 @@ void PVulkanRenderer::Draw()
 
 	// transition our main draw image into general layout so we can write into it
 	// we will overwrite it all so we dont care about what was the older layout
-	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->RenderTarget.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->DrawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	DrawCompute(CommandBuffer);
+	StandardComputePipeline->Draw(CommandBuffer, Swapchain->DrawImage.imageView, Swapchain->DrawImageExtent);
 
 	//transition the draw image and the swapchain image into their correct transfer layouts
-	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->RenderTarget.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->DrawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	StandardGraphicsPipeline->Draw(CommandBuffer, Swapchain->DrawImage.imageView, Swapchain->DrawImageExtent);
+
+	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->DrawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	Vulkan::Utility::TransitionImage(CommandBuffer, Swapchain->SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	// execute a copy from the draw image into the swapchain
-	Vulkan::Utility::CopyImageToImage(CommandBuffer, Swapchain->RenderTarget.image, Swapchain->SwapchainImages[SwapchainImageIndex], Swapchain->RenderTargetExtent, Swapchain->SwapchainExtent);
+	Vulkan::Utility::CopyImageToImage(CommandBuffer, Swapchain->DrawImage.image, Swapchain->SwapchainImages[SwapchainImageIndex], Swapchain->DrawImageExtent, Swapchain->SwapchainExtent);
 	
 	DrawImGui(CommandBuffer, nullptr, Swapchain->SwapchainImageViews[SwapchainImageIndex]);
 
@@ -330,6 +339,23 @@ VKAPI_ATTR VkBool32 VKAPI_CALL PVulkanRenderer::DebugCallback(VkDebugUtilsMessag
 	return VK_FALSE;
 }
 
+void PVulkanRenderer::Resize()
+{
+	WaitUntilIdle();
+
+	GetSwapchain()->RegenerateSwapchain(GetInstance().SurfaceInterface, GetDevice().PhysicalDevice, GetDevice().LogicalDevice, GetAllocator());
+	CreateGlobalDescriptorAllocator();
+
+
+	StandardGraphicsPipeline->Free(Device.LogicalDevice);
+	StandardComputePipeline->Free(Device.LogicalDevice);
+	
+	uploadmesh(StandardGraphicsPipeline->MeshBuffer);
+	
+	StandardComputePipeline->Init(Device.LogicalDevice, Swapchain->DrawImage.imageView, GlobalDescriptorAllocator.Pool, Swapchain->DrawImage.imageFormat);
+	StandardGraphicsPipeline->Init(Device.LogicalDevice, Swapchain->DrawImage.imageView, GlobalDescriptorAllocator.Pool, Swapchain->DrawImage.imageFormat);
+}
+
 void PVulkanRenderer::CreatePhysicalDevice()
 {
 	uint32_t DeviceCount = 0;
@@ -380,7 +406,7 @@ void PVulkanRenderer::CreateLogicalDevice()
 	Features_1_2.bufferDeviceAddress = VK_TRUE;
 	Features_1_2.descriptorIndexing = VK_TRUE;
 
-	// Chain Vulkan 1.3 features to Vulkan 1.2 features
+	// Chain the features together
 	Features_1_3.pNext = &Features_1_2;
 
 	VkPhysicalDeviceFeatures DeviceFeatures{};
@@ -420,9 +446,10 @@ void PVulkanRenderer::CreateCommandPool()
 	commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	commandPoolInfo.queueFamilyIndex = Device.GraphicsFamilyIndex;
 
+	VkResult Result;
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
-		VkResult Result = vkCreateCommandPool(Device.LogicalDevice, &commandPoolInfo, nullptr, &Frames[i].CommandPool);
+		Result = vkCreateCommandPool(Device.LogicalDevice, &commandPoolInfo, nullptr, &Frames[i].CommandPool);
 		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create command pool.");
 
 		// allocate the default command buffer that we will use for rendering
@@ -435,6 +462,21 @@ void PVulkanRenderer::CreateCommandPool()
 
 		Result = vkAllocateCommandBuffers(Device.LogicalDevice, &cmdAllocInfo, &Frames[i].CommandBuffer);
 		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to allocate command buffers.");
+	}
+
+	{
+		Result = vkCreateCommandPool(Device.LogicalDevice, &commandPoolInfo, nullptr, &ImmediateCommandPool);
+		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create command pool.");
+
+		VkCommandBufferAllocateInfo cmdAllocInfo = {};
+		cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		cmdAllocInfo.pNext = nullptr;
+		cmdAllocInfo.commandPool = ImmediateCommandPool;
+		cmdAllocInfo.commandBufferCount = 1;
+		cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		Result = vkAllocateCommandBuffers(Device.LogicalDevice, &cmdAllocInfo, &ImmediateCommandBuffer);
+		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create command buffers.");
 	}
 }
 
@@ -465,106 +507,124 @@ void PVulkanRenderer::CreateSynchronizationObjects()
 		Result = vkCreateSemaphore(Device.LogicalDevice, &SemaphoreCreateInfo, nullptr, &Frames[Index].RenderSemaphore);
 		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
 	}
+
+	Result = vkCreateFence(Device.LogicalDevice, &FenceCreateInfo, nullptr, &ImmediateFence);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create immediate mode fence.");
 }
 
-void PVulkanRenderer::CreateMemoryAllocator()
+void PVulkanRenderer::CreateGlobalMemoryAllocator()
 {
 	VmaAllocatorCreateInfo allocatorInfo = {};
 	allocatorInfo.physicalDevice = Device.PhysicalDevice;
 	allocatorInfo.device = Device.LogicalDevice;
 	allocatorInfo.instance = Instance.Handle;
 	allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-	vmaCreateAllocator(&allocatorInfo, &Allocator);
+	vmaCreateAllocator(&allocatorInfo, &GlobalMemoryAllocator);
 }
 
-void PVulkanRenderer::CreateDescriptorSet()
+void PVulkanRenderer::CreateGlobalDescriptorAllocator()
 {
+	static bool bGlobalInitFirstTime = false;
+
 	// Cleanup old descriptor set and layout (if they exist)
-	if (RenderTargetDescriptorSetLayout != VK_NULL_HANDLE)
-	{
-		vkDestroyDescriptorSetLayout(Device.LogicalDevice, RenderTargetDescriptorSetLayout, nullptr);
-		RenderTargetDescriptorSetLayout = VK_NULL_HANDLE;
+	//if (ComputeDescriptorSetLayout != VK_NULL_HANDLE)
+	//{
+	//	vkDestroyDescriptorSetLayout(Device.LogicalDevice, ComputeDescriptorSetLayout, nullptr);
+	//	ComputeDescriptorSetLayout = VK_NULL_HANDLE;
+	//}
 	
+	//if (MeshDescriptorSetLayout != VK_NULL_HANDLE)
+	//{
+	//	vkDestroyDescriptorSetLayout(Device.LogicalDevice, MeshDescriptorSetLayout, nullptr);
+	//	MeshDescriptorSetLayout = VK_NULL_HANDLE;
+	//}
+	
+	GlobalDescriptorAllocator.ClearDescriptors(Device.LogicalDevice);
+	if (!bGlobalInitFirstTime)
+	{
 		// Reset the descriptor pool, which effectively frees all descriptor sets allocated from it
-		DescriptorAllocator.ClearDescriptors(Device.LogicalDevice);
+
+		// Create a descriptor pool that will hold 10 sets with 1 image each
+		std::vector<SDescriptorAllocator::SPoolSizeRatio> Sizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+		};
+
+		// Initialize or reset the descriptor pool
+		GlobalDescriptorAllocator.InitializePool(Device.LogicalDevice, 10, Sizes);
+
+		bGlobalInitFirstTime = true;
 	}
 
-	// Create a descriptor pool that will hold 10 sets with 1 image each
-	std::vector<SDescriptorAllocator::SPoolSizeRatio> Sizes =
-	{
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
-	};
+	//{
+	//	SDescriptorLayoutBuilder builder;
+	//	builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+	//	ComputeDescriptorSetLayout = builder.Build(Device.LogicalDevice, VK_SHADER_STAGE_COMPUTE_BIT);
+	//
+	//	// Allocate a descriptor set for the draw image
+	//	ComputeDescriptorSet = GlobalDescriptorAllocator.Allocate(Device.LogicalDevice, ComputeDescriptorSetLayout);
+	//
+	//	// Update the descriptor set with the new image view from the swapchain
+	//	VkDescriptorImageInfo ImageInfo{};
+	//	ImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	//	ImageInfo.imageView = Swapchain->DrawImage.imageView;  // Use the new image view after swapchain recreation
+	//
+	//	VkWriteDescriptorSet RenderTargetWrite = {};
+	//	RenderTargetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//	RenderTargetWrite.pNext = nullptr;
+	//	RenderTargetWrite.dstBinding = 0;
+	//	RenderTargetWrite.dstSet = ComputeDescriptorSet;
+	//	RenderTargetWrite.descriptorCount = 1;
+	//	RenderTargetWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	//	RenderTargetWrite.pImageInfo = &ImageInfo;
+	//
+	//	vkUpdateDescriptorSets(Device.LogicalDevice, 1, &RenderTargetWrite, 0, nullptr);
+	//}
+}
 
-	// Initialize or reset the descriptor pool
-	DescriptorAllocator.InitializePool(Device.LogicalDevice, 10, Sizes);
+void PVulkanRenderer::uploadmesh(SMeshBuffer& MeshBuffer)
+{
+	//> init_data
+	std::array<SVertex, 4> rect_vertices;
 
-	// Create the descriptor set layout for the compute draw
-	{
-		SDescriptorLayoutBuilder builder;
-		builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-		RenderTargetDescriptorSetLayout = builder.Build(Device.LogicalDevice, VK_SHADER_STAGE_COMPUTE_BIT);
-	}
+	rect_vertices[0].position = { 0.5,-0.5, 0 };
+	rect_vertices[1].position = { 0.5,0.5, 0 };
+	rect_vertices[2].position = { -0.5,-0.5, 0 };
+	rect_vertices[3].position = { -0.5,0.5, 0 };
 
-	// Allocate a descriptor set for the draw image
-	RenderTargetDescriptorSet = DescriptorAllocator.Allocate(Device.LogicalDevice, RenderTargetDescriptorSetLayout);
+	rect_vertices[0].color = { 0,0, 0,1 };
+	rect_vertices[1].color = { 0.5,0.5,0.5 ,1 };
+	rect_vertices[2].color = { 1,0, 0,1 };
+	rect_vertices[3].color = { 0,1, 0,1 };
 
-	// Update the descriptor set with the new image view from the swapchain
-	VkDescriptorImageInfo ImageInfo{};
-	ImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	ImageInfo.imageView = Swapchain->RenderTarget.imageView;  // Use the new image view after swapchain recreation
+	std::array<uint32_t, 6> rect_indices;
 
-	VkWriteDescriptorSet RenderTargetWrite = {};
-	RenderTargetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	RenderTargetWrite.pNext = nullptr;
-	RenderTargetWrite.dstBinding = 0;
-	RenderTargetWrite.dstSet = RenderTargetDescriptorSet;
-	RenderTargetWrite.descriptorCount = 1;
-	RenderTargetWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	RenderTargetWrite.pImageInfo = &ImageInfo;
+	rect_indices[0] = 0;
+	rect_indices[1] = 1;
+	rect_indices[2] = 2;
 
-	vkUpdateDescriptorSets(Device.LogicalDevice, 1, &RenderTargetWrite, 0, nullptr);
+	rect_indices[3] = 2;
+	rect_indices[4] = 1;
+	rect_indices[5] = 3;
+
+	MeshBuffer = CreateMeshBuffer(rect_indices, rect_vertices);
 }
 
 void PVulkanRenderer::CreatePipeline()
 {
-	CreateBackgroundPipeline();
+	if (!StandardComputePipeline)
+	{
+		StandardComputePipeline = new PVulkanStandardComputePipeline(GlobalMemoryAllocator);
+	}
+	StandardComputePipeline->Init(Device.LogicalDevice, Swapchain->DrawImage.imageView, GlobalDescriptorAllocator.Pool, Swapchain->DrawImage.imageFormat);
+
+	if (!StandardGraphicsPipeline)
+	{
+		StandardGraphicsPipeline = new PVulkanColorGraphicsPipeline(GlobalMemoryAllocator);
+	}
+	uploadmesh(StandardGraphicsPipeline->MeshBuffer);
+	StandardGraphicsPipeline->Init(Device.LogicalDevice, Swapchain->DrawImage.imageView, GlobalDescriptorAllocator.Pool, Swapchain->DrawImage.imageFormat);
 }
-
-void PVulkanRenderer::CreateBackgroundPipeline()
-{
-    VkPipelineLayoutCreateInfo computeLayout{};
-    computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    computeLayout.pNext = nullptr;
-    computeLayout.pSetLayouts = &RenderTargetDescriptorSetLayout;
-    computeLayout.setLayoutCount = 1;
-
-    // Include the push constant range for the compute shader stage
-    VkPushConstantRange pushConstant{};
-    pushConstant.offset = 0;
-    pushConstant.size = sizeof(SComputePushConstants);
-    pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    computeLayout.pPushConstantRanges = &pushConstant;
-    computeLayout.pushConstantRangeCount = 1;
-
-    VkResult Result = vkCreatePipelineLayout(Device.LogicalDevice, &computeLayout, nullptr, &_gradientPipelineLayout);
-    RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
-
-    PVulkanShader* Shader = new PVulkanShader();
-    SShaderProgram ShaderProgram = Shader->Compile(Device.LogicalDevice, RK_SHADERTYPE_COMPUTE_SHADER, L"../Engine/Shaders/Gradient_PushConstant.compute", L"main", "cs_6_0");
-
-    VkComputePipelineCreateInfo computePipelineCreateInfo{};
-    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    computePipelineCreateInfo.pNext = nullptr;
-    computePipelineCreateInfo.layout = _gradientPipelineLayout;
-    computePipelineCreateInfo.stage = ShaderProgram.CreateInfo;
-
-    Result = vkCreateComputePipelines(Device.LogicalDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &_gradientPipeline);
-    RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
-
-    Shader->Free(Device.LogicalDevice, ShaderProgram);
-}
-
 
 void PVulkanRenderer::InitImGui()
 {
@@ -652,25 +712,125 @@ void PVulkanRenderer::DrawImGui(VkCommandBuffer CommandBuffer, VkClearValue* Cle
 	vkCmdEndRendering(CommandBuffer);
 }
 
+SBuffer PVulkanRenderer::CreateBuffer(size_t AllocSize, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags)
+{
+	VkBufferCreateInfo bufferInfo = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	bufferInfo.pNext = nullptr;
+	bufferInfo.size = AllocSize;
+	bufferInfo.usage = UsageFlags;
+
+	VmaAllocationCreateInfo vmaallocInfo = {};
+	vmaallocInfo.usage = MemoryUsage;
+	vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	SBuffer newBuffer;
+
+	VkResult Result = vmaCreateBuffer(GlobalMemoryAllocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to allocate buffer.");
+
+	return newBuffer;
+}
+
+SMeshBuffer PVulkanRenderer::CreateMeshBuffer(std::span<uint32_t> indices, std::span<SVertex> vertices)
+{
+	const size_t vertexBufferSize = vertices.size() * sizeof(SVertex);
+	const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+
+	SMeshBuffer newSurface;
+
+	//create vertex buffer
+	newSurface.vertexBuffer = CreateBuffer(vertexBufferSize, VMA_MEMORY_USAGE_GPU_ONLY, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+
+	//find the adress of the vertex buffer
+	VkBufferDeviceAddressInfo deviceAdressInfo{ .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,.buffer = newSurface.vertexBuffer.buffer };
+	newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(Device.LogicalDevice, &deviceAdressInfo);
+
+	//create index buffer
+	newSurface.indexBuffer = CreateBuffer(indexBufferSize, VMA_MEMORY_USAGE_GPU_ONLY, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	
+	SBuffer staging = CreateBuffer(vertexBufferSize + indexBufferSize, VMA_MEMORY_USAGE_CPU_ONLY, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+	void* data = staging.allocation->GetMappedData();
+
+	// copy vertex buffer
+	memcpy(data, vertices.data(), vertexBufferSize);
+	// copy index buffer
+	memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
+
+	ImmediateSubmit([&](VkCommandBuffer cmd)
+	{
+		VkBufferCopy vertexCopy{ 0 };
+		vertexCopy.dstOffset = 0;
+		vertexCopy.srcOffset = 0;
+		vertexCopy.size = vertexBufferSize;
+
+		vkCmdCopyBuffer(cmd, staging.buffer, newSurface.vertexBuffer.buffer, 1, &vertexCopy);
+
+		VkBufferCopy indexCopy{ 0 };
+		indexCopy.dstOffset = 0;
+		indexCopy.srcOffset = vertexBufferSize;
+		indexCopy.size = indexBufferSize;
+
+		vkCmdCopyBuffer(cmd, staging.buffer, newSurface.indexBuffer.buffer, 1, &indexCopy);
+	});
+
+	DestroyBuffer(staging);
+
+	return newSurface;
+}
+
+void PVulkanRenderer::DestroyBuffer(const SBuffer& Buffer)
+{
+	vmaDestroyBuffer(GlobalMemoryAllocator, Buffer.buffer, Buffer.allocation);
+}
+
 void PVulkanRenderer::WaitUntilIdle()
 {
 	vkDeviceWaitIdle(Device.LogicalDevice);
 }
 
-void PVulkanRenderer::DrawCompute(VkCommandBuffer CommandBuffer)
+void PVulkanRenderer::ImmediateSubmit(std::function<void(VkCommandBuffer CommandBuffer)>&& Func)
 {
-	// bind the gradient drawing compute pipeline
-	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
+	VkResult Result;
+	Result = vkResetFences(Device.LogicalDevice, 1, &ImmediateFence);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to reset fence.");
+	
+	Result = vkResetCommandBuffer(ImmediateCommandBuffer, 0);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to reset command buffer.");
 
-	// bind the descriptor set containing the draw image for the compute pipeline
-	vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &RenderTargetDescriptorSet, 0, nullptr);
+	VkCommandBuffer CommandBuffer = ImmediateCommandBuffer;
+	
+	VkCommandBufferBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.pNext = nullptr;
+	info.pInheritanceInfo = nullptr;
+	info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	SComputePushConstants pc;
-	pc.data1 = glm::vec4(0, 0, 0, 1);
-	pc.data2 = glm::vec4(0, 0, 1, 1);
+	Result = vkBeginCommandBuffer(CommandBuffer, &info);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to begin command buffer.");
 
-	vkCmdPushConstants(CommandBuffer, _gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SComputePushConstants), &pc);
+	Func(CommandBuffer);
 
-	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-	vkCmdDispatch(CommandBuffer, std::ceil(Swapchain->RenderTargetExtent.width / 16.0), std::ceil(Swapchain->RenderTargetExtent.height / 16.0), 1);
+	Result = vkEndCommandBuffer(CommandBuffer);
+	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to end command buffer..");
+
+	VkCommandBufferSubmitInfo CommandBufferSubmitInfo{};
+	CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+	CommandBufferSubmitInfo.pNext = nullptr;
+	CommandBufferSubmitInfo.CommandBuffer = CommandBuffer;
+	CommandBufferSubmitInfo.deviceMask = 0;
+
+    VkSubmitInfo2 SubmitInfo = {};
+	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+	SubmitInfo.pNext = nullptr;
+	SubmitInfo.waitSemaphoreInfoCount = 0;
+	SubmitInfo.pWaitSemaphoreInfos = nullptr;
+	SubmitInfo.signalSemaphoreInfoCount = 0;
+	SubmitInfo.pSignalSemaphoreInfos = nullptr;
+	SubmitInfo.commandBufferInfoCount = 1;
+	SubmitInfo.pCommandBufferInfos = &CommandBufferSubmitInfo;
+
+	// submit command buffer to the queue and execute it.
+	//  _renderFence will now block until the graphic commands finish execution
+	Result = vkQueueSubmit2(Device.GraphicsQueue, 1, &SubmitInfo, ImmediateFence);
+	Result = vkWaitForFences(Device.LogicalDevice, 1, &ImmediateFence, true, 9999999999);
 }

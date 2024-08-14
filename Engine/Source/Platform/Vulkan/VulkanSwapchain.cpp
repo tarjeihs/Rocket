@@ -145,11 +145,11 @@ void PVulkanSwapchain::CreateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhysical
 		RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 	}
 	
-	RenderTargetExtent = SwapchainExtent;
-	VkExtent3D DrawImageExtent = { RenderTargetExtent.width, RenderTargetExtent.height, 1 };
+	DrawImageExtent = SwapchainExtent;
+	VkExtent3D DrawImageExtent3D = { DrawImageExtent.width, DrawImageExtent.height, 1 };
 
-	RenderTarget.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT; // Or another supported format
-	RenderTarget.imageExtent = DrawImageExtent;
+	DrawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT; // Or another supported format
+	DrawImage.imageExtent = DrawImageExtent3D;
 
 	VkImageUsageFlags DrawImageUsageFlags{};
 	DrawImageUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -160,8 +160,8 @@ void PVulkanSwapchain::CreateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhysical
 	VkImageCreateInfo DrawImageCreateInfo{};
 	DrawImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	DrawImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	DrawImageCreateInfo.format = RenderTarget.imageFormat;
-	DrawImageCreateInfo.extent = RenderTarget.imageExtent;
+	DrawImageCreateInfo.format = DrawImage.imageFormat;
+	DrawImageCreateInfo.extent = DrawImage.imageExtent;
 	DrawImageCreateInfo.mipLevels = 1;
 	DrawImageCreateInfo.arrayLayers = 1;
 	DrawImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -172,21 +172,21 @@ void PVulkanSwapchain::CreateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhysical
 	VmaAllocationCreateInfo rimg_allocinfo = {};
 	rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vmaCreateImage(Allocator, &DrawImageCreateInfo, &rimg_allocinfo, &RenderTarget.image, &RenderTarget.allocation, nullptr);
+	vmaCreateImage(Allocator, &DrawImageCreateInfo, &rimg_allocinfo, &DrawImage.image, &DrawImage.allocation, nullptr);
 
 	// Create image view
 	VkImageViewCreateInfo DrawImageViewCreateInfo{};
 	DrawImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	DrawImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	DrawImageViewCreateInfo.image = RenderTarget.image;
-	DrawImageViewCreateInfo.format = RenderTarget.imageFormat;
+	DrawImageViewCreateInfo.image = DrawImage.image;
+	DrawImageViewCreateInfo.format = DrawImage.imageFormat;
 	DrawImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
 	DrawImageViewCreateInfo.subresourceRange.levelCount = 1;
 	DrawImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 	DrawImageViewCreateInfo.subresourceRange.layerCount = 1;
 	DrawImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-	Result = vkCreateImageView(LogicalDevice, &DrawImageViewCreateInfo, nullptr, &RenderTarget.imageView);
+	Result = vkCreateImageView(LogicalDevice, &DrawImageViewCreateInfo, nullptr, &DrawImage.imageView);
 	RK_ENGINE_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 }
 
@@ -205,8 +205,8 @@ void PVulkanSwapchain::RegenerateSwapchain(VkSurfaceKHR SurfaceInterface, VkPhys
 
 void PVulkanSwapchain::DestroySwapchain(VkSurfaceKHR SurfaceInterface, VkPhysicalDevice PhysicalDevice, VkDevice LogicalDevice, VmaAllocator Allocator)
 {
-	vkDestroyImageView(LogicalDevice, RenderTarget.imageView, nullptr);
-	vmaDestroyImage(Allocator, RenderTarget.image, RenderTarget.allocation);
+	vkDestroyImageView(LogicalDevice, DrawImage.imageView, nullptr);
+	vmaDestroyImage(Allocator, DrawImage.image, DrawImage.allocation);
 
 	for (size_t i = 0; i < SwapchainImageViews.size(); i++)
 	{

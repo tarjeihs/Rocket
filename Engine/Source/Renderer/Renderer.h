@@ -7,12 +7,11 @@ class IRenderer
 public:
 	virtual void Initialize() = 0;
 	virtual void DestroyRenderer() = 0;
-
 	virtual void Draw() = 0;
+	virtual void Resize() = 0;
 };
 
-template<typename TRenderer>
-inline static TRenderer* GetRenderer()
+inline static IRenderer* GetRenderer()
 {
-	return static_cast<TRenderer*>(PEngine::Get()->GetRenderer());
+	return PEngine::Get()->GetRenderer();
 }

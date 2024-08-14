@@ -30,13 +30,19 @@ void PEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
+		Timestep.Validate();
+
 		Window->Poll();
 		Window->Swap();
 
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
+		ImGui::Begin("Metrics");
+		ImGui::Text("Frame Rate: %f", 1.0f / Timestep.GetDeltaTime());
+		ImGui::Text("Frame Time: %fms", Timestep.GetDeltaTime());
+		ImGui::Text("Engine Time: %fs", Timestep.GetElapsedTime());
+		ImGui::End();
 		ImGui::Render();
 		
 		Renderer->Draw();

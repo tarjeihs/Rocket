@@ -9,6 +9,8 @@
 #include "Core/Assert.h"
 #include "Renderer/Renderer.h"
 #include "Platform/Vulkan/VulkanDescriptor.h"
+#include "VulkanTypes.h"
+#include "VulkanPipeline.h"
 
 class SValidationLayer
 {
@@ -36,23 +38,6 @@ struct SFrameData
 	VkSemaphore RenderSemaphore;
 
 	VkFence RenderFence;
-};
-
-struct SComputePushConstants
-{
-	glm::vec4 data1;
-	glm::vec4 data2;
-	glm::vec4 data3;
-	glm::vec4 data4;
-};
-
-struct SComputeEffect
-{
-	const char* debugName;
-	SComputePushConstants data;
-
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
 };
 
 struct SVulkanInstance
@@ -88,6 +73,7 @@ public:
 	virtual void Initialize() override;
 	virtual void DestroyRenderer() override;
 	virtual void Draw() override;
+	virtual void Resize() override;
 
 	inline PVulkanSwapchain* GetSwapchain() const;
 	inline const SVulkanInstance& GetInstance() const;
@@ -112,23 +98,28 @@ protected:
 public:
 	void CreatePhysicalDevice();
 	void CreateLogicalDevice();
+	
 	void CreateCommandPool();
 	void CreateSynchronizationObjects();
-	void CreateMemoryAllocator();
-	void CreateDescriptorSet();
+
+	void CreateGlobalMemoryAllocator();
+	void CreateGlobalDescriptorAllocator();
+
 	void CreatePipeline();
 
-	void CreateColorGradientPipeline();
-	void CreateBackgroundPipeline();
+	void ImmediateSubmit(std::function<void(VkCommandBuffer CommandBuffer)>&& Func);
 
+	/* Seperate VulkanImGui class */
 	void InitImGui();
 	void DrawImGui(VkCommandBuffer CommandBuffer, VkClearValue* ClearValue, VkImageView ImageView);
+	/* Seperate VulkanImGui class */
+	
+	SBuffer CreateBuffer(size_t AllocSize, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
+	void DestroyBuffer(const SBuffer& Buffer);
+	SMeshBuffer CreateMeshBuffer(std::span<uint32_t> indices, std::span<SVertex> vertices);
 
 public:
 	void WaitUntilIdle();
-
-protected:
-	void DrawCompute(VkCommandBuffer CommandBuffer);
 
 private:
 	PVulkanSwapchain* Swapchain;
@@ -139,17 +130,20 @@ private:
 	SFrameData Frames[FRAME_OVERLAP];
 	size_t CurrentFrameIndex = 0;
 
-	VmaAllocator Allocator;
-	SDescriptorAllocator DescriptorAllocator;
+	VmaAllocator GlobalMemoryAllocator;
+	SDescriptorAllocator GlobalDescriptorAllocator;
 
 	VkDescriptorPool ImGuiDescriptorPool;
 
-	VkDescriptorSet RenderTargetDescriptorSet;
-	VkDescriptorSetLayout RenderTargetDescriptorSetLayout;
+	void uploadmesh(SMeshBuffer& MeshBuffer);
 
-	// Temp
-	VkPipeline _gradientPipeline;
-	VkPipelineLayout _gradientPipelineLayout;
+	PVulkanColorGraphicsPipeline* StandardGraphicsPipeline;
+	PVulkanStandardComputePipeline* StandardComputePipeline;
+
+	// immediate submit structures
+	VkFence ImmediateFence;
+	VkCommandBuffer ImmediateCommandBuffer;
+	VkCommandPool ImmediateCommandPool;
 };
 
 inline PVulkanSwapchain* PVulkanRenderer::GetSwapchain() const
@@ -169,5 +163,5 @@ inline const SVulkanDevice& PVulkanRenderer::GetDevice() const
 
 inline VmaAllocator PVulkanRenderer::GetAllocator() const
 {
-	return Allocator;
+	return GlobalMemoryAllocator;
 }

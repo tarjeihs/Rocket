@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "Utils/Timestep.h"
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
@@ -33,6 +35,8 @@ private:
 	PScene* Scene;
 	IWindow* Window;
 	IRenderer* Renderer;
+
+	STimestep Timestep;
 
 	static PEngine* GEngine;
 };

@@ -10,7 +10,6 @@
 void PWindowsWindow::CreateNativeWindow()
 {
     glfwInit();
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     NativeWindow = glfwCreateWindow(WindowSpecification.Width, WindowSpecification.Height, WindowSpecification.Name, nullptr, nullptr);
@@ -36,10 +35,7 @@ void PWindowsWindow::CreateNativeWindow()
 			if (Window->IsMinimized()) Window->SetIsMinimized(false);
 		}
 
-		PVulkanRenderer* Renderer = GetRenderer<PVulkanRenderer>();
-		Renderer->WaitUntilIdle();
-		Renderer->GetSwapchain()->RegenerateSwapchain(Renderer->GetInstance().SurfaceInterface, Renderer->GetDevice().PhysicalDevice, Renderer->GetDevice().LogicalDevice, Renderer->GetAllocator());
-		Renderer->CreateDescriptorSet();
+		GetRenderer()->Resize();
 	});
 }
 
