@@ -8,6 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Use only Debug, Release, and Dist configurations
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
 
+# This makes sure that CMake generates the appropriate files for VSCode
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(CMakeToolsHelpers OPTIONAL)
+
 # Enable parallel compilation
 add_compile_options(/MP)
 
