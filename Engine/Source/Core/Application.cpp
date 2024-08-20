@@ -9,6 +9,8 @@ void PApplication::Run()
 	Engine->Start();
 
 	Engine->Run();
+
+	Engine->Stop();
 }
 
 void PApplication::Exit()

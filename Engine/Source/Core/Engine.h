@@ -2,52 +2,64 @@
 
 #include <cstdint>
 
+#include "Utils/Timestep.h"
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 class PScene;
 class IWindow;
-class IRenderer;
+class PRenderer;
+class IRHI;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
-static constexpr uint32_t VIEWPORT_WIDTH = 1280;
-static constexpr uint32_t VIEWPORT_HEIGHT = 720;
+static constexpr uint32_t VIEWPORT_WIDTH = 1920;
+static constexpr uint32_t VIEWPORT_HEIGHT = 1080;
 
 class PEngine
 {
 public:
+	STimestep Timestep;
+	
 	void Start();
 	void Run();
 	void Stop();
 
-	inline PScene* GetScene() const;
-	inline IWindow* GetWindow() const;
-	inline IRenderer* GetRenderer() const;
-
+	inline IWindow* GetWindow();
+	inline PRenderer* GetRenderer();
+	inline PScene* GetScene();
+	inline IRHI* GetRHI();
+	
 	static PEngine* Get()
 	{
 		return GEngine;
 	}
 
 private:
-	PScene* Scene;
 	IWindow* Window;
-	IRenderer* Renderer;
+	IRHI* RHI;
+	PRenderer* Renderer;
+	PScene* Scene;
 
 	static PEngine* GEngine;
 };
 
-inline PScene* PEngine::GetScene() const
+inline PScene* PEngine::GetScene()
 {
-	return Scene;
+	return PEngine::Get()->Scene;
 }
 
-inline IWindow* PEngine::GetWindow() const
+inline IRHI* PEngine::GetRHI()
 {
-	return Window;
+	return RHI;
 }
 
-inline IRenderer* PEngine::GetRenderer() const
+inline IWindow* PEngine::GetWindow()
 {
-	return Renderer;
+	return PEngine::Get()->Window;
+}
+
+inline PRenderer* PEngine::GetRenderer()
+{
+	return PEngine::Get()->Renderer;
 }
