@@ -8,22 +8,31 @@
 #include <spdlog/fmt/ostr.h>
 #pragma warning(pop)
 
+enum ELogCategory
+{
+	LOG_TRACE,
+	LOG_DEBUG,
+	LOG_INFO,
+	LOG_WARNING,
+	LOG_ERROR
+};
+
 class PLogger
 {
 public:
 	static void Init();
 
-	static inline std::shared_ptr<spdlog::logger>& GetEngineLogger()
+	static inline std::shared_ptr<spdlog::logger>& GetLogger()
 	{
-		return GEngineLogger;
+		return GLogger;
 	}
 
 private:
-	static std::shared_ptr<spdlog::logger> GEngineLogger;
+	static std::shared_ptr<spdlog::logger> GLogger;
 };
 
-#define RK_ENGINE_TRACE(...) ::PLogger::GetEngineLogger()->trace(__VA_ARGS__)
-#define RK_ENGINE_VERBOSE(...) ::PLogger::GetEngineLogger()->debug(__VA_ARGS__)
-#define RK_ENGINE_INFO(...)  ::PLogger::GetEngineLogger()->info(__VA_ARGS__)
-#define RK_ENGINE_WARNING(...)  ::PLogger::GetEngineLogger()->warn(__VA_ARGS__)
-#define RK_ENGINE_ERROR(...) ::PLogger::GetEngineLogger()->error(__VA_ARGS__)
+#define RK_LOG_TRACE(...) ::PLogger::GetLogger()->trace(__VA_ARGS__)
+#define RK_LOG_VERBOSE(...) ::PLogger::GetLogger()->debug(__VA_ARGS__)
+#define RK_LOG_INFO(...)  ::PLogger::GetLogger()->info(__VA_ARGS__)
+#define RK_LOG_WARNING(...)  ::PLogger::GetLogger()->warn(__VA_ARGS__)
+#define RK_LOG_ERROR(...) ::PLogger::GetLogger()->error(__VA_ARGS__)

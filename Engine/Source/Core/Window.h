@@ -31,17 +31,16 @@ public:
 	virtual void DestroyNativeWindow() = 0;
 
 	virtual void Poll() = 0;
-	virtual void Swap() = 0;
 
 	virtual bool ShouldClose() const = 0;
 	virtual bool IsMinimized() const = 0;
-
 	virtual void SetIsMinimized(bool bMinimized) = 0;
 
 	inline void* GetNativeWindow() const;
-	inline const char* GetName() const;
-	inline uint32_t GetWidth() const;
-	inline uint32_t GetHeight() const;
+	inline SWindowSpecification& GetWindowSpecification();
+	inline SWindowUserData& GetWindowUserData();
+	
+	inline float GetAspectRatio() const;
 
 protected:
 	SWindowSpecification WindowSpecification;
@@ -58,19 +57,19 @@ inline void* IWindow::GetNativeWindow() const
 	return NativeWindow;
 }
 
-inline const char* IWindow::GetName() const
+inline SWindowSpecification& IWindow::GetWindowSpecification()
 {
-	return WindowSpecification.Name;
+	return WindowSpecification;
 }
 
-inline uint32_t IWindow::GetWidth() const
+inline SWindowUserData& IWindow::GetWindowUserData()
 {
-	return WindowSpecification.Width;
+	return WindowUserData;
 }
 
-inline uint32_t IWindow::GetHeight() const
+inline float IWindow::GetAspectRatio() const
 {
-	return WindowSpecification.Height;
+	return static_cast<float>(WindowSpecification.Width) / static_cast<float>(WindowSpecification.Height);
 }
 
 static inline IWindow* GetWindow()

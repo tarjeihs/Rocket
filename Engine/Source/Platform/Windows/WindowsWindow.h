@@ -13,7 +13,6 @@ public:
 	virtual void CreateNativeWindow() override;
 	virtual void DestroyNativeWindow() override;
 	virtual void Poll() override;
-	virtual void Swap() override;
 	virtual bool ShouldClose() const override;
 	virtual bool IsMinimized() const override;
 	virtual void SetIsMinimized(bool bMinimized) override;
