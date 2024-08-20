@@ -26,35 +26,50 @@ set(VMA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Vendor/imgui")
 
+# Collect ImGui source files
+set(IMGUI_SRC
+    ${IMGUI_INCLUDE_DIR}/imgui.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_draw.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_tables.cpp
+    ${IMGUI_INCLUDE_DIR}/imgui_widgets.cpp
+    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_vulkan.cpp
+)
+
 # Collect all source files for the Engine project
 file(GLOB_RECURSE ENGINE_FILES
     Engine/Source/*.cpp
     Engine/Source/*.h
 )
+# Collect all HLSL and GLSL files for the Engine project
+file(GLOB_RECURSE ENGINE_SHADER_FILES 
+    Engine/Shaders/*.hlsl
+    Engine/Shaders/*.glsl
+)
 
 # Define source groups for Engine
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source PREFIX "Files" FILES ${ENGINE_FILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source PREFIX "Source" FILES ${ENGINE_FILES})
+
+# Define source groups for shader files
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Shaders PREFIX "Shaders" FILES ${ENGINE_SHADER_FILES})
+
+# Define source groups for third-party files
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui PREFIX "Third Party\\ImGui" FILES ${IMGUI_SRC})
 
 # Vulkan SDK
 find_package(Vulkan REQUIRED)
 
 # Add GLFW as a subdirectory to be compiled alongside this project
 add_subdirectory(Vendor/glfw)
-# Collect ImGui source files
-set(IMGUI_SRC
-    ${IMGUI_INCLUDE_DIR}/imgui.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_draw.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_tables.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_demo.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_widgets.cpp
-    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_glfw.cpp
-    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_vulkan.cpp
-)
+
 # Target Engine project
 add_library(Engine STATIC 
     ${ENGINE_FILES}
     ${IMGUI_SRC}  # Add ImGui source files to the Engine target
 )
+
+set_source_files_properties(${ENGINE_SHADER_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
+target_sources(Engine PRIVATE ${ENGINE_SHADER_FILES})
 
 target_include_directories(Engine PRIVATE
     ${CMAKE_SOURCE_DIR}/Engine/Source
