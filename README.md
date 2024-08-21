@@ -4,9 +4,8 @@ A powerful and versatile game engine designed to propel your game development to
 
 ## 🚀 Features
 
-- High-performance graphics
+- High-performance graphics renderer
 - Modern engine architecture
-- Advanced tools for game development
 
 ## 📦 Prerequisites
 
