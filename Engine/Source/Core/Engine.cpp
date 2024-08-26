@@ -1,8 +1,5 @@
 #include "Engine.h"
 
-#include <imgui.h>
-#include <imgui_impl_vulkan.h>
-#include <imgui_impl_glfw.h>
 #include <GLFW/glfw3.h>
 
 #include "Core/Assert.h"
@@ -44,10 +41,10 @@ void PEngine::Run()
 		static glm::vec3 rot = glm::vec3(0.0f);
 		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_W) == GLFW_PRESS) { pos += glm::vec3(1.0f, 0.0f, 0.0f) * Timestep.GetDeltaTime(); }
 		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_S) == GLFW_PRESS) { pos -= glm::vec3(1.0f, 0.0f, 0.0f) * Timestep.GetDeltaTime(); }
-		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_D) == GLFW_PRESS) { pos += glm::vec3(0.0f, 1.0f, 0.0f) * Timestep.GetDeltaTime(); }
-		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_A) == GLFW_PRESS) { pos -= glm::vec3(0.0f, 1.0f, 0.0f) * Timestep.GetDeltaTime(); }
-		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_SPACE) == GLFW_PRESS) { pos += glm::vec3(0.0f, 0.0f, 1.0f) * Timestep.GetDeltaTime(); }
-		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) { pos -= glm::vec3(0.0f, 0.0f, 1.0f) * Timestep.GetDeltaTime(); }
+		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_D) == GLFW_PRESS) { pos += glm::vec3(0.0f, 0.0f, 1.0f) * Timestep.GetDeltaTime(); }
+		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_A) == GLFW_PRESS) { pos -= glm::vec3(0.0f, 0.0f, 1.0f) * Timestep.GetDeltaTime(); }
+		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_SPACE) == GLFW_PRESS) { pos += glm::vec3(0.0f, 1.0f, 0.0f) * Timestep.GetDeltaTime(); }
+		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) { pos -= glm::vec3(0.0f, 1.0f, 0.0f) * Timestep.GetDeltaTime(); }
 		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_UP) == GLFW_PRESS) { rot += glm::vec3(5.f, 0.0f, 0.0f) * Timestep.GetDeltaTime(); }
 		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_DOWN) == GLFW_PRESS) { rot -= glm::vec3(5.f, 0.0f, 0.0f) * Timestep.GetDeltaTime(); }
 		if (glfwGetKey((GLFWwindow*)Window->GetNativeWindow(), GLFW_KEY_RIGHT) == GLFW_PRESS) { rot += glm::vec3(0.0f, 5.0f, 0.0f) * Timestep.GetDeltaTime(); }
@@ -55,17 +52,17 @@ void PEngine::Run()
 		Camera->SetPerspectiveProjection(glm::radians(66.0f), Window->GetAspectRatio(), 0.1f, 1000.0f);
 		Camera->CalculateViewMatrix(pos, rot);
 
-		//Renderer->Draw();
 		RHI->Render();
 	}
 }
 
 void PEngine::Stop()
 {
-	Window->DestroyNativeWindow();
 	RHI->Shutdown();
+	Window->DestroyNativeWindow();
 
 	delete Scene;
+	delete RHI;
 	delete Window;
 
 	GEngine = nullptr;

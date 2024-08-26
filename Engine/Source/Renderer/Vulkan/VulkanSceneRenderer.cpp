@@ -47,19 +47,20 @@ std::vector<SVertex> cube_vertices()
 	return cube_vertices;
 }
 std::vector<uint32_t> cube_indices = {
-	// Front face
-	0, 1, 2, 2, 3, 0,
-	// Right face
-	0, 4, 5, 5, 1, 0,
-	// Back face
-	4, 7, 6, 6, 5, 4,
-	// Left face
-	7, 3, 2, 2, 6, 7,
-	// Top face
-	7, 4, 0, 0, 3, 7,
-	// Bottom face
-	1, 5, 6, 6, 2, 1
+    // Front face
+    0, 3, 2, 2, 1, 0,
+    // Right face
+    0, 1, 5, 5, 4, 0,
+    // Back face
+    4, 5, 6, 6, 7, 4,
+    // Left face
+    7, 6, 2, 2, 3, 7,
+    // Top face
+    7, 3, 0, 0, 4, 7,
+    // Bottom face
+    1, 2, 6, 6, 5, 1
 };
+
 PVulkanMesh* Mesh = nullptr;
 
 void PVulkanSceneRenderer::Init()

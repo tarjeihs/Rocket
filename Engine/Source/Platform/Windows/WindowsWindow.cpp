@@ -1,12 +1,12 @@
 #include "EnginePCH.h"
 #include "WindowsWindow.h"
 
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include "Core/Assert.h"
+#include "Core/Camera.h"
+#include "Core/Scene.h"
 #include "Renderer/VulkanRHI.h"
-#include <Core/Camera.h>
-#include <Core/Scene.h>
 
 void PWindowsWindow::CreateNativeWindow()
 {
@@ -17,15 +17,13 @@ void PWindowsWindow::CreateNativeWindow()
     RK_ASSERT(NativeWindow, "Failed to create GLFW window");
 
     glfwSetWindowUserPointer((GLFWwindow*)NativeWindow, &WindowUserData);
-    glfwSetInputMode((GLFWwindow*)NativeWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
     glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
+
+    glfwSetInputMode((GLFWwindow*)NativeWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
 	{
 		SWindowUserData& UserData = *(SWindowUserData*)glfwGetWindowUserPointer(Window);
-
-		auto Clock = std::chrono::steady_clock::now();
 
 		if (KeyCode == GLFW_KEY_ESCAPE)
 		{

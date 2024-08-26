@@ -1,11 +1,8 @@
-#define VMA_IMPLEMENTATION
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_EXPOSE_NATIVE_WIN32
-
 #include "VulkanInstance.h"
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+#include <iostream>
 
 #include "Core/Assert.h"
 #include "Core/Window.h"
@@ -75,11 +72,6 @@ void PVulkanInstance::Init()
 	InstanceCreateInfo.ppEnabledLayerNames = RHI->ValidationLayerExtensions.data();
 	InstanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugMessengerCreateInfo;
 
-	VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo{};
-	SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	SurfaceCreateInfo.hwnd = glfwGetWin32Window((GLFWwindow*)GetWindow()->GetNativeWindow());
-	SurfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
-	
 	VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
 

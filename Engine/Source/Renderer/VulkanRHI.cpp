@@ -1,7 +1,3 @@
-#define VMA_IMPLEMENTATION
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_EXPOSE_NATIVE_WIN32
-
 #include "VulkanRHI.h"
 
 #include <GLFW/glfw3.h>

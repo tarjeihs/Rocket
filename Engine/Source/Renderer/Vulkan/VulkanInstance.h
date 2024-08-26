@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
-
 #include <vector>
 
 class PVulkanRHI;
@@ -28,6 +27,5 @@ private:
 
 	VkInstance Instance;
 	VkSurfaceKHR Surface;
-
 	VkDebugUtilsMessengerEXT DebugMessenger;
 };

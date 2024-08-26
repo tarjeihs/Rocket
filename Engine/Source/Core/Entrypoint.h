@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef RK_PLATFORM_WINDOWS
-
 extern PApplication* CreateApplication();
 
 int main()
@@ -14,5 +12,3 @@ int main()
 
     return 0;
 }
-
-#endif

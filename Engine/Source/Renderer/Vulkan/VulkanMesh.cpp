@@ -1,5 +1,7 @@
 #include "VulkanMesh.h"
 
+#include <cstring>
+
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
