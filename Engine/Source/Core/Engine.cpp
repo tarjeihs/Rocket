@@ -22,14 +22,12 @@ void PEngine::Start()
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
 	Scene = new PScene();
-	//Renderer = new PRenderer();
 	RHI = new PVulkanRHI();
 	Window = new PWindowsWindow(WindowSpecification);
 
 	Scene->Init();
 	Window->CreateNativeWindow();
 	RHI->Init();
-	//Renderer->Initialize();
 }
 
 void PEngine::Run()
@@ -66,11 +64,9 @@ void PEngine::Stop()
 {
 	Window->DestroyNativeWindow();
 	RHI->Shutdown();
-	//Renderer->DestroyRenderer();
 
 	delete Scene;
 	delete Window;
-	delete Renderer;
 
 	GEngine = nullptr;
 }

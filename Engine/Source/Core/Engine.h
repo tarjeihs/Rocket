@@ -9,7 +9,6 @@
 
 class PScene;
 class IWindow;
-class PRenderer;
 class IRHI;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
@@ -26,7 +25,6 @@ public:
 	void Stop();
 
 	inline IWindow* GetWindow();
-	inline PRenderer* GetRenderer();
 	inline PScene* GetScene();
 	inline IRHI* GetRHI();
 	
@@ -38,7 +36,6 @@ public:
 private:
 	IWindow* Window;
 	IRHI* RHI;
-	PRenderer* Renderer;
 	PScene* Scene;
 
 	static PEngine* GEngine;
@@ -57,9 +54,4 @@ inline IRHI* PEngine::GetRHI()
 inline IWindow* PEngine::GetWindow()
 {
 	return PEngine::Get()->Window;
-}
-
-inline PRenderer* PEngine::GetRenderer()
-{
-	return PEngine::Get()->Renderer;
 }
