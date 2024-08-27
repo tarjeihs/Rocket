@@ -4,11 +4,11 @@
 #include <string>
 #include <functional>
 #include <cstdint>
-#include <dxc/dxcapi.h>
 
 #ifdef RK_PLATFORM_WINDOWS
 	#include <Windows.h>
 	#include <wrl.h>
+	#include <dxc/dxcapi.h>
 	
 	using Microsoft::WRL::ComPtr;
 #endif
@@ -16,6 +16,7 @@
 #ifdef RK_PLATFORM_LINUX
 	#include <dlfcn.h>
 	#include <wchar.h>
+	#include <dxc/dxcapi.h>
 #endif
 
 class PShader
