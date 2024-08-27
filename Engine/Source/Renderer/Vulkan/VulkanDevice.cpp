@@ -82,7 +82,13 @@ void PVulkanDevice::Init()
 
 			if (!SurfaceFormats.empty() && !PresentModes.empty() && GraphicsFamily.has_value() && PresentFamily.has_value())
 			{
+				VkPhysicalDeviceProperties PhysicalDeviceProperties;
+    			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
+
+				RK_LOG_INFO("Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
+
 				GPU = PhysicalDevice;
+				break;
 			}
 		}
 	}

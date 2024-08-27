@@ -11,6 +11,9 @@
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Math/Math.h"
 
+// Prioritize VK_PRESENT_MODE_IMMEDIATE_KHR to disable V-Sync
+static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+
 namespace Utils
 {
 	static VkSurfaceFormatKHR SelectSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& Formats)
@@ -26,17 +29,16 @@ namespace Utils
 		return Formats[0];
 	}
 
-	static VkPresentModeKHR SelectSwapchainPresentMode(const std::vector<VkPresentModeKHR>& PresentModes)
+	static VkPresentModeKHR SelectSwapchainPresentMode(const std::vector<VkPresentModeKHR>& PresentModes, VkPresentModeKHR DesiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR)
 	{
 		for (const auto& PresentMode : PresentModes)
 		{
-			// Instead of blocking the application when the queue is full, the images that are already queued are simply replaced with the newer ones. 
-			// This mode can be used to render frames as fast as possible while still avoiding tearing, resulting in fewer latency issues than standard vertical sync
-			if (PresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+			if (PresentMode == DesiredPresentMode)
 			{
 				return PresentMode;
 			}
 		}
+		// Guaranteed to be avilable (standard V-Sync)
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
@@ -64,7 +66,7 @@ namespace Utils
 void PVulkanSwapchain::Init(PVulkanRHI* RHI)
 {
 	SurfaceFormat = Utils::SelectSwapchainSurfaceFormat(RHI->GetDevice()->GetSurfaceFormats());
-	PresentMode = Utils::SelectSwapchainPresentMode(RHI->GetDevice()->GetPresentModes());
+	PresentMode = Utils::SelectSwapchainPresentMode(RHI->GetDevice()->GetPresentModes(), PresentMode);
 	ImageExtent = Utils::SelectSwapchainSurfaceExtent(RHI->GetDevice()->GetSurfaceCapabilities());
 
 	// Number of images to use in the swapchain
