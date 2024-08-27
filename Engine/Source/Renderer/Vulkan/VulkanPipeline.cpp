@@ -1,5 +1,9 @@
 #include "VulkanPipeline.h"
 
+#include <cstdlib>
+
+#include "Core/Logger.h"
+#include "EngineMacros.h"
 #include "Core/Assert.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -11,7 +15,6 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
-#include <cstdlib>
 
 void PVulkanPipelineLayout::CreatePipelineLayout(PVulkanRHI* RHI, const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
 {
@@ -40,15 +43,12 @@ VkPipelineLayout PVulkanPipelineLayout::GetVkPipelineLayout() const
 
 void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
 {
-	std::string Root = std::string(std::getenv("ROCKET_SDK"));
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> Converter;
-    std::wstring WidePath = Converter.from_bytes(Root);
-
     VertexShader = new PVulkanShader();
-    VertexShader->CreateShader(RHI, WidePath + L"/Engine/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
+    VertexShader->CreateShader(RHI, WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
 
     FragmentShader = new PVulkanShader();
-    FragmentShader->CreateShader(RHI, WidePath + L"/Engine/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
+    FragmentShader->CreateShader(RHI, WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
+
 
     const size_t UniformBufferSize = sizeof(SUniformBufferObject);
     UniformBuffer = RHI->GetMemory()->CreateBuffer(UniformBufferSize, VMA_MEMORY_USAGE_CPU_TO_GPU, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);

@@ -5,15 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Check if ROCKET_SDK environment variable is set
-if(NOT DEFINED ENV{ROCKET_SDK})
-    message(FATAL_ERROR "The environment variable ROCKET_SDK is not set. Please set it as Rocket Engine root directory before running CMake.")
-else()
-    # Retrieve the ROCKET_SDK environment variable
-    set(ROCKET_SDK_PATH $ENV{ROCKET_SDK})
-    message(STATUS "Found ROCKET_SDK environment variable: ${ROCKET_SDK_PATH}")
-endif()
-
 # Use only Debug, Release, and Dist configurations
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
 
@@ -166,9 +157,11 @@ else()
     target_compile_definitions(Engine PRIVATE
         RK_PLATFORM_LINUX
         RK_BUILD_DLL
+        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
     target_compile_definitions(Editor PRIVATE
         RK_PLATFORM_LINUX
+        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
 endif()
 

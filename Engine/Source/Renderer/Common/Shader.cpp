@@ -90,7 +90,7 @@ void PShader::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std:
 void PShader::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile, std::function<void(const CComPtr<IDxcBlob>&)>&& Callback)
 {
 	// Load the DXC shared library (libdxcompiler.so)
-	std::string Path = std::string(std::getenv("VULKAN_SDK")) + "/lib/libdxcompiler.so";
+	std::string Path = std::string("/usr/lib/dxc/libdxcompiler.so");
 	void* DxcLibHandle = dlopen(Path.c_str(), RTLD_LAZY);
 	RK_ASSERT(DxcLibHandle, "Failed to dynamically load DXC library (Ensure that the DLL is installed and environment is set).");
 
