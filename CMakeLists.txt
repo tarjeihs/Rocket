@@ -137,9 +137,11 @@ if(MSVC)
     target_compile_definitions(Engine PRIVATE
         RK_PLATFORM_WINDOWS
         RK_BUILD_DLL
+        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
     target_compile_definitions(Editor PRIVATE
         RK_PLATFORM_WINDOWS
+        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
 else()
     # Non-MSVC compilers (GCC, Clang)
