@@ -19,8 +19,6 @@ void PWindowsWindow::CreateNativeWindow()
     glfwSetWindowUserPointer((GLFWwindow*)NativeWindow, &WindowUserData);
     glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
 
-    glfwSetInputMode((GLFWwindow*)NativeWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
 	glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
 	{
 		SWindowUserData& UserData = *(SWindowUserData*)glfwGetWindowUserPointer(Window);
@@ -57,6 +55,32 @@ void PWindowsWindow::CreateNativeWindow()
 		GetScene()->ActiveCamera->SetPerspectiveProjection(glm::radians(66.0f), Window->GetAspectRatio(), 0.1f, 1000.f);
 		GetRHI()->Resize();
 	});
+
+	glfwSetWindowFocusCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t Focused)
+	{
+		if (Focused)
+		{
+			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
+
+			GetWindow()->SetIsFocused(true);
+		}
+		else 
+		{
+			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
+
+			GetWindow()->SetIsFocused(false);
+
+			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	});
+
+	glfwSetWindowPosCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t PositionX, int32_t PositionY)
+	{
+		GetWindow()->GetWindowSpecification().PositionX = PositionX;
+		GetWindow()->GetWindowSpecification().PositionY = PositionY;
+	});
 }
 
 void PWindowsWindow::DestroyNativeWindow()
@@ -83,4 +107,19 @@ bool PWindowsWindow::IsMinimized() const
 void PWindowsWindow::SetIsMinimized(bool bMinimized)
 {
 	bIsMinimized = bMinimized;
+}
+
+void PWindowsWindow::SetIsFocused(bool bFocused)
+{
+	bIsFocused = bFocused;
+}
+
+void PWindowsWindow::WaitEventOrTimeout(float TimeoutSeconds)
+{
+	glfwWaitEventsTimeout(TimeoutSeconds);
+}
+
+bool PWindowsWindow::IsFocused() const
+{
+    return bIsFocused;
 }
