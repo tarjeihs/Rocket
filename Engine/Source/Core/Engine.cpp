@@ -6,7 +6,7 @@
 #include "Core/Logger.h"
 #include "Core/Scene.h"
 #include "Core/Subsystem.h"
-#include "Platform/Windows/WindowsWindow.h"
+#include "Platform/Generic/GenericWindow.h"
 #include "Renderer/VulkanRHI.h"
 
 PEngine* PEngine::GEngine = nullptr;
@@ -21,7 +21,7 @@ void PEngine::Start()
 	
 	Scene = new PScene();
 	RHI = new PVulkanRHI();
-	Window = new PWindowsWindow(WindowSpecification);
+	Window = new PGenericWindow(WindowSpecification);
 
 	Scene->Init();
 	Window->CreateNativeWindow();

@@ -1,14 +1,15 @@
 #include "EnginePCH.h"
-#include "WindowsWindow.h"
+#include "GenericWindow.h"
 
 #include <GLFW/glfw3.h>
 
 #include "Core/Assert.h"
+#include "Core/Input.h"
 #include "Core/Camera.h"
 #include "Core/Scene.h"
 #include "Renderer/VulkanRHI.h"
 
-void PWindowsWindow::CreateNativeWindow()
+void PGenericWindow::CreateNativeWindow()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -16,16 +17,27 @@ void PWindowsWindow::CreateNativeWindow()
     NativeWindow = glfwCreateWindow(WindowSpecification.Width, WindowSpecification.Height, WindowSpecification.Name, nullptr, nullptr);
     RK_ASSERT(NativeWindow, "Failed to create GLFW window");
 
-    glfwSetWindowUserPointer((GLFWwindow*)NativeWindow, &WindowUserData);
     glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
 
 	glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
 	{
-		SWindowUserData& UserData = *(SWindowUserData*)glfwGetWindowUserPointer(Window);
-
-		if (KeyCode == GLFW_KEY_ESCAPE)
+		if (KeyCode == RK_KEY_ESCAPE)
 		{
 			glfwSetWindowShouldClose(Window, true);
+		}
+
+		if (Action == GLFW_PRESS)
+		{
+			SKeyState& KeyState = PInput::GetKeyState(KeyCode);
+			KeyState.Start = std::chrono::steady_clock::now();
+			KeyState.Action = EKeyAction::Press;
+		}
+
+		if (Action == GLFW_RELEASE)
+		{
+			SKeyState& KeyState = PInput::GetKeyState(KeyCode);
+			KeyState.Start = std::chrono::steady_clock::time_point();
+			KeyState.Action = EKeyAction::None;
 		}
 	});
 
@@ -68,11 +80,11 @@ void PWindowsWindow::CreateNativeWindow()
 		}
 		else 
 		{
+			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
 			GetWindow()->SetIsFocused(false);
-
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
 	});
 
@@ -83,43 +95,43 @@ void PWindowsWindow::CreateNativeWindow()
 	});
 }
 
-void PWindowsWindow::DestroyNativeWindow()
+void PGenericWindow::DestroyNativeWindow()
 {
     glfwDestroyWindow((GLFWwindow*)NativeWindow);
     glfwTerminate();
 }
 
-void PWindowsWindow::Poll()
+void PGenericWindow::Poll()
 {
     glfwPollEvents();
 }
 
-bool PWindowsWindow::ShouldClose() const
+bool PGenericWindow::ShouldClose() const
 {
     return glfwWindowShouldClose((GLFWwindow*)NativeWindow);
 }
 
-bool PWindowsWindow::IsMinimized() const
+bool PGenericWindow::IsMinimized() const
 {
     return bIsMinimized;
 }
 
-void PWindowsWindow::SetIsMinimized(bool bMinimized)
+void PGenericWindow::SetIsMinimized(bool bMinimized)
 {
 	bIsMinimized = bMinimized;
 }
 
-void PWindowsWindow::SetIsFocused(bool bFocused)
+void PGenericWindow::SetIsFocused(bool bFocused)
 {
 	bIsFocused = bFocused;
 }
 
-void PWindowsWindow::WaitEventOrTimeout(float TimeoutSeconds)
+void PGenericWindow::WaitEventOrTimeout(float TimeoutSeconds)
 {
 	glfwWaitEventsTimeout(TimeoutSeconds);
 }
 
-bool PWindowsWindow::IsFocused() const
+bool PGenericWindow::IsFocused() const
 {
     return bIsFocused;
 }
