@@ -223,8 +223,9 @@ void PVulkanGraphicsPipeline::BindPipeline(PVulkanRHI* RHI, PVulkanCommandBuffer
     ColorAttachment.pNext = nullptr;
     ColorAttachment.imageView = RHI->GetSceneRenderer()->GetRenderTarget()->ImageView;
     ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    ColorAttachment.clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     VkRenderingInfo RenderingInfo{};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
