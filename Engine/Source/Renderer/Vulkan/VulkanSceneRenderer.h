@@ -4,6 +4,7 @@
 #include <functional>
 #include <vulkan/vulkan_core.h>
 
+class PVulkanRenderGraph;
 class PVulkanRHI;
 class PVulkanFramePool;
 class PVulkanImage;
@@ -30,14 +31,9 @@ public:
 
 	PVulkanSwapchain* GetSwapchain() const;
 	PVulkanImage* GetRenderTarget() const;
+	PVulkanRenderGraph* GetRenderGraph() const;
 
-	void DeferredSubmit();
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
-
-protected:
-	void PrepareRenderTarget();
-	void BindRenderTarget();
-	void FinalizeRenderTarget();
 
 protected:
 	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
@@ -46,6 +42,7 @@ protected:
 private:
 	PVulkanSwapchain* Swapchain;
 	PVulkanImage* RenderTarget;
+	PVulkanRenderGraph* RenderGraph;
 
 	PVulkanFramePool* DeferredFramePool;
 	PVulkanFramePool* ImmediateFramePool;

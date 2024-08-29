@@ -1,20 +1,19 @@
 #include "VulkanSceneRenderer.h"
 
 #include "Core/Assert.h"
+#include "Core/Camera.h"
+#include "Core/Scene.h"
+#include "Math/Transform.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanImGui.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
-
-#include <Math/Transform.h>
-#include "Core/Camera.h"
-#include "Core/Scene.h"
+#include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
 // 3 swapchain images, 2 frames.
@@ -65,50 +64,56 @@ PVulkanMesh* Mesh = nullptr;
 
 void PVulkanSceneRenderer::Init()
 {
-
 	Swapchain = new PVulkanSwapchain();
-	Swapchain->Init(RHI);
-
 	RenderTarget = new PVulkanImage();
-	RenderTarget->CreateImage(RHI, Swapchain->GetVkExtent());
-
+	RenderGraph = new PVulkanRenderGraph();
 	DeferredFramePool = new PVulkanFramePool(DeferredFrameCount);
-	DeferredFramePool->CreateFramePool(RHI);
-
 	ImmediateFramePool = new PVulkanFramePool(ImmediateFrameCount);
-	ImmediateFramePool->CreateFramePool(RHI);
-	
 	ImGui = new PVulkanImGui();
-	ImGui->Init(RHI);
-
 	Mesh = new PVulkanMesh();
-	Mesh->CreateMesh(RHI, cube_vertices(), cube_indices);
-
 	GraphicsPipeline = new PVulkanGraphicsPipeline();
+
+	Swapchain->Init(RHI);
+	RenderTarget->CreateImage(RHI, Swapchain->GetVkExtent());
+	DeferredFramePool->CreateFramePool(RHI);
+	ImmediateFramePool->CreateFramePool(RHI);
+	ImGui->Init(RHI);
+	Mesh->CreateMesh(RHI, cube_vertices(), cube_indices);
 	GraphicsPipeline->CreatePipeline(RHI);
+
+	RenderGraph->AddCommand([this](VkCommandBuffer CommandBuffer)
+	{
+		PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
+
+		static Transform transform;
+		transform.m_Rotation.x += 0.0001f;
+		transform.m_Rotation.y += 0.0003f;
+
+		SUniformBufferObject uniformBuffer;
+		PCamera* camera = GetScene()->ActiveCamera;
+		uniformBuffer.ViewMatrix = camera->GetViewMatrix();
+		uniformBuffer.ProjectionMatrix = camera->m_Projection;
+		uniformBuffer.WorldMatrix = transform.ToMatrix();
+		GraphicsPipeline->BindPipeline(RHI, Frame->GetCommandBuffer(), Mesh, uniformBuffer);
+	});
 }
 
 void PVulkanSceneRenderer::Shutdown()
 {
-	Mesh->DestroyMesh(RHI);
-	delete Mesh;
-
 	GraphicsPipeline->DestroyPipeline(RHI);
-	delete GraphicsPipeline;
-
+	Mesh->DestroyMesh(RHI);
 	ImGui->Shutdown(RHI);
-	delete ImGui;
-	
 	DeferredFramePool->FreeFramePool(RHI);
-	delete DeferredFramePool;
-
 	ImmediateFramePool->FreeFramePool(RHI);
-	delete ImmediateFramePool;
-
 	RenderTarget->DestroyImage(RHI);
-	delete RenderTarget;
-
 	Swapchain->Shutdown(RHI);
+
+	delete Mesh;
+	delete GraphicsPipeline;
+	delete ImGui;
+	delete DeferredFramePool;
+	delete ImmediateFramePool;
+	delete RenderTarget;
 	delete Swapchain;
 }
 
@@ -125,9 +130,16 @@ void PVulkanSceneRenderer::Render()
 {
 	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
 	Frame->BeginFrame(RHI);
-	PrepareRenderTarget();
-	BindRenderTarget();
-	FinalizeRenderTarget();
+
+	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	RenderGraph->Execute(Frame->GetCommandBuffer()->GetVkCommandBuffer());
+	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	CopyImageRegion(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], RenderTarget->ImageExtent, Swapchain->GetVkExtent());
+	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+	ImGui->Bind(RHI, Frame->GetCommandBuffer(), Swapchain->GetSwapchainImageViews()[Frame->TransientFrameData.NextImageIndex]);
+
 	Frame->EndFrame(RHI);
 	DeferredFramePool->FrameIndex++;
 }
@@ -142,8 +154,9 @@ PVulkanImage* PVulkanSceneRenderer::GetRenderTarget() const
 	return RenderTarget;
 }
 
-void PVulkanSceneRenderer::DeferredSubmit()
+PVulkanRenderGraph * PVulkanSceneRenderer::GetRenderGraph() const
 {
+	return RenderGraph;
 }
 
 void PVulkanSceneRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer* CommandBuffer)>&& Func)
@@ -190,52 +203,6 @@ void PVulkanSceneRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuff
 	// The RenderFence will now block until all graphics commands have completed.
 	Result = vkQueueSubmit2(RHI->GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, ImmediateFramePool->Pool[0]->RenderFence);
 	Result = vkWaitForFences(RHI->GetDevice()->GetVkDevice(), 1, &ImmediateFramePool->Pool[0]->RenderFence, true, UINT64_MAX);
-}
-
-void PVulkanSceneRenderer::PrepareRenderTarget()
-{
-	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
-	
-	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-	VkClearColorValue ClearColorValue = { 0.0f, 0.0f, 0.0f, 1.0f };
-	VkImageSubresourceRange SubresourceRange = {};
-	SubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	SubresourceRange.baseMipLevel = 0;
-	SubresourceRange.levelCount = 1;
-	SubresourceRange.baseArrayLayer = 0;
-	SubresourceRange.layerCount = 1;
-	vkCmdClearColorImage(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_GENERAL, &ClearColorValue, 1, &SubresourceRange);
-
-	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-}
-
-void PVulkanSceneRenderer::BindRenderTarget()
-{
-	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
-
-	static Transform transform;
-	transform.m_Rotation.x += 0.0001f;
-	transform.m_Rotation.y += 0.0003f;
-
-	SUniformBufferObject uniformBuffer;
-	PCamera* camera = GetScene()->ActiveCamera;
-	uniformBuffer.ViewMatrix = camera->GetViewMatrix();
-	uniformBuffer.ProjectionMatrix = camera->m_Projection;
-	uniformBuffer.WorldMatrix = transform.ToMatrix();
-
-	GraphicsPipeline->BindPipeline(RHI, Frame->GetCommandBuffer(), Mesh, uniformBuffer);
-}
-
-void PVulkanSceneRenderer::FinalizeRenderTarget()
-{
-	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
-	
-	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	CopyImageRegion(Frame->GetCommandBuffer()->GetVkCommandBuffer(), RenderTarget->Image, Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], RenderTarget->ImageExtent, Swapchain->GetVkExtent());
-	ImGui->Bind(RHI, Frame->GetCommandBuffer(), Swapchain->GetSwapchainImageViews()[Frame->TransientFrameData.NextImageIndex]);
-	TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 }
 
 void PVulkanSceneRenderer::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
