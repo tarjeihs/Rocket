@@ -13,7 +13,7 @@
 	#define RK_DEBUGBREAK() __builtin_trap()
 #endif
 
-#ifdef _DEBUG
+#ifdef RK_DEBUG
 	#define RK_ENABLE_ASSERTS
 #endif
 
