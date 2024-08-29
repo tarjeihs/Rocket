@@ -18,22 +18,6 @@ bool PGenericInput::GetKeyPressedImpl(int32_t KeyCode)
     return State == GLFW_PRESS || State == GLFW_REPEAT;
 }
 
-bool PGenericInput::GetKeyHoldImpl(int32_t KeyCode, float Threshold)
-{
-    auto Now = std::chrono::steady_clock::now();
-
-    if (KeyPressData[KeyCode].bIsPressed)
-    {
-        auto Duration = std::chrono::duration<double>(Now - KeyPressData[KeyCode].Start).count();
-        if (Duration >= Threshold)
-        {
-            KeyPressData[KeyCode].bIsPressed = false;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool PGenericInput::GetMouseButtonPressedImpl(int32_t KeyCode)
 {
     auto Window = static_cast<GLFWwindow*>(GetWindow()->GetNativeWindow());

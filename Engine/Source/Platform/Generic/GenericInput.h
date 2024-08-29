@@ -6,7 +6,6 @@ class PGenericInput : public PInput
 {
 protected:
     virtual bool GetKeyPressedImpl(int32_t KeyCode) override;
-    virtual bool GetKeyHoldImpl(int32_t KeyCode, float Threshold) override;
     virtual bool GetMouseButtonPressedImpl(int32_t KeyCode) override;
 
     virtual float GetMouseXImpl() override;

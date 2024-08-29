@@ -25,20 +25,6 @@ void PGenericWindow::CreateNativeWindow()
 		{
 			glfwSetWindowShouldClose(Window, true);
 		}
-
-		if (Action == GLFW_PRESS)
-		{
-			SKeyState& KeyState = PInput::GetKeyState(KeyCode);
-			KeyState.Start = std::chrono::steady_clock::now();
-			KeyState.Action = EKeyAction::Press;
-		}
-
-		if (Action == GLFW_RELEASE)
-		{
-			SKeyState& KeyState = PInput::GetKeyState(KeyCode);
-			KeyState.Start = std::chrono::steady_clock::time_point();
-			KeyState.Action = EKeyAction::None;
-		}
 	});
 
 	glfwSetFramebufferSizeCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* GlfwWindow, int Width, int Height)
