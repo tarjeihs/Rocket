@@ -22,6 +22,7 @@ set(SPDLOG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/spdlog")
 set(VMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
+set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
 
 # Collect ImGui source files
 set(IMGUI_SRC
@@ -76,6 +77,7 @@ target_include_directories(Engine PRIVATE
     ${GLFW_INCLUDE_DIR}/include
     ${IMGUI_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}/backends
+    ${ENTT_INCLUDE_DIR}/src
 )
 
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
@@ -109,6 +111,8 @@ target_include_directories(Editor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Vendor
     ${Vulkan_INCLUDE_DIR}
     ${GLM_INCLUDE_DIR}
+    ${ENTT_INCLUDE_DIR}/src
+
 )
 
 target_link_libraries(Editor PRIVATE 
