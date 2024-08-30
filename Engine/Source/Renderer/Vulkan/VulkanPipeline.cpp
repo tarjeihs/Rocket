@@ -49,8 +49,10 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
     FragmentShader = new PVulkanShader();
     FragmentShader->CreateShader(RHI, WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
 
+    constexpr size_t StorageBufferSize = sizeof(SShaderStorageBufferObject) * 1024 * 10;
+    StorageBuffer = RHI->GetMemory()->CreateBuffer(StorageBufferSize, VMA_MEMORY_USAGE_CPU_TO_GPU, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
-    const size_t UniformBufferSize = sizeof(SUniformBufferObject);
+    constexpr size_t UniformBufferSize = sizeof(SUniformBufferObject);
     UniformBuffer = RHI->GetMemory()->CreateBuffer(UniformBufferSize, VMA_MEMORY_USAGE_CPU_TO_GPU, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
@@ -69,6 +71,7 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
 
     std::vector<PVulkanDescriptorSetLayout::EDescriptorSetLayoutType> LayoutTypes = 
     {
+        PVulkanDescriptorSetLayout::EDescriptorSetLayoutType::Storage,
         PVulkanDescriptorSetLayout::EDescriptorSetLayoutType::Uniform,
     };
 
@@ -77,7 +80,8 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
 
     DescriptorSet = new PVulkanDescriptorSet();
     DescriptorSet->CreateDescriptorSet(RHI, DescriptorSetLayout);
-    DescriptorSet->UseDescriptorUniformBuffer(RHI, UniformBuffer->Buffer, 0, sizeof(SUniformBufferObject), 0);
+    DescriptorSet->UseDescriptorStorageBuffer(RHI, StorageBuffer->Buffer, 0, VK_WHOLE_SIZE, 0);
+    DescriptorSet->UseDescriptorUniformBuffer(RHI, UniformBuffer->Buffer, 0, sizeof(SUniformBufferObject), 1);
 
     VkPushConstantRange UInt64PointerPushConstantRange{};
     UInt64PointerPushConstantRange.offset = 0;
@@ -206,6 +210,9 @@ void PVulkanGraphicsPipeline::DestroyPipeline(PVulkanRHI* RHI)
     RHI->GetMemory()->FreeBuffer(UniformBuffer);
     delete UniformBuffer;
 
+    RHI->GetMemory()->FreeBuffer(StorageBuffer);
+    delete StorageBuffer;
+
     vkDestroyPipeline(RHI->GetDevice()->GetVkDevice(), Pipeline, nullptr);
 }
 
@@ -256,7 +263,8 @@ void PVulkanGraphicsPipeline::BindPipeline(PVulkanRHI* RHI, PVulkanCommandBuffer
     vkCmdSetScissor(CommandBuffer->GetVkCommandBuffer(), 0, 1, &Scissor);
 
     vkCmdBindPipeline(CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-    vkCmdBindDescriptorSets(CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(), 0, 1, &DescriptorSetPointer, 0, nullptr);
+    vkCmdBindDescriptorSets(CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(),
+        0, 1, &DescriptorSetPointer, 0, nullptr);
     
     Mesh->Bind(RHI, CommandBuffer, PipelineLayout);
     Mesh->Draw(RHI, CommandBuffer);

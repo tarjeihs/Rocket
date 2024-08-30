@@ -42,7 +42,9 @@ protected:
 	PVulkanShader* VertexShader;
 	PVulkanShader* FragmentShader;
 
-	SBuffer* UniformBuffer;
+public:
+	SBuffer* StorageBuffer; // Array of instance data (eg. model matrix)
+	SBuffer* UniformBuffer; // Global data (eg. skylight, projection and view matrix)
 
 private:
 	VkPipeline Pipeline;

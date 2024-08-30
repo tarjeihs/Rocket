@@ -66,6 +66,7 @@ void PVulkanMesh::Bind(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, PVu
 {
 	SUInt64PointerPushConstant PushConstant;
 	PushConstant.DeviceAddress = DeviceAddress;
+	PushConstant.ObjectId = 0;
 	vkCmdPushConstants(CommandBuffer->GetVkCommandBuffer(), PipelineLayout->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
 	vkCmdBindIndexBuffer(CommandBuffer->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
 }

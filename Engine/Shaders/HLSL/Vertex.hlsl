@@ -14,7 +14,14 @@ struct VS_OUTPUT
     float2 outUV : TEXCOORD0;
 };
 
-cbuffer UBO : register(b0) // Binding 1 in Vulkan
+struct SShaderStorageBufferObject
+{
+    float4x4 ModelMatrix;
+};
+
+StructuredBuffer<SShaderStorageBufferObject> SSBO : register(t0);
+
+cbuffer UBO : register(b1) // Binding 1 in Vulkan
 {
     float4x4 m_ModelMatrix;
     float4x4 m_ViewMatrix;
@@ -24,6 +31,7 @@ cbuffer UBO : register(b0) // Binding 1 in Vulkan
 struct PushConstant 
 {
     uint64_t BufferDeviceAddress;
+    uint ObjectID;
 };
 
 [[vk::push_constant]]
@@ -31,7 +39,8 @@ PushConstant pushConstant;
 
 #define VK_RAW_BUFFER_LOAD(Type, Addr, Offset, Position) vk::RawBufferLoad<Type>(Addr + Offset + Position)
 
-VS_OUTPUT main(uint vertexIndex : SV_VertexID) {
+VS_OUTPUT main(uint vertexIndex : SV_VertexID) 
+{
     VS_OUTPUT output;
 
     // Size of a single vertex in the buffer
@@ -47,7 +56,7 @@ VS_OUTPUT main(uint vertexIndex : SV_VertexID) {
     float uv_y = vk::RawBufferLoad<float>(pushConstant.BufferDeviceAddress + vertexOffset + 28);
     float4 color = vk::RawBufferLoad<float4>(pushConstant.BufferDeviceAddress + vertexOffset + 32);
 
-    float4 worldPosition = mul(m_ModelMatrix, float4(pos, 1.0));
+    float4 worldPosition = mul(SSBO[0].ModelMatrix, float4(pos, 1.0));
     float4 viewPosition = mul(m_ViewMatrix, worldPosition);
     output.position = mul(m_ProjectionMatrix, viewPosition);
     output.outColor = color.xyz;  // Explicitly truncate the float4 to float3

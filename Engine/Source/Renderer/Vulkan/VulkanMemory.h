@@ -15,6 +15,11 @@ struct SBuffer
 	VmaAllocationInfo AllocationInfo;
 };
 
+struct SShaderStorageBufferObject
+{
+	alignas(16) glm::mat4 ModelMatrix;
+};
+
 struct SUniformBufferObject
 {
 	glm::mat4 WorldMatrix;
@@ -25,6 +30,7 @@ struct SUniformBufferObject
 struct SUInt64PointerPushConstant
 {
 	VkDeviceAddress DeviceAddress;
+	uint32_t ObjectId;
 };
 
 class PVulkanMemory
@@ -42,6 +48,7 @@ public:
 
 	SBuffer* CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
 	void FreeBuffer(SBuffer* Buffer);
+	void UploadBuffer(SBuffer* Buffer, void* Data, size_t Size);
 
 	VmaAllocator GetMemoryAllocator() const;
 	PVulkanDescriptorPool* GetDescriptorPool() const;

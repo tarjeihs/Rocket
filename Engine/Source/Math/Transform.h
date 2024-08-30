@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-struct Transform
+struct STransform
 {
 	glm::vec3 m_Translation = glm::vec3(0.0f);
 	glm::vec3 m_Rotation = glm::vec3(0.0f);

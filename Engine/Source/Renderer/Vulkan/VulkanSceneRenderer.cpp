@@ -85,12 +85,25 @@ void PVulkanSceneRenderer::Init()
 	{
 		PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
 
-		static Transform transform;
+		static STransform Transform;
+		Transform.m_Rotation.x += 0.0001f;
+		Transform.m_Rotation.y += 0.0003f;
+
+		SShaderStorageBufferObject SSBO;
+		PCamera* camera = GetScene()->ActiveCamera;
+		SSBO.ModelMatrix = Transform.ToMatrix();
+		RHI->GetMemory()->UploadBuffer(GraphicsPipeline->StorageBuffer, &SSBO, sizeof(SShaderStorageBufferObject));
+
+		// This does not work atm because of us not actually passing 1024 * 10 elements, but one single element..
+		//RHI->GetMemory()->UploadBuffer(GraphicsPipeline->StorageBuffer, &SSBO, sizeof(SShaderStorageBufferObject) * 1024 * 10);
+
+
+
+		static STransform transform;
 		transform.m_Rotation.x += 0.0001f;
 		transform.m_Rotation.y += 0.0003f;
 
 		SUniformBufferObject uniformBuffer;
-		PCamera* camera = GetScene()->ActiveCamera;
 		uniformBuffer.ViewMatrix = camera->GetViewMatrix();
 		uniformBuffer.ProjectionMatrix = camera->m_Projection;
 		uniformBuffer.WorldMatrix = transform.ToMatrix();

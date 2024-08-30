@@ -44,7 +44,7 @@ SBuffer* PVulkanMemory::CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, Vk
 	AllocationCreateInfo.usage = MemoryUsage;
 	AllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	SBuffer* Buffer = new SBuffer();
+	auto* Buffer = new SBuffer();
 
 	VkResult Result = vmaCreateBuffer(MemoryAllocator, &BufferCreateInfo, &AllocationCreateInfo, &Buffer->Buffer, &Buffer->Allocation, &Buffer->AllocationInfo);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate buffer.");
@@ -55,6 +55,14 @@ SBuffer* PVulkanMemory::CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, Vk
 void PVulkanMemory::FreeBuffer(SBuffer* Buffer)
 {
 	vmaDestroyBuffer(MemoryAllocator, Buffer->Buffer, Buffer->Allocation);
+}
+
+void PVulkanMemory::UploadBuffer(SBuffer* Buffer, void* Data, size_t Size)
+{
+	void* MappedData;
+	vmaMapMemory(MemoryAllocator, Buffer->Allocation, &MappedData);
+	memcpy(MappedData, Data, Size);
+	vmaUnmapMemory(RHI->GetMemory()->GetMemoryAllocator(), Buffer->Allocation);
 }
 
 VmaAllocator PVulkanMemory::GetMemoryAllocator() const
