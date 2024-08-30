@@ -6,7 +6,7 @@
 #include "Core/Assert.h"
 #include "Core/Input.h"
 #include "Core/Camera.h"
-#include "Core/Scene.h"
+#include "Scene/Scene.h"
 #include "Renderer/VulkanRHI.h"
 
 void PGenericWindow::CreateNativeWindow()
@@ -50,7 +50,7 @@ void PGenericWindow::CreateNativeWindow()
 			glfwWaitEvents();
 		}
 
-		GetScene()->ActiveCamera->SetPerspectiveProjection(glm::radians(66.0f), Window->GetAspectRatio(), 0.1f, 1000.f);
+		GetScene()->GetCamera()->SetPerspectiveProjection(glm::radians(66.0f), Window->GetAspectRatio(), 0.1f, 1000.f);
 		GetRHI()->Resize();
 	});
 
@@ -58,7 +58,7 @@ void PGenericWindow::CreateNativeWindow()
 	{
 		if (Focused)
 		{
-			//glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
@@ -66,7 +66,7 @@ void PGenericWindow::CreateNativeWindow()
 		}
 		else 
 		{
-			//glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
