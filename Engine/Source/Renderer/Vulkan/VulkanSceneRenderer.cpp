@@ -2,7 +2,7 @@
 
 #include "Core/Assert.h"
 #include "Core/Camera.h"
-#include "Core/Scene.h"
+#include "Scene/Scene.h"
 #include "Math/Transform.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
@@ -86,11 +86,11 @@ void PVulkanSceneRenderer::Init()
 		PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
 
 		static STransform Transform;
-		Transform.m_Rotation.x += 0.0001f;
-		Transform.m_Rotation.y += 0.0003f;
+		Transform.Rotation.x += 0.0001f;
+		Transform.Rotation.y += 0.0003f;
 
 		SShaderStorageBufferObject SSBO;
-		PCamera* camera = GetScene()->ActiveCamera;
+		PCamera* camera = GetScene()->GetCamera();
 		SSBO.ModelMatrix = Transform.ToMatrix();
 		RHI->GetMemory()->UploadBuffer(GraphicsPipeline->StorageBuffer, &SSBO, sizeof(SShaderStorageBufferObject));
 
@@ -100,8 +100,8 @@ void PVulkanSceneRenderer::Init()
 
 
 		static STransform transform;
-		transform.m_Rotation.x += 0.0001f;
-		transform.m_Rotation.y += 0.0003f;
+		transform.Rotation.x += 0.0001f;
+		transform.Rotation.y += 0.0003f;
 
 		SUniformBufferObject uniformBuffer;
 		uniformBuffer.ViewMatrix = camera->GetViewMatrix();

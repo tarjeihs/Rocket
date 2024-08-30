@@ -2,9 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Core/Assert.h"
 #include "Core/Logger.h"
-#include "Core/Scene.h"
+#include "Scene/Scene.h"
 #include "Core/Subsystem.h"
 #include "Platform/Generic/GenericWindow.h"
 #include "Renderer/VulkanRHI.h"
