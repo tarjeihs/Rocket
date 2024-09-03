@@ -23,6 +23,7 @@ set(VMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
 set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
+set(TINYGLTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/tinygltf")
 
 # Collect ImGui source files
 set(IMGUI_SRC
@@ -78,6 +79,7 @@ target_include_directories(Engine PRIVATE
     ${IMGUI_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}/backends
     ${ENTT_INCLUDE_DIR}/src
+    ${TINYGLTF_INCLUDE_DIR}
 )
 
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
