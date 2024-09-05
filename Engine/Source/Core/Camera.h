@@ -1,14 +1,34 @@
-#pragma once
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
+#pragma once
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
+
+#include "Renderer/VulkanRHI.h"
+#include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanImGui.h"
+
+enum class ECameraProjectionMode 
+{ 
+	Perspective, Orthographic
+};
 
 class PCamera
 {
 public:
+	PCamera() 
+	{
+		Settings.ProjectionMode = ECameraProjectionMode::Perspective;
+    	Settings.FoVY = 66.0f;
+    	Settings.ZNear = 0.1f;
+    	Settings.ZFar = 100.0f;
+
+		ApplySettings();
+	}
+
 	void SetOrthographicProjection(float Zoom, float AspectRatio, float ZNear, float ZFar)
 	{
 		m_Projection = glm::ortho(-AspectRatio * Zoom, AspectRatio * Zoom, -1.0f * Zoom, 1.0f * Zoom, ZNear, ZFar);
@@ -32,6 +52,15 @@ public:
 		m_ViewMatrix = glm::lookAt(Position, Position + Direction, Up);
 	}
 
+	void ApplySettings()
+	{
+		switch (Settings.ProjectionMode)
+		{
+			case ECameraProjectionMode::Orthographic: SetOrthographicProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
+			case ECameraProjectionMode::Perspective: SetPerspectiveProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
+		}
+	}
+
 	inline const glm::mat4& GetViewMatrix() const
 	{
 		return m_ViewMatrix;
@@ -42,7 +71,16 @@ public:
 		return m_Projection;
 	}
 
-public:
+	struct SCameraSettings 
+	{
+		ECameraProjectionMode ProjectionMode;
+		float FoVY;
+		float AspectRatio;
+		float ZNear;
+		float ZFar;
+	} Settings;
+
+private:
 	glm::mat4 m_Projection = glm::identity<glm::mat4>();
 	glm::mat4 m_ViewMatrix = glm::identity<glm::mat4>();
 };

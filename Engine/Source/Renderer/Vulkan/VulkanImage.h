@@ -23,6 +23,12 @@ public:
 	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
 	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
 
+	VkImage GetVkImage() const;
+	VkImageView GetVkImageView() const;
+	VkExtent2D GetImageExtent2D() const;
+	VkFormat GetVkFormat() const;
+
+private:
 	VkImage ImageHandle;
 	VkImageView ImageViewHandle;
 	VmaAllocation MemoryAllocation;

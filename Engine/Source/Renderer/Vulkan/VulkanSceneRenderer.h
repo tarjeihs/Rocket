@@ -14,8 +14,7 @@ class PVulkanCommandBuffer;
 class PVulkanSceneRenderer
 {
 public:
-	PVulkanSceneRenderer(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanSceneRenderer()
 	{
 		Swapchain = nullptr;
 		DrawImage = nullptr;
@@ -29,10 +28,11 @@ public:
 	void Render();
 
 	PVulkanSwapchain* GetSwapchain() const;
-	PVulkanImage* GetRenderTarget() const;
+	PVulkanImage* GetDrawImage() const;
 	PVulkanImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
 	PVulkanFramePool* GetFramePool() const;
+	PVulkanImGui* GetImGui() const;
 
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
@@ -44,7 +44,4 @@ private:
 	PVulkanFramePool* DeferredFramePool;
 	PVulkanFramePool* ImmediateFramePool;
 	PVulkanImGui* ImGui;
-
-private:
-	PVulkanRHI* RHI;
 };

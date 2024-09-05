@@ -11,10 +11,10 @@
 void PVulkanDevice::Init()
 {
 	uint32_t DeviceCount = 0;
-	vkEnumeratePhysicalDevices(RHI->GetInstance()->GetVkInstance(), &DeviceCount, 0);
+	vkEnumeratePhysicalDevices(GetRHI()->GetInstance()->GetVkInstance(), &DeviceCount, 0);
 
 	std::vector<VkPhysicalDevice> PhysicalDevices(DeviceCount);
-	vkEnumeratePhysicalDevices(RHI->GetInstance()->GetVkInstance(), &DeviceCount, PhysicalDevices.data());
+	vkEnumeratePhysicalDevices(GetRHI()->GetInstance()->GetVkInstance(), &DeviceCount, PhysicalDevices.data());
 
 	for (VkPhysicalDevice PhysicalDevice : PhysicalDevices)
 	{
@@ -28,7 +28,7 @@ void PVulkanDevice::Init()
 		{
 			const VkQueueFamilyProperties& FamilyProperty = QueueFamilies[Index];
 			VkBool32 PresentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, Index, RHI->GetInstance()->GetVkSurfaceKHR(), &PresentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, Index, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentSupport);
 			
 			if (FamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
@@ -52,7 +52,7 @@ void PVulkanDevice::Init()
 		std::vector<VkExtensionProperties> AvailableExtensions(ExtensionCount);
 		vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
 
-		bool bExtensionSupport = std::all_of(RHI->PhysicalDeviceExtensions.begin(), RHI->PhysicalDeviceExtensions.end(), [&AvailableExtensions](const std::string& RequiredExtension)
+		bool bExtensionSupport = std::all_of(GetRHI()->Extensions.PhysicalDeviceExtensions.begin(), GetRHI()->Extensions.PhysicalDeviceExtensions.end(), [&AvailableExtensions](const std::string& RequiredExtension)
 		{
 			return std::any_of(AvailableExtensions.begin(), AvailableExtensions.end(), [&RequiredExtension](const VkExtensionProperties& Extension)
 			{
@@ -65,19 +65,19 @@ void PVulkanDevice::Init()
 			uint32_t FormatCount;
 			uint32_t PresentModeCount;
 		
-			vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, RHI->GetInstance()->GetVkSurfaceKHR(), &FormatCount, nullptr);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, RHI->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, nullptr);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &FormatCount, nullptr);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, nullptr);
 
 			if (FormatCount)
 			{
 				SurfaceFormats.resize(FormatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, RHI->GetInstance()->GetVkSurfaceKHR(), &FormatCount, SurfaceFormats.data());
+				vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &FormatCount, SurfaceFormats.data());
 			}
 
 			if (PresentModeCount)
 			{
 				PresentModes.resize(PresentModeCount);
-				vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, RHI->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, PresentModes.data());
+				vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, PresentModes.data());
 			}
 
 			if (!SurfaceFormats.empty() && !PresentModes.empty() && GraphicsFamily.has_value() && PresentFamily.has_value())
@@ -131,10 +131,10 @@ void PVulkanDevice::Init()
 	DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
 	DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
 	DeviceCreateInfo.pNext = &Features_1_3;
-	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(RHI->PhysicalDeviceExtensions.size());
-	DeviceCreateInfo.ppEnabledExtensionNames = RHI->PhysicalDeviceExtensions.data();
-	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(RHI->ValidationLayerExtensions.size());
-	DeviceCreateInfo.ppEnabledLayerNames = RHI->ValidationLayerExtensions.data();
+	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->Extensions.PhysicalDeviceExtensions.size());
+	DeviceCreateInfo.ppEnabledExtensionNames = GetRHI()->Extensions.PhysicalDeviceExtensions.data();
+	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetRHI()->Extensions.ValidationLayerExtensions.size());
+	DeviceCreateInfo.ppEnabledLayerNames = GetRHI()->Extensions.ValidationLayerExtensions.data();
 
 	VkResult Result = vkCreateDevice(GPU, &DeviceCreateInfo, nullptr, &Device);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create logical device.");
@@ -191,7 +191,7 @@ const std::vector<VkPresentModeKHR>& PVulkanDevice::GetPresentModes() const
 VkSurfaceCapabilitiesKHR PVulkanDevice::GetSurfaceCapabilities() const
 {
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GPU, RHI->GetInstance()->GetVkSurfaceKHR(), &SurfaceCapabilities);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GPU, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &SurfaceCapabilities);
 	return SurfaceCapabilities;
 }
 

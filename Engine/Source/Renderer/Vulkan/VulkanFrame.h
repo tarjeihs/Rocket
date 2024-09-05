@@ -17,11 +17,11 @@ struct FTransientFrameData
 class PVulkanFrame
 {
 public:
-	void CreateFrame(PVulkanRHI* RHI);
-	void DestroyFrame(PVulkanRHI* RHI);
+	void CreateFrame();
+	void DestroyFrame();
 	
-	void BeginFrame(PVulkanRHI* RHI);
-	void EndFrame(PVulkanRHI* RHI);
+	void BeginFrame();
+	void EndFrame();
 
 	PVulkanCommandBuffer* GetCommandBuffer() const;
 	
@@ -31,7 +31,6 @@ public:
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
 
-	//std::optional<FTransientFrameData> TransientFrameData;
 	FTransientFrameData TransientFrameData;
 };
 
@@ -44,8 +43,8 @@ public:
 		FrameIndex = 0;
 	}
 
-	void CreateFramePool(PVulkanRHI* InRHI);
-	void FreeFramePool(PVulkanRHI* InRHI);
+	void CreateFramePool();
+	void FreeFramePool();
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

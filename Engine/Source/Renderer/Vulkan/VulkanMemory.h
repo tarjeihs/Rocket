@@ -6,7 +6,6 @@
 #include <vulkan/vulkan_core.h>
 
 class PVulkanDescriptorPool;
-class PVulkanRHI;
 
 struct SBuffer
 {
@@ -37,8 +36,7 @@ struct SUInt64PointerPushConstant
 class PVulkanMemory
 {
 public:
-	PVulkanMemory(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanMemory()
 	{
 		MemoryAllocator = nullptr;
 		DescriptorPool = nullptr;
@@ -47,9 +45,9 @@ public:
 	void Init();
 	void Shutdown();
 
-	void AllocateBuffer(SBuffer*& Buffer, size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
-	void FreeBuffer(SBuffer* Buffer);
-	void UploadBuffer(SBuffer* Buffer, void* Data, size_t Size);
+	//void AllocateBuffer(SBuffer& Buffer, size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
+	//void FreeBuffer(SBuffer& Buffer);
+	//void UploadBuffer(SBuffer& Buffer, void* Data, size_t Size);
 
 	VmaAllocator GetMemoryAllocator() const;
 	PVulkanDescriptorPool* GetDescriptorPool() const;
@@ -57,7 +55,4 @@ public:
 protected:
 	VmaAllocator MemoryAllocator;
 	PVulkanDescriptorPool* DescriptorPool;
-
-private:
-	PVulkanRHI* RHI;
 };

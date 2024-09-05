@@ -4,18 +4,16 @@
 #include <cstring>
 
 #include "VulkanMesh.h"
-#include "Renderer/VulkanRHI.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 
 void PVulkanMaterial::Init()
 {
     GraphicsPipeline = std::make_shared<PVulkanGraphicsPipeline>();
-    GraphicsPipeline->CreatePipeline(GetRHI<PVulkanRHI>());
+    GraphicsPipeline->CreatePipeline();
 }
 
 void PVulkanMaterial::Destroy()
 {
-    GraphicsPipeline->DestroyPipeline(GetRHI<PVulkanRHI>());
+    GraphicsPipeline->DestroyPipeline();
 }
 
 void PVulkanMaterial::Bind(STransform Transform) const

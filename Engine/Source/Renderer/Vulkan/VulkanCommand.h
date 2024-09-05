@@ -2,9 +2,6 @@
 
 #include <vulkan/vulkan_core.h>
 
-class PVulkanRHI;
-class PVulkanFrame;
-
 class PVulkanCommandPool
 {
 public:
@@ -23,16 +20,12 @@ public:
 	void Create(VkDevice Device, VkCommandPool CommandPool);
 	void Destroy(VkDevice Device, VkCommandPool CommandPool);
 
-	VkCommandBuffer GetVkCommandBuffer() const;
-
+	void ResetCommandBuffer();
 	void BeginCommandBuffer();
 	void EndCommandBuffer();
+	
+	VkCommandBuffer GetVkCommandBuffer() const;
 
 private:
 	VkCommandBuffer CommandBuffer;
-};
-
-struct SVulkanCommandQueue
-{
-	
 };

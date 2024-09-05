@@ -18,13 +18,13 @@ void PEngine::Start()
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
-	Scene = new PScene();
-	RHI = new PVulkanRHI();
 	Window = new PGenericWindow(WindowSpecification);
+	RHI = new PVulkanRHI();
+	Scene = new PScene();
 
 	Window->CreateNativeWindow();
-	Scene->Init();
 	RHI->Init();
+	Scene->Init();
 
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
 	{

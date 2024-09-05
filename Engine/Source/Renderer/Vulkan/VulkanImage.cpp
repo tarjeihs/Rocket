@@ -27,8 +27,6 @@ void PVulkanImage::Reset()
 
 void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
 {
-	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-
 	VkImageCreateInfo ImageCreateInfo{};
 	ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	ImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -44,13 +42,11 @@ void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
 	VmaAllocationCreateInfo ImageAllocationCreateInfo{};
 	ImageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	ImageAllocationCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vmaCreateImage(RHI->GetMemory()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
+	vmaCreateImage(GetRHI()->GetMemory()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
 }
 
 void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
 {
-	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-
 	VkImageViewCreateInfo ImageViewCreateInfo{};
 	ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -66,7 +62,7 @@ void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
 	ImageViewCreateInfo.subresourceRange.layerCount = 1;
 	ImageViewCreateInfo.subresourceRange.aspectMask = ImageViewAspectFlags;
 
-	VkResult Result = vkCreateImageView(RHI->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViewHandle);
+	VkResult Result = vkCreateImageView(GetRHI()->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViewHandle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 }
 
@@ -84,16 +80,12 @@ void PVulkanImage::ApplyImageView(VkImageView ImageView)
 
 void PVulkanImage::DestroyImage()
 {
-	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-
-	vmaDestroyImage(RHI->GetMemory()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
+	vmaDestroyImage(GetRHI()->GetMemory()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
 }
 
 void PVulkanImage::DestroyImageView()
 {
-	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-
-	vkDestroyImageView(RHI->GetDevice()->GetVkDevice(), ImageViewHandle, nullptr);
+	vkDestroyImageView(GetRHI()->GetDevice()->GetVkDevice(), ImageViewHandle, nullptr);
 }
 
 void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
@@ -158,4 +150,24 @@ void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, 
 	ImageBlitInfo.pRegions = &ImageBlit;
 
 	vkCmdBlitImage2(CommandBuffer, &ImageBlitInfo);
+}
+
+VkImage PVulkanImage::GetVkImage() const
+{
+	return ImageHandle;
+}
+
+VkImageView PVulkanImage::GetVkImageView() const
+{
+	return ImageViewHandle;
+}
+
+VkExtent2D PVulkanImage::GetImageExtent2D() const
+{
+	return ImageExtent;
+}
+
+VkFormat PVulkanImage::GetVkFormat() const
+{
+	return ImageFormat;
 }

@@ -4,13 +4,10 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-class PVulkanRHI;
-
 class PVulkanDevice
 {
 public:
-    PVulkanDevice(PVulkanRHI* InRHI)
-        : RHI(InRHI)
+    PVulkanDevice()
     {
         GPU = nullptr;
         Device = nullptr;
@@ -35,8 +32,6 @@ public:
     VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const;
 
 private:
-    PVulkanRHI* RHI;
-
     VkDevice Device;
     VkPhysicalDevice GPU;
 

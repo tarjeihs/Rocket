@@ -83,5 +83,5 @@ inline float IWindow::GetAspectRatio() const
 
 static inline IWindow* GetWindow()
 {
-	return PEngine::Get()->GetWindow();
+	return GetEngine()->GetWindow();
 }

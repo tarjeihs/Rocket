@@ -64,5 +64,5 @@ private:
 
 inline static PScene* GetScene()
 {
-	return PEngine::Get()->GetScene();
+	return GetEngine()->GetScene();
 }

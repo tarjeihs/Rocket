@@ -13,7 +13,7 @@ class IRHI;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1920;
-static constexpr uint32_t VIEWPORT_HEIGHT = 1080;
+static constexpr uint32_t VIEWPORT_HEIGHT = 1200;
 
 class PEngine
 {
@@ -24,26 +24,23 @@ public:
 	void Run();
 	void Stop();
 
-	inline IWindow* GetWindow();
 	inline PScene* GetScene();
+	inline IWindow* GetWindow();
 	inline IRHI* GetRHI();
 	
-	static PEngine* Get()
-	{
-		return GEngine;
-	}
-
+	inline friend PEngine* GetEngine();
+	
 private:
+	PScene* Scene;
 	IWindow* Window;
 	IRHI* RHI;
-	PScene* Scene;
 
 	static PEngine* GEngine;
 };
 
 inline PScene* PEngine::GetScene()
 {
-	return PEngine::Get()->Scene;
+	return Scene;
 }
 
 inline IRHI* PEngine::GetRHI()
@@ -53,5 +50,10 @@ inline IRHI* PEngine::GetRHI()
 
 inline IWindow* PEngine::GetWindow()
 {
-	return PEngine::Get()->Window;
+	return Window;
+}
+
+inline PEngine* GetEngine() 
+{
+	return PEngine::GEngine;
 }

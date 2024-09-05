@@ -33,9 +33,6 @@ void PVulkanMesh::Cleanup()
 
 void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices)
 {
-    const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-    const PVulkanMemory* Memory = RHI->GetMemory();
-
     const size_t VertexBufferSize = Vertices.size() * sizeof(SVertex);
     const size_t IndexBufferSize = Indices.size() * sizeof(uint32_t);
 
@@ -48,20 +45,20 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
     StagingBuffer->Allocate(VertexBufferSize + IndexBufferSize);
 
     void* Data = nullptr;
-    vmaMapMemory(Memory->GetMemoryAllocator(), StagingBuffer->Allocation, &Data);
+    vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), StagingBuffer->Allocation, &Data);
     memcpy(Data, Vertices.data(), VertexBufferSize);
     memcpy((char*)Data + VertexBufferSize, Indices.data(), IndexBufferSize);
-    vmaUnmapMemory(Memory->GetMemoryAllocator(), StagingBuffer->Allocation);
+    vmaUnmapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), StagingBuffer->Allocation);
 
 
     VkBufferDeviceAddressInfo BufferDeviceAddressInfo{};
     BufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     BufferDeviceAddressInfo.buffer = VertexBuffer->Buffer;
-    DeviceAddress64 = vkGetBufferDeviceAddress(RHI->GetDevice()->GetVkDevice(), &BufferDeviceAddressInfo);
+    DeviceAddress64 = vkGetBufferDeviceAddress(GetRHI()->GetDevice()->GetVkDevice(), &BufferDeviceAddressInfo);
 
     // Copy vertex and index data from the staging buffer (in CPU memory) immediately but synchronously to the GPU-only buffers, ensuring the data is guaranteed to be in GPU memory and ready for use.
     // TODO: Move ImmediateSubmit into command buffer management class
-    RHI->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
+    GetRHI()->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
     {
         VkBufferCopy vertexCopy{ 0 };
         vertexCopy.dstOffset = 0;
@@ -81,11 +78,6 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
 
 void PVulkanMesh::Draw(const STransform& Transform)
 {
-    const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-    const PVulkanSceneRenderer* SceneRenderer = RHI->GetSceneRenderer();
-    const PVulkanFramePool* FramePool = SceneRenderer->GetFramePool();
-    const PVulkanFrame* Frame = FramePool->Pool[FramePool->FrameIndex % 2];
-
     glm::mat4 ModelMatrix = Transform.ToMatrix();
     glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelMatrix));
 
@@ -94,7 +86,8 @@ void PVulkanMesh::Draw(const STransform& Transform)
     Instance.NormalMatrix = NormalMatrix;
 
     BufferData.push_back(Instance);
-    GetRHI<PVulkanRHI>()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer,&Instance, sizeof(SShaderStorageBufferObject));
+    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer,&Instance, sizeof(SShaderStorageBufferObject));
+    Material->GraphicsPipeline->StorageBuffer->Update(&Instance, sizeof(Instance));
 
     //SubmitData.push_back([&]()
     //{
@@ -103,7 +96,8 @@ void PVulkanMesh::Draw(const STransform& Transform)
         PushConstant.ObjectId = SubmitData.size();
 
         Material->Bind(Transform);
-
+        
+        const PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetFramePool()->FrameIndex % 2];
         vkCmdPushConstants(Frame->CommandBuffer->GetVkCommandBuffer(), Material->GraphicsPipeline->GetPipelineLayout()->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
         vkCmdBindIndexBuffer(Frame->CommandBuffer->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(Frame->CommandBuffer->GetVkCommandBuffer(), static_cast<size_t>(IndexBuffer->AllocationInfo.size) / sizeof(uint32_t), 1, 0, 0, 0);
@@ -255,8 +249,7 @@ void PVulkanMesh::BeginFrame()
 
 void PVulkanMesh::EndFrame()
 {
-    GetRHI<PVulkanRHI>()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer,
-        BufferData.data(), sizeof(SShaderStorageBufferObject) * 1);
+    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer, BufferData.data(), sizeof(SShaderStorageBufferObject) * 1);
 
     for (const std::function<void()>& Func : SubmitData)
     {

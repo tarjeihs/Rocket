@@ -6,6 +6,7 @@
 
 #include "Core/Window.h"
 #include "Core/Engine.h"
+#include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
@@ -14,7 +15,7 @@
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 
-void PVulkanImGui::Init(PVulkanRHI* RHI)
+void PVulkanImGui::Init()
 {
 	std::vector<SVulkanDescriptorPoolRatio> Sizes = {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -31,18 +32,18 @@ void PVulkanImGui::Init(PVulkanRHI* RHI)
 	};
 
 	DescriptorPool = new PVulkanDescriptorPool();
-	DescriptorPool->CreatePool(RHI, 1000, Sizes, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
+	DescriptorPool->CreatePool(1000, Sizes, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
 
-	VkFormat ColorAttachmentFormatPointer = RHI->GetSceneRenderer()->GetSwapchain()->GetSurfaceFormat().format;
+	VkFormat ColorAttachmentFormatPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSurfaceFormat().format;
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindow()->GetNativeWindow(), true);
 
 	ImGui_ImplVulkan_InitInfo ImGuiInitInfo{};
-	ImGuiInitInfo.Instance = RHI->GetInstance()->GetVkInstance();
-	ImGuiInitInfo.PhysicalDevice = RHI->GetDevice()->GetVkPhysicalDevice();
-	ImGuiInitInfo.Device = RHI->GetDevice()->GetVkDevice();
-	ImGuiInitInfo.Queue = RHI->GetDevice()->GetGraphicsQueue();
+	ImGuiInitInfo.Instance = GetRHI()->GetInstance()->GetVkInstance();
+	ImGuiInitInfo.PhysicalDevice = GetRHI()->GetDevice()->GetVkPhysicalDevice();
+	ImGuiInitInfo.Device = GetRHI()->GetDevice()->GetVkDevice();
+	ImGuiInitInfo.Queue = GetRHI()->GetDevice()->GetGraphicsQueue();
 	ImGuiInitInfo.DescriptorPool = DescriptorPool->GetVkDescriptorPool();
 	ImGuiInitInfo.MinImageCount = 3;
 	ImGuiInitInfo.ImageCount = 3;
@@ -56,23 +57,23 @@ void PVulkanImGui::Init(PVulkanRHI* RHI)
 	ImGui_ImplVulkan_CreateFontsTexture();
 }
 
-void PVulkanImGui::Shutdown(PVulkanRHI* RHI)
+void PVulkanImGui::Shutdown()
 {
 	ImGui_ImplVulkan_Shutdown();
 	
-	DescriptorPool->DestroyPool(RHI);
+	DescriptorPool->DestroyPool();
 	delete DescriptorPool;
 }
 
-void PVulkanImGui::Bind(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView)
+void PVulkanImGui::Bind(PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView)
 {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	ImGui::Begin("Metrics");
-	ImGui::Text("Frame Rate: %f", 1.0f / PEngine::Get()->Timestep.GetDeltaTime());
-	ImGui::Text("Frame Time: %fms", PEngine::Get()->Timestep.GetDeltaTime());
-	ImGui::Text("Engine Time: %fs", PEngine::Get()->Timestep.GetElapsedTime());
+	ImGui::Text("Frame Rate: %f", 1.0f / GetEngine()->Timestep.GetDeltaTime());
+	ImGui::Text("Frame Time: %fms", GetEngine()->Timestep.GetDeltaTime());
+	ImGui::Text("Engine Time: %fs", GetEngine()->Timestep.GetElapsedTime());
 	ImGui::End();
 	ImGui::Render();
 
@@ -89,7 +90,7 @@ void PVulkanImGui::Bind(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, Vk
 	RenderingInfo.pNext = nullptr;
 	RenderingInfo.flags = 0;
 	RenderingInfo.renderArea.offset = { 0, 0 };
-	RenderingInfo.renderArea.extent = RHI->GetSceneRenderer()->GetSwapchain()->GetVkExtent();
+	RenderingInfo.renderArea.extent = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkExtent();
 	RenderingInfo.layerCount = 1;
 	RenderingInfo.viewMask = 0;
 	RenderingInfo.colorAttachmentCount = 1;

@@ -15,9 +15,9 @@ struct SVulkanDescriptorPoolRatio
 class PVulkanDescriptorPool
 {
 public:
-    void CreatePool(PVulkanRHI* RHI, uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags = 0);
-    void DestroyPool(PVulkanRHI* RHI);
-    void ResetPool(PVulkanRHI* RHI);
+    void CreatePool(uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags = 0);
+    void DestroyPool();
+    void ResetPool();
 
     VkDescriptorPool GetVkDescriptorPool() const;
 
@@ -30,8 +30,8 @@ class PVulkanDescriptorSetLayout
 public:
     enum class EDescriptorSetLayoutType { Storage, Uniform };
 
-    void CreateDescriptorSetLayout(PVulkanRHI* RHI, std::vector<EDescriptorSetLayoutType> LayoutTypes);
-    void FreeDescriptorSetLayout(PVulkanRHI* RHI);
+    void CreateDescriptorSetLayout(std::vector<EDescriptorSetLayoutType> LayoutTypes);
+    void FreeDescriptorSetLayout();
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout() const;
 
@@ -46,11 +46,11 @@ private:
 class PVulkanDescriptorSet
 {
 public:
-    void CreateDescriptorSet(PVulkanRHI* RHI, PVulkanDescriptorSetLayout* DescriptorSetLayout);
-    void FreeDescriptorSet(PVulkanRHI* RHI);
+    void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout);
+    void FreeDescriptorSet();
 
-    void UseDescriptorStorageBuffer(PVulkanRHI* RHI, VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
-    void UseDescriptorUniformBuffer(PVulkanRHI* RHI, VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorStorageBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorUniformBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
 
     VkDescriptorSet GetVkDescriptorSet() const;
 

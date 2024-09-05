@@ -4,9 +4,10 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Math/Transform.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
+#include "Renderer/Vulkan/VulkanMemory.h"
 
 class IMesh;
-class PVulkanRHI;
 class PVulkanDescriptorSet;
 class PVulkanDescriptorSetLayout;
 class PVulkanShader;
@@ -17,8 +18,8 @@ struct SUniformBufferObject;
 class PVulkanPipelineLayout
 {
 public:
-	void CreatePipelineLayout(PVulkanRHI* RHI, const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
-	void DestroyPipelineLayout(PVulkanRHI* RHI);
+	void CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
+	void DestroyPipelineLayout();
 
 	VkPipelineLayout GetVkPipelineLayout() const;
 
@@ -29,8 +30,8 @@ private:
 class PVulkanGraphicsPipeline
 {
 public:
-	void CreatePipeline(PVulkanRHI* RHI);
-	void DestroyPipeline(PVulkanRHI* RHI);
+	void CreatePipeline();
+	void DestroyPipeline();
 
 	void Bind(STransform Transform);
 	void Unbind();
@@ -38,19 +39,16 @@ public:
 	PVulkanPipelineLayout* GetPipelineLayout() const;
 	VkPipeline GetVkPipeline() const;
 
-
 protected:
 	PVulkanPipelineLayout* PipelineLayout;
-
 	PVulkanDescriptorSetLayout* DescriptorSetLayout;
 	PVulkanDescriptorSet* DescriptorSet;
-
 	PVulkanShader* VertexShader;
 	PVulkanShader* FragmentShader;
 
 public:
-	SBuffer* StorageBuffer; // Array of instance data (eg. model matrix)
-	SBuffer* UniformBuffer; // Global data (eg. skylight, projection and view matrix)
+	SVulkanBuffer* StorageBuffer; // Array of instance data (eg. model matrix)
+	SVulkanBuffer* UniformBuffer; // Global data (eg. skylight, projection and view matrix)
 
 private:
 	VkPipeline Pipeline;

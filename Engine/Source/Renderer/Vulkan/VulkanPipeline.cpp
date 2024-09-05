@@ -2,8 +2,9 @@
 
 #include <cstdlib>
 
-#include "Core/Logger.h"
 #include "EngineMacros.h"
+#include "Renderer/RHI.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "VulkanFrame.h"
 #include "Core/Assert.h"
 #include "Core/Camera.h"
@@ -18,7 +19,7 @@
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Scene/Scene.h"
 
-void PVulkanPipelineLayout::CreatePipelineLayout(PVulkanRHI* RHI, const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
+void PVulkanPipelineLayout::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
 {
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo{};
     PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -29,13 +30,13 @@ void PVulkanPipelineLayout::CreatePipelineLayout(PVulkanRHI* RHI, const std::vec
     PipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32_t>(PushConstantRanges.size());
     PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges.data();
 
-    VkResult Result = vkCreatePipelineLayout(RHI->GetDevice()->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
+    VkResult Result = vkCreatePipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
 }
 
-void PVulkanPipelineLayout::DestroyPipelineLayout(PVulkanRHI* RHI)
+void PVulkanPipelineLayout::DestroyPipelineLayout()
 {
-    vkDestroyPipelineLayout(RHI->GetDevice()->GetVkDevice(), PipelineLayout, nullptr);
+    vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout, nullptr);
 }
 
 VkPipelineLayout PVulkanPipelineLayout::GetVkPipelineLayout() const
@@ -43,19 +44,21 @@ VkPipelineLayout PVulkanPipelineLayout::GetVkPipelineLayout() const
     return PipelineLayout;
 }
 
-void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
+void PVulkanGraphicsPipeline::CreatePipeline()
 {
     VertexShader = new PVulkanShader();
-    VertexShader->CreateShader(RHI, WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
+    VertexShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
 
     FragmentShader = new PVulkanShader();
-    FragmentShader->CreateShader(RHI, WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
+    FragmentShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
 
     constexpr size_t StorageBufferSize = sizeof(SShaderStorageBufferObject);
-    RHI->GetMemory()->AllocateBuffer(StorageBuffer, StorageBufferSize, VMA_MEMORY_USAGE_CPU_TO_GPU, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    StorageBuffer = new SVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    StorageBuffer->Allocate(StorageBufferSize);
 
     constexpr size_t UniformBufferSize = sizeof(SUniformBufferObject);
-    RHI->GetMemory()->AllocateBuffer(UniformBuffer, UniformBufferSize, VMA_MEMORY_USAGE_CPU_TO_GPU, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    UniformBuffer = new SVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    UniformBuffer->Allocate(UniformBufferSize);
 
     VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
     VertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -78,12 +81,12 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
     };
 
     DescriptorSetLayout = new PVulkanDescriptorSetLayout();
-    DescriptorSetLayout->CreateDescriptorSetLayout(RHI, LayoutTypes);
+    DescriptorSetLayout->CreateDescriptorSetLayout(LayoutTypes);
 
     DescriptorSet = new PVulkanDescriptorSet();
-    DescriptorSet->CreateDescriptorSet(RHI, DescriptorSetLayout);
-    DescriptorSet->UseDescriptorStorageBuffer(RHI, StorageBuffer->Buffer, 0, VK_WHOLE_SIZE, 0);
-    DescriptorSet->UseDescriptorUniformBuffer(RHI, UniformBuffer->Buffer, 0, sizeof(SUniformBufferObject), 1);
+    DescriptorSet->CreateDescriptorSet(DescriptorSetLayout);
+    DescriptorSet->UseDescriptorStorageBuffer(StorageBuffer->Buffer, 0, VK_WHOLE_SIZE, 0);
+    DescriptorSet->UseDescriptorUniformBuffer(UniformBuffer->Buffer, 0, sizeof(SUniformBufferObject), 1);
 
     VkPushConstantRange UInt64PointerPushConstantRange{};
     UInt64PointerPushConstantRange.offset = 0;
@@ -91,12 +94,12 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
     UInt64PointerPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     PipelineLayout = new PVulkanPipelineLayout(); 
-    PipelineLayout->CreatePipelineLayout(RHI, 
+    PipelineLayout->CreatePipelineLayout(
         { DescriptorSetLayout->GetVkDescriptorSetLayout() }, 
         { UInt64PointerPushConstantRange }
     );
 
-    VkFormat ColorAttachmentFormat = RHI->GetSceneRenderer()->GetRenderTarget()->ImageFormat;
+    VkFormat ColorAttachmentFormat = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetVkFormat();
     std::vector<VkDynamicState> DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos = { VertexShaderStageCreateInfo, FragmentShaderStageCreateInfo };
 
@@ -147,7 +150,7 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
     RenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     RenderingCreateInfo.colorAttachmentCount = 1;
     RenderingCreateInfo.pColorAttachmentFormats = &ColorAttachmentFormat;
-    RenderingCreateInfo.depthAttachmentFormat = RHI->GetSceneRenderer()->GetDepthImage()->ImageFormat;
+    RenderingCreateInfo.depthAttachmentFormat = GetRHI()->GetSceneRenderer()->GetDepthImage()->GetVkFormat();
 
     VkPipelineViewportStateCreateInfo ViewportStateCreateInfo{};
     ViewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -188,20 +191,22 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanRHI* RHI)
     PipelineCreateInfo.layout = PipelineLayout->GetVkPipelineLayout();
     PipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
 
-    VkResult Result = vkCreateGraphicsPipelines(RHI->GetDevice()->GetVkDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &Pipeline);
+    VkResult Result = vkCreateGraphicsPipelines(GetRHI()->GetDevice()->GetVkDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &Pipeline);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create graphics pipeline.");
 }
 
-void PVulkanGraphicsPipeline::DestroyPipeline(PVulkanRHI* RHI)
+void PVulkanGraphicsPipeline::DestroyPipeline()
 {
-    VertexShader->DestroyShader(RHI);
-    FragmentShader->DestroyShader(RHI);
-    DescriptorSetLayout->FreeDescriptorSetLayout(RHI);
-    DescriptorSet->FreeDescriptorSet(RHI);
-    PipelineLayout->DestroyPipelineLayout(RHI);
-    RHI->GetMemory()->FreeBuffer(UniformBuffer);
-    RHI->GetMemory()->FreeBuffer(StorageBuffer);
-    vkDestroyPipeline(RHI->GetDevice()->GetVkDevice(), Pipeline, nullptr);
+    VertexShader->DestroyShader();
+    FragmentShader->DestroyShader();
+    DescriptorSetLayout->FreeDescriptorSetLayout();
+    DescriptorSet->FreeDescriptorSet();
+    PipelineLayout->DestroyPipelineLayout();
+    //GetRHI()->GetMemory()->FreeBuffer(UniformBuffer);
+    //GetRHI()->GetMemory()->FreeBuffer(StorageBuffer);
+    UniformBuffer->Free();
+    StorageBuffer->Free();
+    vkDestroyPipeline(GetRHI()->GetDevice()->GetVkDevice(), Pipeline, nullptr);
 
     delete VertexShader;
     delete FragmentShader;
@@ -215,26 +220,24 @@ void PVulkanGraphicsPipeline::DestroyPipeline(PVulkanRHI* RHI)
 void PVulkanGraphicsPipeline::Bind(STransform Transform)
 //void PVulkanGraphicsPipeline::Bind()
 {
-    const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-    const PVulkanSceneRenderer* SceneRenderer = RHI->GetSceneRenderer();
-    const PVulkanFrame* Frame = SceneRenderer->GetFramePool()->Pool[SceneRenderer->GetFramePool()->FrameIndex % 2];
+    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetFramePool()->FrameIndex % 2];
 
     PCamera* Camera = GetScene()->GetCamera();
     SUniformBufferObject UBO;
     UBO.ViewMatrix = Camera->GetViewMatrix();
-    UBO.ProjectionMatrix = Camera->m_Projection;
+    UBO.ProjectionMatrix = Camera->GetProjectionMatrix();
     UBO.WorldMatrix = Transform.ToMatrix();
     void* Data;
-    vmaMapMemory(RHI->GetMemory()->GetMemoryAllocator(), UniformBuffer->Allocation, &Data);
+    vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), UniformBuffer->Allocation, &Data);
     memcpy(Data, &UBO, sizeof(SUniformBufferObject));
-    vmaUnmapMemory(RHI->GetMemory()->GetMemoryAllocator(), UniformBuffer->Allocation);
+    vmaUnmapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), UniformBuffer->Allocation);
 
     VkDescriptorSet DescriptorSetPointer = DescriptorSet->GetVkDescriptorSet();
 
     VkRenderingAttachmentInfo ColorAttachment{};
     ColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     ColorAttachment.pNext = nullptr;
-    ColorAttachment.imageView = SceneRenderer->GetRenderTarget()->ImageViewHandle;
+    ColorAttachment.imageView = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetVkImageView();
     ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -243,7 +246,7 @@ void PVulkanGraphicsPipeline::Bind(STransform Transform)
     VkRenderingAttachmentInfo DepthAttachment{};
     DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     DepthAttachment.pNext = nullptr;
-    DepthAttachment.imageView = RHI->GetSceneRenderer()->GetDepthImage()->ImageViewHandle;
+    DepthAttachment.imageView = GetRHI()->GetSceneRenderer()->GetDepthImage()->GetVkImageView();
     DepthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     DepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -252,7 +255,7 @@ void PVulkanGraphicsPipeline::Bind(STransform Transform)
     VkRenderingInfo RenderingInfo{};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     RenderingInfo.pNext = nullptr;
-    RenderingInfo.renderArea = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { SceneRenderer->GetRenderTarget()->ImageExtent.width, SceneRenderer->GetRenderTarget()->ImageExtent.height }};
+    RenderingInfo.renderArea = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().width, GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().height }};
     RenderingInfo.layerCount = 1;
     RenderingInfo.colorAttachmentCount = 1;
     RenderingInfo.pColorAttachments = &ColorAttachment;
@@ -262,16 +265,16 @@ void PVulkanGraphicsPipeline::Bind(STransform Transform)
     VkViewport Viewport{};
     Viewport.x = 0;
     Viewport.y = 0;
-    Viewport.width = SceneRenderer->GetRenderTarget()->ImageExtent.width;
-    Viewport.height = SceneRenderer->GetRenderTarget()->ImageExtent.height;
+    Viewport.width = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().width;
+    Viewport.height = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().height;
     Viewport.minDepth = 0.0f;
     Viewport.maxDepth = 1.0f;
 
     VkRect2D Scissor = {};
     Scissor.offset.x = 0;
     Scissor.offset.y = 0;
-    Scissor.extent.width = SceneRenderer->GetRenderTarget()->ImageExtent.width;
-    Scissor.extent.height = SceneRenderer->GetRenderTarget()->ImageExtent.height;
+    Scissor.extent.width = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().width;
+    Scissor.extent.height = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().height;
 
     vkCmdBeginRendering(Frame->CommandBuffer->GetVkCommandBuffer(), &RenderingInfo);
     vkCmdSetViewport(Frame->CommandBuffer->GetVkCommandBuffer(), 0, 1, &Viewport);
@@ -283,10 +286,7 @@ void PVulkanGraphicsPipeline::Bind(STransform Transform)
 
 void PVulkanGraphicsPipeline::Unbind()
 {
-    const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
-    const PVulkanSceneRenderer* SceneRenderer = RHI->GetSceneRenderer();
-    const PVulkanFrame* Frame = SceneRenderer->GetFramePool()->Pool[SceneRenderer->GetFramePool()->FrameIndex % 2];
-
+    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetFramePool()->FrameIndex % 2];
     vkCmdEndRendering(Frame->CommandBuffer->GetVkCommandBuffer());
 }
 

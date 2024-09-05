@@ -3,13 +3,10 @@
 #include <vulkan/vulkan_core.h>
 #include <vector>
 
-class PVulkanRHI;
-
 class PVulkanInstance
 {
 public:
-	PVulkanInstance(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanInstance()
 	{
 		Instance = nullptr;
 		Surface = nullptr;
@@ -23,8 +20,6 @@ public:
 	VkSurfaceKHR GetVkSurfaceKHR() const;
 
 private:
-	PVulkanRHI* RHI;
-
 	VkInstance Instance;
 	VkSurfaceKHR Surface;
 	VkDebugUtilsMessengerEXT DebugMessenger;

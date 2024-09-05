@@ -9,8 +9,8 @@ class PVulkanRHI;
 class PVulkanShader : public PShader
 {
 public:
-	void CreateShader(PVulkanRHI* RHI, const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile);
-	void DestroyShader(PVulkanRHI* RHI);
+	void CreateShader(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile);
+	void DestroyShader();
 
 	VkShaderModule GetVkShaderModule() const;
 

@@ -9,9 +9,9 @@ class PVulkanDescriptorPool;
 class PVulkanImGui
 {
 public:
-	void Init(PVulkanRHI* RHI);
-	void Shutdown(PVulkanRHI* RHI);
-	void Bind(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView);
+	void Init();
+	void Shutdown();
+	void Bind(PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView);
 
 private:
 	PVulkanDescriptorPool* DescriptorPool;

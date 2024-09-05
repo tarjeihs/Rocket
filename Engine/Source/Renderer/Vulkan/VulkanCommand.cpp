@@ -50,18 +50,21 @@ VkCommandBuffer PVulkanCommandBuffer::GetVkCommandBuffer() const
 	return CommandBuffer;
 }
 
-void PVulkanCommandBuffer::BeginCommandBuffer()
+void PVulkanCommandBuffer::ResetCommandBuffer()
 {
 	VkResult Result = vkResetCommandBuffer(CommandBuffer, 0);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to reset command buffer.");
+}
 
+void PVulkanCommandBuffer::BeginCommandBuffer()
+{
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
 	CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	CommandBufferBeginInfo.pNext = nullptr;
 	CommandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-	Result = vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);
+	VkResult Result = vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to begin recording command buffer.");
 }
 

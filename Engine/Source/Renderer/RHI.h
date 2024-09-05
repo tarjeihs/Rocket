@@ -13,9 +13,19 @@ public:
     virtual void Render() = 0;
 };
 
-template<typename TRHI = IRHI>
+#define RK_RHI VULKAN
+
+#if RK_RHI == VULKAN
+    using RK_RHI_TYPE = class PVulkanRHI;
+#elif RK_RHI == D3D12
+    using RK_RHI_TYPE = class PD3D12RHI;
+#elif RK_RHI == METAL
+    using RK_RHI_TYPE = class PMetalRHI;
+#endif
+
+template<typename TRHI = RK_RHI_TYPE>
 inline TRHI* GetRHI()
 {
-    IRHI* RHI = PEngine::Get()->GetRHI();
+    IRHI* RHI = GetEngine()->GetRHI();
     return static_cast<TRHI*>(RHI);
 }

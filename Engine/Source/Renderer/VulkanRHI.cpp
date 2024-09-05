@@ -9,16 +9,14 @@
 
 void PVulkanRHI::Init()
 {
-	Instance = new PVulkanInstance(this);
+	Instance = new PVulkanInstance();
+	Device = new PVulkanDevice();
+	Memory = new PVulkanMemory();
+	SceneRenderer = new PVulkanSceneRenderer();
+	
 	Instance->Init();
-
-	Device = new PVulkanDevice(this);
 	Device->Init();
-
-	Memory = new PVulkanMemory(this);
 	Memory->Init();
-
-	SceneRenderer = new PVulkanSceneRenderer(this);
 	SceneRenderer->Init();
 }
 
