@@ -8,15 +8,25 @@ class PVulkanRHI;
 class PVulkanImage
 {
 public:
-	void CreateImage(PVulkanRHI* RHI, VkExtent2D Extent);
-	void DestroyImage(PVulkanRHI* RHI);
+	void Init(VkExtent2D Extent, VkFormat Format);
+	void Reset();
+
+	void ApplyImage(VkImage Image);
+	void ApplyImageView(VkImageView ImageView);
+
+	void CreateImage(VkImageUsageFlags ImageUsageFlags);
+	void CreateImageView(VkImageAspectFlags ImageViewAspectFlags);
+	
+	void DestroyImage();
+	void DestroyImageView();
 
 	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
-	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Src, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
+	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
 
-	VkImage Image;
-	VkImageView ImageView;
-	VkExtent2D ImageExtent;
-	VkFormat ImageFormat;
+	VkImage ImageHandle;
+	VkImageView ImageViewHandle;
 	VmaAllocation MemoryAllocation;
+	VkFormat ImageFormat;
+	VkExtent2D ImageExtent;
+	VkExtent3D ImageExtent3D;
 };

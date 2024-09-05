@@ -14,7 +14,7 @@ public:
 };
 
 template<typename TRHI = IRHI>
-TRHI* GetRHI()
+inline TRHI* GetRHI()
 {
     IRHI* RHI = PEngine::Get()->GetRHI();
     return static_cast<TRHI*>(RHI);

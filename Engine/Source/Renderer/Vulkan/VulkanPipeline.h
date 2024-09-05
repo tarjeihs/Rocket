@@ -3,12 +3,14 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "Math/Transform.h"
+
+class IMesh;
 class PVulkanRHI;
 class PVulkanDescriptorSet;
 class PVulkanDescriptorSetLayout;
 class PVulkanShader;
 class PVulkanCommandBuffer;
-class PVulkanMesh;
 struct SBuffer;
 struct SUniformBufferObject;
 
@@ -29,13 +31,17 @@ class PVulkanGraphicsPipeline
 public:
 	void CreatePipeline(PVulkanRHI* RHI);
 	void DestroyPipeline(PVulkanRHI* RHI);
-	void BindPipeline(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, PVulkanMesh* Mesh, const SUniformBufferObject& GlobalUBO);
 
+	void Bind(STransform Transform);
+	void Unbind();
+
+	PVulkanPipelineLayout* GetPipelineLayout() const;
 	VkPipeline GetVkPipeline() const;
+
 
 protected:
 	PVulkanPipelineLayout* PipelineLayout;
-	
+
 	PVulkanDescriptorSetLayout* DescriptorSetLayout;
 	PVulkanDescriptorSet* DescriptorSet;
 

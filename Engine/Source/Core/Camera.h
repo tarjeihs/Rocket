@@ -6,9 +6,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Core/Assert.h"
-#include "Math/Math.h"
-
 class PCamera
 {
 public:

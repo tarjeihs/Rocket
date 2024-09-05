@@ -18,6 +18,7 @@ struct SBuffer
 struct SShaderStorageBufferObject
 {
 	alignas(16) glm::mat4 ModelMatrix;
+	alignas(16) glm::mat4 NormalMatrix;
 };
 
 struct SUniformBufferObject
@@ -46,7 +47,7 @@ public:
 	void Init();
 	void Shutdown();
 
-	SBuffer* CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
+	void AllocateBuffer(SBuffer*& Buffer, size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
 	void FreeBuffer(SBuffer* Buffer);
 	void UploadBuffer(SBuffer* Buffer, void* Data, size_t Size);
 
@@ -55,7 +56,6 @@ public:
 
 protected:
 	VmaAllocator MemoryAllocator;
-
 	PVulkanDescriptorPool* DescriptorPool;
 
 private:

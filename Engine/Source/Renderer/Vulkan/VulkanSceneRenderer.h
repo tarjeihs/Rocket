@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <functional>
 #include <vulkan/vulkan_core.h>
 
@@ -19,7 +18,7 @@ public:
 		: RHI(InRHI)
 	{
 		Swapchain = nullptr;
-		RenderTarget = nullptr;
+		DrawImage = nullptr;
 		DeferredFramePool = nullptr;
 		ImmediateFramePool = nullptr;
 	}
@@ -31,25 +30,20 @@ public:
 
 	PVulkanSwapchain* GetSwapchain() const;
 	PVulkanImage* GetRenderTarget() const;
+	PVulkanImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
+	PVulkanFramePool* GetFramePool() const;
 
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
-protected:
-	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
-	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Src, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
-
 private:
 	PVulkanSwapchain* Swapchain;
-	PVulkanImage* RenderTarget;
+	PVulkanImage* DrawImage;
+	PVulkanImage* DepthImage;
 	PVulkanRenderGraph* RenderGraph;
-
 	PVulkanFramePool* DeferredFramePool;
 	PVulkanFramePool* ImmediateFramePool;
-
 	PVulkanImGui* ImGui;
-
-	class PVulkanGraphicsPipeline* GraphicsPipeline;
 
 private:
 	PVulkanRHI* RHI;

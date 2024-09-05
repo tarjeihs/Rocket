@@ -92,8 +92,7 @@ void PVulkanFrame::EndFrame(PVulkanRHI* RHI)
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pImageIndices = &TransientFrameData.NextImageIndex;
 
-	Result = vkQueuePresentKHR(RHI->GetDevice()->GetGraphicsQueue(), &presentInfo);
-	RK_ASSERT(Result == VK_SUCCESS, "Failed to present the frame.");
+	vkQueuePresentKHR(RHI->GetDevice()->GetGraphicsQueue(), &presentInfo);
 }
 
 PVulkanCommandBuffer* PVulkanFrame::GetCommandBuffer() const

@@ -1,22 +1,33 @@
 #include "VulkanImage.h"
 
+#include <vulkan/vulkan_core.h>
+
 #include "Core/Assert.h"
+#include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
-void PVulkanImage::CreateImage(PVulkanRHI* RHI, VkExtent2D Extent)
+void PVulkanImage::Init(VkExtent2D Extent, VkFormat Format)
 {
-	VkExtent3D ImageExtent3D = { Extent.width, Extent.height, 1 };
-
-	ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+	ImageFormat = Format;
 	ImageExtent = Extent;
+	ImageExtent3D = { Extent.width, Extent.height, 1 };
+}
 
-	VkImageUsageFlags ImageUsageFlags{};
-	ImageUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-	ImageUsageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	ImageUsageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
-	ImageUsageFlags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+void PVulkanImage::Reset() 
+{
+	ImageHandle = VK_NULL_HANDLE;
+	ImageViewHandle = VK_NULL_HANDLE;
+	MemoryAllocation = VK_NULL_HANDLE;
+	ImageFormat = {};
+	ImageExtent = {};
+	ImageExtent3D = {};
+}
+
+void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
+{
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
 
 	VkImageCreateInfo ImageCreateInfo{};
 	ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -33,28 +44,56 @@ void PVulkanImage::CreateImage(PVulkanRHI* RHI, VkExtent2D Extent)
 	VmaAllocationCreateInfo ImageAllocationCreateInfo{};
 	ImageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	ImageAllocationCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vmaCreateImage(RHI->GetMemory()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &Image, &MemoryAllocation, nullptr);
+	vmaCreateImage(RHI->GetMemory()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
+}
 
-	// Create image view
+void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
+{
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
+
 	VkImageViewCreateInfo ImageViewCreateInfo{};
 	ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	ImageViewCreateInfo.image = Image;
+	ImageViewCreateInfo.image = ImageHandle;
 	ImageViewCreateInfo.format = ImageFormat;
+	ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 	ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
 	ImageViewCreateInfo.subresourceRange.levelCount = 1;
 	ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 	ImageViewCreateInfo.subresourceRange.layerCount = 1;
-	ImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	ImageViewCreateInfo.subresourceRange.aspectMask = ImageViewAspectFlags;
 
-	VkResult Result = vkCreateImageView(RHI->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageView);
+	VkResult Result = vkCreateImageView(RHI->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViewHandle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 }
 
-void PVulkanImage::DestroyImage(PVulkanRHI* RHI)
+void PVulkanImage::ApplyImage(VkImage Image)
 {
-	vkDestroyImageView(RHI->GetDevice()->GetVkDevice(), ImageView, nullptr);
-	vmaDestroyImage(RHI->GetMemory()->GetMemoryAllocator(), Image, MemoryAllocation);
+	RK_ASSERT(Image, "Passing an invalid or uninitialized pointer.");
+	ImageHandle = Image;
+}
+
+void PVulkanImage::ApplyImageView(VkImageView ImageView)
+{
+	RK_ASSERT(ImageView, "Passing an invalid or uninitialized pointer.");
+	ImageViewHandle = ImageView;
+}
+
+void PVulkanImage::DestroyImage()
+{
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
+
+	vmaDestroyImage(RHI->GetMemory()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
+}
+
+void PVulkanImage::DestroyImageView()
+{
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
+
+	vkDestroyImageView(RHI->GetDevice()->GetVkDevice(), ImageViewHandle, nullptr);
 }
 
 void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
@@ -76,7 +115,7 @@ void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageL
 	ImageMemoryBarrier.oldLayout = CurrentLayout;
 	ImageMemoryBarrier.newLayout = NewLayout;
 	ImageMemoryBarrier.subresourceRange = SubresourceRange;
-	ImageMemoryBarrier.image = Image;
+	ImageMemoryBarrier.image = ImageHandle;
 
 	VkDependencyInfo DependencyInfo{};
 	DependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -87,7 +126,7 @@ void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageL
 	vkCmdPipelineBarrier2(CommandBuffer, &DependencyInfo);
 }
 
-void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Src, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
+void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
 {
 	VkImageBlit2 ImageBlit{};
 	ImageBlit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
@@ -112,7 +151,7 @@ void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Src, V
 	ImageBlitInfo.pNext = nullptr;
 	ImageBlitInfo.dstImage = Dest;
 	ImageBlitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	ImageBlitInfo.srcImage = Src;
+	ImageBlitInfo.srcImage = ImageHandle;
 	ImageBlitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 	ImageBlitInfo.filter = VK_FILTER_LINEAR;
 	ImageBlitInfo.regionCount = 1;

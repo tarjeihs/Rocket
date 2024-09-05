@@ -6,13 +6,14 @@
 
 #include "Core/Assert.h"
 #include "Core/Window.h"
+#include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Math/Math.h"
-
 // Prioritize VK_PRESENT_MODE_IMMEDIATE_KHR to disable V-Sync
-static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 
 namespace Utils
 {
@@ -63,8 +64,10 @@ namespace Utils
 	}
 }
 
-void PVulkanSwapchain::Init(PVulkanRHI* RHI)
+void PVulkanSwapchain::Init()
 {
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
+
 	SurfaceFormat = Utils::SelectSwapchainSurfaceFormat(RHI->GetDevice()->GetSurfaceFormats());
 	PresentMode = Utils::SelectSwapchainPresentMode(RHI->GetDevice()->GetPresentModes(), PresentMode);
 	ImageExtent = Utils::SelectSwapchainSurfaceExtent(RHI->GetDevice()->GetSurfaceCapabilities());
@@ -111,45 +114,36 @@ void PVulkanSwapchain::Init(PVulkanRHI* RHI)
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain.");
 
 	// Obtain the array of presentable images associated with a swapchain
+	std::vector<VkImage> QuerySwapchainImages;
 	vkGetSwapchainImagesKHR(RHI->GetDevice()->GetVkDevice(), SwapchainKHR, &ImageCount, nullptr);
+	QuerySwapchainImages.resize(ImageCount);
 	SwapchainImages.resize(ImageCount);
-	SwapchainImageViews.resize(ImageCount);
-	vkGetSwapchainImagesKHR(RHI->GetDevice()->GetVkDevice(), SwapchainKHR, &ImageCount, SwapchainImages.data());
-
-	//for (size_t Index = 0; Index < ImageCount; ++Index)
-	for (size_t Index = 0; Index < ImageCount; Index++)
+	vkGetSwapchainImagesKHR(RHI->GetDevice()->GetVkDevice(), SwapchainKHR, &ImageCount, QuerySwapchainImages.data());
+	
+	for (size_t Index = 0; Index < ImageCount; ++Index)
 	{
-		VkImageViewCreateInfo ImageViewCreateInfo{};
-		ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		ImageViewCreateInfo.image = SwapchainImages[Index];
-		ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // Specifies how an image should be interpreted (eg. 1D textures, 2D textures, 3D textures and cube maps).
-		ImageViewCreateInfo.format = SurfaceFormat.format;
-
-		// Default color channel mapping
-		ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-		// Defines image purpose and what part of the image should be accessed. 
-		// Image is currently set to be used as color target without any mipmapping levels or multiple layers.
-		ImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-		ImageViewCreateInfo.subresourceRange.levelCount = 1;
-		ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-		ImageViewCreateInfo.subresourceRange.layerCount = 1;
-
-		VkResult Result = vkCreateImageView(RHI->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &SwapchainImageViews[Index]);
-		RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
+		PVulkanImage* Image = new PVulkanImage();
+		Image->Init(ImageExtent, SurfaceFormat.format);
+		Image->ApplyImage(QuerySwapchainImages[Index]);
+		Image->CreateImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+		SwapchainImages[Index] = Image;
 	}
 }
 
-void PVulkanSwapchain::Shutdown(PVulkanRHI* RHI)
+void PVulkanSwapchain::Shutdown()
 {
-	for (size_t i = 0; i < SwapchainImageViews.size(); i++)
+	const PVulkanRHI* RHI = GetRHI<PVulkanRHI>();
+
+	while (SwapchainImages.size())
 	{
-		vkDestroyImageView(RHI->GetDevice()->GetVkDevice(), SwapchainImageViews[i], nullptr);
+		PVulkanImage* Image = SwapchainImages[0];
+		Image->DestroyImageView();
+
+		delete Image;
+		SwapchainImages.erase(SwapchainImages.begin());
 	}
+	
+	// Vulkan does internal destruction of swapchain images
 	vkDestroySwapchainKHR(RHI->GetDevice()->GetVkDevice(), SwapchainKHR, nullptr);
 }
 
@@ -168,12 +162,7 @@ VkExtent2D PVulkanSwapchain::GetVkExtent() const
 	return ImageExtent;
 }
 
-const std::vector<VkImage>& PVulkanSwapchain::GetSwapchainImages() const
+const std::vector<PVulkanImage*>& PVulkanSwapchain::GetSwapchainImages() const
 {
 	return SwapchainImages;
-}
-
-const std::vector<VkImageView>& PVulkanSwapchain::GetSwapchainImageViews() const
-{
-	return SwapchainImageViews;
 }

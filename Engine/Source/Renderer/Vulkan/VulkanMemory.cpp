@@ -32,7 +32,7 @@ void PVulkanMemory::Shutdown()
 	vmaDestroyAllocator(MemoryAllocator);
 }
 
-SBuffer* PVulkanMemory::CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags)
+void PVulkanMemory::AllocateBuffer(SBuffer*& Buffer, size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags)
 {
 	VkBufferCreateInfo BufferCreateInfo{};
 	BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -44,12 +44,11 @@ SBuffer* PVulkanMemory::CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, Vk
 	AllocationCreateInfo.usage = MemoryUsage;
 	AllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	auto* Buffer = new SBuffer();
+	RK_ASSERT(!Buffer, "Expecting an uninitialized pointer handle.");
+	Buffer = new SBuffer();
 
 	VkResult Result = vmaCreateBuffer(MemoryAllocator, &BufferCreateInfo, &AllocationCreateInfo, &Buffer->Buffer, &Buffer->Allocation, &Buffer->AllocationInfo);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate buffer.");
-
-	return Buffer;
 }
 
 void PVulkanMemory::FreeBuffer(SBuffer* Buffer)

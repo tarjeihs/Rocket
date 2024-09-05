@@ -2,7 +2,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Core/Window.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
@@ -28,15 +27,13 @@ void PVulkanRHI::Shutdown()
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
 	SceneRenderer->Shutdown();
-	delete SceneRenderer;
+  	Memory->Shutdown();
+  	Device->Shutdown();
+  	Instance->Shutdown();
 
-	Memory->Shutdown();
+  	delete SceneRenderer;
 	delete Memory;
-
-	Device->Shutdown();
 	delete Device;
-
-	Instance->Shutdown();
 	delete Instance;
 }
 
