@@ -5,7 +5,7 @@
 
 #include "Core/Logger.h"
 
-#define STOPWATCH(DebugName) SStopwatch Stopwatch(##DebugName)
+#define STOPWATCH(DebugName) SStopwatch Stopwatch(DebugName)
 
 class SStopwatch
 {
