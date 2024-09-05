@@ -22,8 +22,8 @@ void PEngine::Start()
 	RHI = new PVulkanRHI();
 	Window = new PGenericWindow(WindowSpecification);
 
-	Scene->Init();
 	Window->CreateNativeWindow();
+	Scene->Init();
 	RHI->Init();
 
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
@@ -57,6 +57,7 @@ void PEngine::Stop()
 	}
 
 	RHI->Shutdown();
+	Scene->Cleanup();
 	Window->DestroyNativeWindow();
 
 	delete Scene;
