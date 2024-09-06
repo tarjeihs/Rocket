@@ -7,9 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
 
-#include "Renderer/VulkanRHI.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
-#include "Renderer/Vulkan/VulkanImGui.h"
+#include "Renderer/Common/Overlay.h"
 
 enum class ECameraProjectionMode 
 { 
@@ -25,6 +23,22 @@ public:
     	Settings.FoVY = 66.0f;
     	Settings.ZNear = 0.1f;
     	Settings.ZFar = 100.0f;
+
+#if RK_DEBUG
+		GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
+#endif
+	}
+
+	void OnImGuiRender() 
+	{
+		const char* ProjectionModeEnumerateNames[2] = { "Perspective", "Orthographic" };
+
+		ImGui::Begin("Camera Settings");
+		ImGui::Combo("Projection Mode", reinterpret_cast<int*>(&Settings.ProjectionMode), ProjectionModeEnumerateNames, IM_ARRAYSIZE(ProjectionModeEnumerateNames));
+		ImGui::DragFloat("Field of View", &Settings.FoVY, 1.0f, 30.0f, 145.0f);
+		ImGui::DragFloat("Z Near", &Settings.ZNear, 1.0f, 0.1f, 1000.0f);
+		ImGui::DragFloat("Z Far", &Settings.ZFar, 1.0f, 0.1f, 1000.0f);
+		ImGui::End();
 
 		ApplySettings();
 	}

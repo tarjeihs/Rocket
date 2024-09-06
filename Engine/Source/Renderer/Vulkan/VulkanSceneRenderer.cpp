@@ -1,3 +1,4 @@
+#include "EnginePCH.h"
 #include "VulkanSceneRenderer.h"
 
 #include <vulkan/vulkan_core.h>
@@ -13,9 +14,8 @@
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Renderer/Vulkan/VulkanImGui.h"
+#include "Renderer/Vulkan/VulkanOverlay.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 
 // 3 swapchain images, 2 frames.
 // 1 frame is currently being processed by CPU, 1 is being drawn by GPU, hence no need for a third frame.
@@ -28,9 +28,10 @@ void PVulkanSceneRenderer::Init()
 	DrawImage = new PVulkanImage();
 	DepthImage = new PVulkanImage();
 	RenderGraph = new PVulkanRenderGraph();
+	OverlayRenderGraph = new PVulkanRenderGraph();
 	DeferredFramePool = new PVulkanFramePool(DeferredFrameCount);
 	ImmediateFramePool = new PVulkanFramePool(ImmediateFrameCount);
-	ImGui = new PVulkanImGui();
+	GOverlay = new PVulkanOverlay();
 
 	Swapchain->Init();
 	
@@ -44,10 +45,11 @@ void PVulkanSceneRenderer::Init()
 	
 	DeferredFramePool->CreateFramePool();
 	ImmediateFramePool->CreateFramePool();
-	ImGui->Init();
+
+	GOverlay->Init();
 
 	// Draw all meshes from scene
-	RenderGraph->AddCommand([this](VkCommandBuffer CommandBuffer)
+	RenderGraph->AddCommand([this](PVulkanFrame* Frame)
 	{
 		GetScene()->Render();
 	});
@@ -55,7 +57,7 @@ void PVulkanSceneRenderer::Init()
 
 void PVulkanSceneRenderer::Shutdown()
 {
-	ImGui->Shutdown();
+	GOverlay->Shutdown();
 	DeferredFramePool->FreeFramePool();
 	ImmediateFramePool->FreeFramePool();
 	DrawImage->DestroyImage();
@@ -64,7 +66,7 @@ void PVulkanSceneRenderer::Shutdown()
 	DepthImage->DestroyImageView();
 	Swapchain->Shutdown();
 
-	delete ImGui;
+	delete GOverlay;
 	delete DeferredFramePool;
 	delete ImmediateFramePool;
 	delete DrawImage;
@@ -72,6 +74,8 @@ void PVulkanSceneRenderer::Shutdown()
 	delete Swapchain;
 	
 	GetScene()->GetAssetManager()->Dispose();
+
+	GOverlay = nullptr;
 }
 
 void PVulkanSceneRenderer::Resize()
@@ -101,14 +105,13 @@ void PVulkanSceneRenderer::Render()
 
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	DepthImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-	RenderGraph->Execute(Frame->GetCommandBuffer()->GetVkCommandBuffer());
+	RenderGraph->Execute(Frame);
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	DrawImage->CopyImageRegion(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->GetVkImage(), DrawImage->GetImageExtent2D(), Swapchain->GetVkExtent());
+	OverlayRenderGraph->Execute(Frame);
 	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-	ImGui->Bind(Frame->GetCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->GetVkImageView());
 
 	Frame->EndFrame();
 	DeferredFramePool->FrameIndex++;
@@ -134,14 +137,14 @@ PVulkanRenderGraph* PVulkanSceneRenderer::GetRenderGraph() const
 	return RenderGraph;
 }
 
+PVulkanRenderGraph* PVulkanSceneRenderer::GetOverlayRenderGraph() const
+{
+	return OverlayRenderGraph;
+}
+
 PVulkanFramePool* PVulkanSceneRenderer::GetFramePool() const
 {
 	return DeferredFramePool;
-}
-
-PVulkanImGui* PVulkanSceneRenderer::GetImGui() const
-{
-	return ImGui;
 }
 
 // TODO: Move to Command

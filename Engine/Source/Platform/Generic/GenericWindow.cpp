@@ -60,16 +60,12 @@ void PGenericWindow::CreateNativeWindow()
 	{
 		if (Focused)
 		{
-			//glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
 			GetWindow()->SetIsFocused(true);
 		}
 		else 
 		{
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
 			GetWindow()->SetIsFocused(false);

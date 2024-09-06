@@ -3,15 +3,16 @@
 #include <functional>
 #include <vulkan/vulkan_core.h>
 
+#include "Renderer/Common/Renderer.h"
+
 class PVulkanRenderGraph;
 class PVulkanRHI;
 class PVulkanFramePool;
 class PVulkanImage;
-class PVulkanImGui;
 class PVulkanSwapchain;
 class PVulkanCommandBuffer;
 
-class PVulkanSceneRenderer
+class PVulkanSceneRenderer : public IRenderer
 {
 public:
 	PVulkanSceneRenderer()
@@ -31,8 +32,8 @@ public:
 	PVulkanImage* GetDrawImage() const;
 	PVulkanImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
+	PVulkanRenderGraph* GetOverlayRenderGraph() const;
 	PVulkanFramePool* GetFramePool() const;
-	PVulkanImGui* GetImGui() const;
 
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
@@ -41,7 +42,7 @@ private:
 	PVulkanImage* DrawImage;
 	PVulkanImage* DepthImage;
 	PVulkanRenderGraph* RenderGraph;
+	PVulkanRenderGraph* OverlayRenderGraph;
 	PVulkanFramePool* DeferredFramePool;
 	PVulkanFramePool* ImmediateFramePool;
-	PVulkanImGui* ImGui;
 };

@@ -1,4 +1,5 @@
-#include "VulkanImGui.h"
+#include "EnginePCH.h"
+#include "VulkanOverlay.h"
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -14,8 +15,11 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VulkanRenderGraph.h"
+#include "Renderer/Vulkan/VulkanFrame.h"
+#include "Renderer/Vulkan/VulkanImage.h"
 
-void PVulkanImGui::Init()
+void PVulkanOverlay::Init()
 {
 	std::vector<SVulkanDescriptorPoolRatio> Sizes = {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -55,51 +59,59 @@ void PVulkanImGui::Init()
 
 	ImGui_ImplVulkan_Init(&ImGuiInitInfo);
 	ImGui_ImplVulkan_CreateFontsTexture();
+
+	GetRHI()->GetSceneRenderer()->GetOverlayRenderGraph()->AddCommand([&](PVulkanFrame* Frame) 
+	{
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Metrics");
+		ImGui::Text("Frame Rate: %f", 1.0f / GetEngine()->Timestep.GetDeltaTime());
+		ImGui::Text("Frame Time: %fms", GetEngine()->Timestep.GetDeltaTime());
+		ImGui::Text("Engine Time: %fs", GetEngine()->Timestep.GetElapsedTime());
+		ImGui::End();
+
+		OnRender.Broadcast();
+
+		ImGui::Render();
+
+		PVulkanImage* Image = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex];
+
+		VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
+		ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		ColorRenderingAttachmentAttachment.pNext = nullptr;
+		ColorRenderingAttachmentAttachment.imageView = Image->GetVkImageView();
+		ColorRenderingAttachmentAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		ColorRenderingAttachmentAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		ColorRenderingAttachmentAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+		VkRenderingInfo RenderingInfo = {};
+		RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		RenderingInfo.pNext = nullptr;
+		RenderingInfo.flags = 0;
+		RenderingInfo.renderArea.offset = { 0, 0 };
+		RenderingInfo.renderArea.extent = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkExtent();
+		RenderingInfo.layerCount = 1;
+		RenderingInfo.viewMask = 0;
+		RenderingInfo.colorAttachmentCount = 1;
+		RenderingInfo.pColorAttachments = &ColorRenderingAttachmentAttachment;
+		RenderingInfo.pDepthAttachment = nullptr;
+		RenderingInfo.pStencilAttachment = nullptr;
+		RenderingInfo.pNext = nullptr;
+
+		vkCmdBeginRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer(), &RenderingInfo);
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Frame->GetCommandBuffer()->GetVkCommandBuffer());
+		vkCmdEndRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer());	
+	});
 }
 
-void PVulkanImGui::Shutdown()
+void PVulkanOverlay::Shutdown()
 {
 	ImGui_ImplVulkan_Shutdown();
 	
 	DescriptorPool->DestroyPool();
 	delete DescriptorPool;
-}
 
-void PVulkanImGui::Bind(PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView)
-{
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-	ImGui::Begin("Metrics");
-	ImGui::Text("Frame Rate: %f", 1.0f / GetEngine()->Timestep.GetDeltaTime());
-	ImGui::Text("Frame Time: %fms", GetEngine()->Timestep.GetDeltaTime());
-	ImGui::Text("Engine Time: %fs", GetEngine()->Timestep.GetElapsedTime());
-	ImGui::End();
-	ImGui::Render();
-
-	VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
-	ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	ColorRenderingAttachmentAttachment.pNext = nullptr;
-	ColorRenderingAttachmentAttachment.imageView = ImageView;
-	ColorRenderingAttachmentAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	ColorRenderingAttachmentAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-	ColorRenderingAttachmentAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-	VkRenderingInfo RenderingInfo = {};
-	RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-	RenderingInfo.pNext = nullptr;
-	RenderingInfo.flags = 0;
-	RenderingInfo.renderArea.offset = { 0, 0 };
-	RenderingInfo.renderArea.extent = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkExtent();
-	RenderingInfo.layerCount = 1;
-	RenderingInfo.viewMask = 0;
-	RenderingInfo.colorAttachmentCount = 1;
-	RenderingInfo.pColorAttachments = &ColorRenderingAttachmentAttachment;
-	RenderingInfo.pDepthAttachment = nullptr;  // Set this if you have a depth attachment
-	RenderingInfo.pStencilAttachment = nullptr;  // Set this if you have a stencil attachment
-	RenderingInfo.pNext = nullptr;
-
-	vkCmdBeginRendering(CommandBuffer->GetVkCommandBuffer(), &RenderingInfo);
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer->GetVkCommandBuffer());
-	vkCmdEndRendering(CommandBuffer->GetVkCommandBuffer());
+	OnRender.Clear();
 }

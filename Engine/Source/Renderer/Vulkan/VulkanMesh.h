@@ -2,8 +2,8 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "VulkanMemory.h"
 #include "Renderer/Common/Mesh.h"
+#include "Renderer/Vulkan/VulkanMemory.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 
 class PVulkanMaterial;

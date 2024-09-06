@@ -2,16 +2,17 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include "Renderer/Common/Overlay.h"
+
 class PVulkanRHI;
 class PVulkanCommandBuffer;
 class PVulkanDescriptorPool;
 
-class PVulkanImGui
+class PVulkanOverlay : public POverlay
 {
 public:
-	void Init();
-	void Shutdown();
-	void Bind(PVulkanCommandBuffer* CommandBuffer, VkImageView ImageView);
+	virtual void Init() override;
+	virtual void Shutdown() override;
 
 private:
 	PVulkanDescriptorPool* DescriptorPool;

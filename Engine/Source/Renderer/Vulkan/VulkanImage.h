@@ -28,7 +28,6 @@ public:
 	VkExtent2D GetImageExtent2D() const;
 	VkFormat GetVkFormat() const;
 
-private:
 	VkImage ImageHandle;
 	VkImageView ImageViewHandle;
 	VmaAllocation MemoryAllocation;
