@@ -2,6 +2,7 @@
 #include "AssetManager.h"
 
 #include "Asset/Asset.h"
+#include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
 #include "Utils/FileSystem.h"
 #include "Utils/Hash.h"
@@ -54,6 +55,10 @@ void PAssetManager::LoadAsset(const std::string& FilePath, const std::string& Ty
     if (Type == "Mesh")
     {
         Asset.Object = new PVulkanMesh();
+    }
+    else if (Type == "Material")
+    {
+        Asset.Object = new PVulkanMaterial();
     }
 
     Asset.UUID = FNV1aHash(Name);

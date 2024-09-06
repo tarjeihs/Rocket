@@ -1,8 +1,5 @@
+#include "EnginePCH.h"
 #include "VulkanDevice.h"
-
-#include <set>
-#include <vector>
-#include <algorithm>
 
 #include "Core/Assert.h"
 #include "Renderer/VulkanRHI.h"

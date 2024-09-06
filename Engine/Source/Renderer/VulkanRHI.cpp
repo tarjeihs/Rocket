@@ -1,6 +1,5 @@
+#include "EnginePCH.h"
 #include "VulkanRHI.h"
-
-#include <GLFW/glfw3.h>
 
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"

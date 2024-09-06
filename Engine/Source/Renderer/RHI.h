@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/Engine.h"
-#include "Renderer/Common/Renderer.h"
 
 class IRHI 
 {

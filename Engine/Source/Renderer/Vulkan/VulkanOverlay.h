@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "Renderer/Common/Overlay.h"
 
 class PVulkanRHI;

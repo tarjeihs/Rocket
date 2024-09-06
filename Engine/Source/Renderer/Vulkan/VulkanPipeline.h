@@ -5,7 +5,6 @@
 
 #include "Math/Transform.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 
 class IMesh;
 class PVulkanDescriptorSet;

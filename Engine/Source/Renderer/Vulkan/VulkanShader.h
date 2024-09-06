@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "Renderer/Common/Shader.h"
 
 class PVulkanRHI;
+struct VkShaderModule_T;
+
+typedef VkShaderModule_T* VkShaderModule;
 
 class PVulkanShader : public PShader
 {

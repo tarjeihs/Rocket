@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <vulkan/vulkan_core.h>
 
 class PVulkanFrame;
 

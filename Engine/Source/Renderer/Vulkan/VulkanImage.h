@@ -1,9 +1,19 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-#include <vk_mem_alloc.h>
+struct VkImage_T;
+struct VkImageView_T;
+struct VmaAllocation_T;
+typedef struct VkImage_T* VkImage;
+typedef struct VkImageView_T* VkImageView;
+typedef struct VmaAllocation_T* VmaAllocation;
+
+struct VkExtent2D;
+struct VkExtent3D;
+enum VkImageLayout;
+enum VkFormat;
 
 class PVulkanRHI;
+class PVulkanCommandBuffer;
 
 class PVulkanImage
 {
@@ -20,8 +30,8 @@ public:
 	void DestroyImage();
 	void DestroyImageView();
 
-	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
-	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
+	void TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
+	void CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
 
 	VkImage GetVkImage() const;
 	VkImageView GetVkImageView() const;

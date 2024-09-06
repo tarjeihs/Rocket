@@ -2,9 +2,21 @@
 
 #include <span>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+
+#include "Renderer/Vulkan/VulkanBuffer.h"
 
 class PVulkanRHI;
+struct SVulkanBuffer;
+struct VkDescriptorPool_T;
+struct VkDescriptorSet_T;
+struct VkDescriptorSetLayout_T;
+struct VkDescriptorSetLayoutBinding;
+enum VkDescriptorType;
+
+typedef struct VkDescriptorPool_T* VkDescriptorPool;
+typedef struct VkDescriptorSet_T* VkDescriptorSet;
+typedef struct VkDescriptorSetLayout_T* VkDescriptorSetLayout;
+typedef uint64_t VkDeviceSize;
 
 struct SVulkanDescriptorPoolRatio
 {
@@ -49,8 +61,8 @@ public:
     void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout);
     void FreeDescriptorSet();
 
-    void UseDescriptorStorageBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
-    void UseDescriptorUniformBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
 
     VkDescriptorSet GetVkDescriptorSet() const;
 

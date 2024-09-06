@@ -1,9 +1,11 @@
+#include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
 #include <vector>
 
 #include "Core/Assert.h"
 #include "Renderer/VulkanRHI.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
@@ -66,10 +68,10 @@ void PVulkanDescriptorSet::FreeDescriptorSet()
 	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
 }
 
-void PVulkanDescriptorSet::UseDescriptorStorageBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer;
+	DescriptorBufferInfo.buffer = Buffer->Buffer;
 	DescriptorBufferInfo.offset = 0;
 	DescriptorBufferInfo.range = Range;
 
@@ -85,10 +87,10 @@ void PVulkanDescriptorSet::UseDescriptorStorageBuffer(VkBuffer Buffer, VkDeviceS
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
-void PVulkanDescriptorSet::UseDescriptorUniformBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer;
+	DescriptorBufferInfo.buffer = Buffer->Buffer;
 	DescriptorBufferInfo.offset = 0;
 	DescriptorBufferInfo.range = Range;
 

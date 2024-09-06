@@ -1,13 +1,12 @@
 #include "EnginePCH.h"
 #include "VulkanMaterial.h"
 
-#include <cstring>
-
-#include "VulkanMesh.h"
+#include "Renderer/Vulkan/VulkanMesh.h"
+#include "Renderer/Vulkan/VulkanPipeline.h"
 
 void PVulkanMaterial::Init()
 {
-    GraphicsPipeline = std::make_shared<PVulkanGraphicsPipeline>();
+    GraphicsPipeline = new PVulkanGraphicsPipeline();
     GraphicsPipeline->CreatePipeline();
 }
 
@@ -24,14 +23,4 @@ void PVulkanMaterial::Bind(STransform Transform) const
 void PVulkanMaterial::Unbind() const
 {
     GraphicsPipeline->Unbind();
-}
-
-void PVulkanMaterial::Serialize(std::string_view Path)
-{
-    // Missing implementation
-}
-
-void PVulkanMaterial::Deserialize(std::string_view Path)
-{
-    // Missing implementation
 }

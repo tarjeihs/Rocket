@@ -85,8 +85,8 @@ void PVulkanGraphicsPipeline::CreatePipeline()
 
     DescriptorSet = new PVulkanDescriptorSet();
     DescriptorSet->CreateDescriptorSet(DescriptorSetLayout);
-    DescriptorSet->UseDescriptorStorageBuffer(StorageBuffer->Buffer, 0, VK_WHOLE_SIZE, 0);
-    DescriptorSet->UseDescriptorUniformBuffer(UniformBuffer->Buffer, 0, sizeof(SUniformBufferObject), 1);
+    DescriptorSet->UseDescriptorStorageBuffer(StorageBuffer, 0, VK_WHOLE_SIZE, 0);
+    DescriptorSet->UseDescriptorUniformBuffer(UniformBuffer, 0, sizeof(SUniformBufferObject), 1);
 
     VkPushConstantRange UInt64PointerPushConstantRange{};
     UInt64PointerPushConstantRange.offset = 0;

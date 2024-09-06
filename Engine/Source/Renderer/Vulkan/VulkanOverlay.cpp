@@ -1,10 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanOverlay.h"
 
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
 #include "Core/Window.h"
 #include "Core/Engine.h"
 #include "Renderer/RHI.h"

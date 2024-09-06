@@ -1,12 +1,12 @@
+#include "EnginePCH.h"
 #include "VulkanImage.h"
-
-#include <vulkan/vulkan_core.h>
 
 #include "Core/Assert.h"
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
+#include "Renderer/Vulkan/VulkanCommand.h"
 
 void PVulkanImage::Init(VkExtent2D Extent, VkFormat Format)
 {
@@ -88,7 +88,7 @@ void PVulkanImage::DestroyImageView()
 	vkDestroyImageView(GetRHI()->GetDevice()->GetVkDevice(), ImageViewHandle, nullptr);
 }
 
-void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
+void PVulkanImage::TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
 {
 	VkImageSubresourceRange SubresourceRange{};
 	SubresourceRange.aspectMask = (NewLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -115,10 +115,10 @@ void PVulkanImage::TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImageL
 	DependencyInfo.imageMemoryBarrierCount = 1;
 	DependencyInfo.pImageMemoryBarriers = &ImageMemoryBarrier;
 
-	vkCmdPipelineBarrier2(CommandBuffer, &DependencyInfo);
+	vkCmdPipelineBarrier2(CommandBuffer->GetVkCommandBuffer(), &DependencyInfo);
 }
 
-void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
+void PVulkanImage::CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
 {
 	VkImageBlit2 ImageBlit{};
 	ImageBlit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
@@ -149,7 +149,7 @@ void PVulkanImage::CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Dest, 
 	ImageBlitInfo.regionCount = 1;
 	ImageBlitInfo.pRegions = &ImageBlit;
 
-	vkCmdBlitImage2(CommandBuffer, &ImageBlitInfo);
+	vkCmdBlitImage2(CommandBuffer->GetVkCommandBuffer(), &ImageBlitInfo);
 }
 
 VkImage PVulkanImage::GetVkImage() const

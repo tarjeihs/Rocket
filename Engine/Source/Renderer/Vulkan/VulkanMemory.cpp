@@ -1,5 +1,3 @@
-#define VMA_IMPLEMENTATION
-
 #include "EnginePCH.h"
 #include "VulkanMemory.h"
 

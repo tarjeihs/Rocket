@@ -2,10 +2,12 @@
 
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan_core.h>
 
 class PVulkanDescriptorPool;
+struct VmaAllocator_T;
+
+typedef VmaAllocator_T* VmaAllocator;
+typedef uint64_t VkDeviceAddress;
 
 struct SBuffer
 {
@@ -44,10 +46,6 @@ public:
 
 	void Init();
 	void Shutdown();
-
-	//void AllocateBuffer(SBuffer& Buffer, size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
-	//void FreeBuffer(SBuffer& Buffer);
-	//void UploadBuffer(SBuffer& Buffer, void* Data, size_t Size);
 
 	VmaAllocator GetMemoryAllocator() const;
 	PVulkanDescriptorPool* GetDescriptorPool() const;

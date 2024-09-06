@@ -1,9 +1,16 @@
 #pragma once
 
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan_core.h>
-
 #include "Renderer/Common/Buffer.h"
+
+struct VkBuffer_T;
+struct VmaAllocation_T;
+struct VmaAllocationInfo;
+
+typedef VkBuffer_T* VkBuffer;
+typedef VmaAllocation_T* VmaAllocation;
+typedef uint32_t VkBufferUsageFlags;
+
+enum VmaMemoryUsage;
 
 struct SVulkanBuffer : public IBuffer
 {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <vulkan/vulkan_core.h>
 
 #include "Renderer/Common/Renderer.h"
 

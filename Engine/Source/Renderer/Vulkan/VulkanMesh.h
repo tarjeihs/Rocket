@@ -1,17 +1,12 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "Renderer/Common/Mesh.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
-#include "Renderer/Vulkan/VulkanBuffer.h"
 
 class PVulkanMaterial;
+class SVulkanBuffer;
 
-struct SDrawQueue
-{
-    std::function<void()> Draw;
-};
+typedef uint64_t VkDeviceAddress;
 
 class PVulkanMesh : public IMesh
 {
@@ -26,20 +21,14 @@ public:
     virtual void Serialize(SBlob& Blob) override;
     virtual void Deserialize(SBlob& Blob) override;
 
-    void BeginFrame();
-    void EndFrame();
-
-    void SetMaterial(const std::shared_ptr<PVulkanMaterial>& NewMaterial);
-
-protected:
-    std::vector<std::function<void()>> SubmitData;
-    std::vector<SShaderStorageBufferObject> BufferData;
+    virtual void ApplyMaterial(IMaterial* NewMaterial) override;
 
 private:
-    std::shared_ptr<PVulkanMaterial> Material;
-    std::unique_ptr<SVulkanBuffer> VertexBuffer;
-    std::unique_ptr<SVulkanBuffer> IndexBuffer;
-    std::unique_ptr<SVulkanBuffer> StagingBuffer;
+    PVulkanMaterial* Material;
+    SVulkanBuffer* VertexBuffer;
+    SVulkanBuffer* IndexBuffer;
+    SVulkanBuffer* StagingBuffer;
 
+    // TODO: Create a small struct wrapper for device addr in VulkanMemory.h
     VkDeviceAddress DeviceAddress64;
 };

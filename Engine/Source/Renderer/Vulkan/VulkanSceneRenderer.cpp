@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanSceneRenderer.h"
 
-#include <vulkan/vulkan_core.h>
-
 #include "Asset/AssetManager.h"
 #include "Core/Assert.h"
 #include "Renderer/RHI.h"
@@ -103,15 +101,15 @@ void PVulkanSceneRenderer::Render()
 	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
 	Frame->BeginFrame();
 
-	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	DepthImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	DepthImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 	RenderGraph->Execute(Frame);
-	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	DrawImage->CopyImageRegion(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->GetVkImage(), DrawImage->GetImageExtent2D(), Swapchain->GetVkExtent());
+	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	DrawImage->CopyImageRegion(Frame->GetCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->GetVkImage(), DrawImage->GetImageExtent2D(), Swapchain->GetVkExtent());
 	OverlayRenderGraph->Execute(Frame);
-	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 	Frame->EndFrame();
 	DeferredFramePool->FrameIndex++;

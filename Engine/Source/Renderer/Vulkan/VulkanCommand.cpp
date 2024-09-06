@@ -1,9 +1,13 @@
+#include "EnginePCH.h"
 #include "VulkanCommand.h"
 
 #include "Core/Assert.h"
+#include "Renderer/RHI.h"
+#include "Renderer/VulkanRHI.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 
-void PVulkanCommandPool::Create(VkDevice Device, uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags)
+void PVulkanCommandPool::Create(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags)
 {
 	// Create a command pool for command buffers to be submitted to the graphics queue.
 	VkCommandPoolCreateInfo CommandPoolCreateInfo = {};
@@ -12,13 +16,13 @@ void PVulkanCommandPool::Create(VkDevice Device, uint32_t QueueFamilyIndex, VkCo
 	CommandPoolCreateInfo.flags = Flags;
 	CommandPoolCreateInfo.queueFamilyIndex = QueueFamilyIndex;
 
-	VkResult Result = vkCreateCommandPool(Device, &CommandPoolCreateInfo, nullptr, &CommandPool);
+	VkResult Result = vkCreateCommandPool(GetRHI()->GetDevice()->GetVkDevice(), &CommandPoolCreateInfo, nullptr, &CommandPool);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create command pool.");
 }
 
-void PVulkanCommandPool::Destroy(VkDevice Device)
+void PVulkanCommandPool::Destroy()
 {
-	vkDestroyCommandPool(Device, CommandPool, nullptr);
+	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool, nullptr);
 	CommandPool = VK_NULL_HANDLE;
 }
 
@@ -27,21 +31,21 @@ VkCommandPool PVulkanCommandPool::GetVkCommandPool() const
 	return CommandPool;
 }
 
-void PVulkanCommandBuffer::Create(VkDevice Device, VkCommandPool CommandPool)
+void PVulkanCommandBuffer::Create(PVulkanCommandPool* CommandPool)
 {
 	VkCommandBufferAllocateInfo CommandBufferAllocateInfo{};
 	CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	CommandBufferAllocateInfo.commandPool = CommandPool;
+	CommandBufferAllocateInfo.commandPool = CommandPool->GetVkCommandPool();
 	CommandBufferAllocateInfo.commandBufferCount = 1;
 	CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-	VkResult Result = vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer);
+	VkResult Result = vkAllocateCommandBuffers(GetRHI()->GetDevice()->GetVkDevice(), &CommandBufferAllocateInfo, &CommandBuffer);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate command buffers.");
 }
 
-void PVulkanCommandBuffer::Destroy(VkDevice Device, VkCommandPool CommandPool)
+void PVulkanCommandBuffer::Destroy(PVulkanCommandPool* CommandPool)
 {
-	vkFreeCommandBuffers(Device, CommandPool, 1, &CommandBuffer);
+	vkFreeCommandBuffers(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), 1, &CommandBuffer);
 	CommandBuffer = VK_NULL_HANDLE;
 }
 

@@ -1,3 +1,4 @@
+#include "EnginePCH.h"
 #include "VulkanFrame.h"
 
 #include "Core/Assert.h"
@@ -11,10 +12,10 @@
 void PVulkanFrame::CreateFrame()
 {
 	CommandPool = new PVulkanCommandPool();
-	CommandPool->Create(GetRHI()->GetDevice()->GetVkDevice(), GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	CommandPool->Create(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	CommandBuffer = new PVulkanCommandBuffer();
-	CommandBuffer->Create(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool());
+	CommandBuffer->Create(CommandPool);
 
 	VkFenceCreateInfo FenceCreateInfo{};
 	FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

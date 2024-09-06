@@ -1,17 +1,7 @@
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
 #include "EnginePCH.h"
 #include "VulkanMesh.h"
 
-#include <cstring>
-#include <tiny_gltf.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/matrix_inverse.hpp>
-#include <vulkan/vulkan_core.h>
-
+#include "Renderer/Common/Material.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -19,6 +9,8 @@
 #include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
+#include "Renderer/Vulkan/VulkanPipeline.h"
 
 void PVulkanMesh::Init() 
 {
@@ -35,9 +27,9 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
     const size_t VertexBufferSize = Vertices.size() * sizeof(SVertex);
     const size_t IndexBufferSize = Indices.size() * sizeof(uint32_t);
 
-    VertexBuffer = std::make_unique<SVulkanBuffer>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-    IndexBuffer = std::make_unique<SVulkanBuffer>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-    StagingBuffer = std::make_unique<SVulkanBuffer>(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    VertexBuffer = new SVulkanBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    IndexBuffer = new SVulkanBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    StagingBuffer = new SVulkanBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
     VertexBuffer->Allocate(VertexBufferSize);
     IndexBuffer->Allocate(IndexBufferSize);
@@ -48,7 +40,6 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
     memcpy(Data, Vertices.data(), VertexBufferSize);
     memcpy((char*)Data + VertexBufferSize, Indices.data(), IndexBufferSize);
     vmaUnmapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), StagingBuffer->Allocation);
-
 
     VkBufferDeviceAddressInfo BufferDeviceAddressInfo{};
     BufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -84,7 +75,7 @@ void PVulkanMesh::Draw(const STransform& Transform)
     Instance.ModelMatrix = ModelMatrix;
     Instance.NormalMatrix = NormalMatrix;
 
-    BufferData.push_back(Instance);
+    //BufferData.push_back(Instance);
     //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer,&Instance, sizeof(SShaderStorageBufferObject));
     Material->GraphicsPipeline->StorageBuffer->Update(&Instance, sizeof(Instance));
 
@@ -92,7 +83,7 @@ void PVulkanMesh::Draw(const STransform& Transform)
     //{
         SUInt64PointerPushConstant PushConstant;
         PushConstant.DeviceAddress = DeviceAddress64;
-        PushConstant.ObjectId = SubmitData.size();
+        PushConstant.ObjectId = 0;
 
         Material->Bind(Transform);
         
@@ -240,25 +231,25 @@ void PVulkanMesh::Deserialize(SBlob& Blob)
     CreateMesh(vertices, indices);
 }
 
-void PVulkanMesh::BeginFrame()
-{
-    SubmitData.clear();
-    BufferData.clear();
-}
+//void PVulkanMesh::BeginFrame()
+//{
+//    SubmitData.clear();
+//    BufferData.clear();
+//}
+//
+//void PVulkanMesh::EndFrame()
+//{
+//    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer, BufferData.data(), sizeof(SShaderStorageBufferObject) * 1);
+//
+//    for (const std::function<void()>& Func : SubmitData)
+//    {
+//        Func();
+//    }
+//}
 
-void PVulkanMesh::EndFrame()
+void PVulkanMesh::ApplyMaterial(IMaterial* NewMaterial)
 {
-    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer, BufferData.data(), sizeof(SShaderStorageBufferObject) * 1);
-
-    for (const std::function<void()>& Func : SubmitData)
-    {
-        Func();
-    }
-}
-
-void PVulkanMesh::SetMaterial(const std::shared_ptr<PVulkanMaterial>& NewMaterial)
-{
-    Material = NewMaterial;
+    Material = static_cast<PVulkanMaterial*>(NewMaterial);
 
     Material->Init();
 }

@@ -1,12 +1,17 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
+struct VkCommandBuffer_T;
+struct VkCommandPool_T;
+
+typedef struct VkCommandBuffer_T* VkCommandBuffer;
+typedef struct VkCommandPool_T* VkCommandPool;
+typedef uint32_t VkCommandPoolCreateFlags;
 
 class PVulkanCommandPool
 {
 public:
-	void Create(VkDevice Device, uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags = 0);
-	void Destroy(VkDevice Device);
+	void Create(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags = 0);
+	void Destroy();
 
 	VkCommandPool GetVkCommandPool() const;
 
@@ -17,8 +22,8 @@ private:
 class PVulkanCommandBuffer
 {
 public:
-	void Create(VkDevice Device, VkCommandPool CommandPool);
-	void Destroy(VkDevice Device, VkCommandPool CommandPool);
+	void Create(PVulkanCommandPool* CommandPool);
+	void Destroy(PVulkanCommandPool* CommandPool);
 
 	void ResetCommandBuffer();
 	void BeginCommandBuffer();

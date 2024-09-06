@@ -1,13 +1,15 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include <vector>
-#include <optional>
 
+// Forward declaration
 class PVulkanCommandPool;
 class PVulkanRHI;
 class PVulkanCommandBuffer;
+struct VkSemaphore_T;
+struct VkFence_T;
+typedef struct VkSemaphore_T* VkSemaphore;
+typedef struct VkFence_T* VkFence;
 
 struct FTransientFrameData
 {
