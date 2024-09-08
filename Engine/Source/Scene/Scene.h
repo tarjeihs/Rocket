@@ -24,14 +24,6 @@ public:
 
 	}
 
-	void Render()
-	{
-		Registry->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
-		{
-			MeshComponent.Mesh->Draw(TransformComponent.Transform);
-		});
-	}
-
 	void Cleanup() 
 	{
 		delete Camera;

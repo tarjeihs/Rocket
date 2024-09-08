@@ -15,7 +15,7 @@ public:
     virtual void Cleanup() override;
 
     virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) override;
-    virtual void Draw(const STransform& Transform) override;
+    virtual void DrawIndirectInstanced(uint32_t ID) override;
     virtual void Destroy() override;
 
     virtual void Serialize(SBlob& Blob) override;

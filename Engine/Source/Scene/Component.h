@@ -16,7 +16,7 @@ struct STagComponent : IComponent
 struct STransformComponent : IComponent
 {
     STransformComponent() = default;
-    STransformComponent(const STransform& InTransform) : Transform(InTransform) {};
+    STransformComponent(const STransform& InTransform) : Transform(InTransform) {}
 
     STransform Transform;
 };
@@ -30,6 +30,14 @@ struct SMeshComponent : IComponent
 {
     SMeshComponent() = default;
     SMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
+
+    IMesh* Mesh;
+};
+
+struct SInstancedMeshComponent : IComponent
+{
+    SInstancedMeshComponent() = default;
+    SInstancedMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
 
     IMesh* Mesh;
 };

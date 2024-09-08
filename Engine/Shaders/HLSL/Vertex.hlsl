@@ -49,9 +49,8 @@ VS_OUTPUT main(uint vertexIndex : SV_VertexID)
     float3 normal = vk::RawBufferLoad<float3>(pushConstant.BufferDeviceAddress + vertexOffset + 20);
     float4 color = vk::RawBufferLoad<float4>(pushConstant.BufferDeviceAddress + vertexOffset + 32);
 
-    //loat4 worldPosition = mul(SSBO[0].ModelMatrix, float4(pos, 1.0));
-    float4 worldPosition = mul(m_ModelMatrix, float4(pos, 1.0));
-    float3 worldNormal = normalize(mul(SSBO[0].NormalMatrix, normal));  // Transform normal to world space
+    float4 worldPosition = mul(SSBO[pushConstant.ObjectID].ModelMatrix, float4(pos, 1.0));
+    float3 worldNormal = normalize(mul(SSBO[pushConstant.ObjectID].NormalMatrix, normal));  // Transform normal to world space
     float4 viewPosition = mul(m_ViewMatrix, worldPosition);
     output.worldPosition = worldPosition;
     output.position = mul(m_ProjectionMatrix, viewPosition);

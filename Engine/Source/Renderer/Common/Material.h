@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Asset/Asset.h"
-#include "Math/Transform.h"
 
 class IMesh;
 
@@ -12,7 +11,7 @@ public:
 
     virtual void Init() = 0;
     virtual void Destroy() = 0;
-    virtual void Bind(STransform Transform) const = 0;
+    virtual void Bind() const = 0;
     virtual void Unbind() const = 0;
 
 protected:

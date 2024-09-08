@@ -4,10 +4,12 @@
 #include "Asset/AssetManager.h"
 #include "Core/Assert.h"
 #include "Renderer/RHI.h"
+#include "Renderer/Vulkan/VulkanMemory.h"
 #include "Scene/Scene.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
@@ -27,7 +29,7 @@ void PVulkanSceneRenderer::Init()
 	DepthImage = new PVulkanImage();
 	RenderGraph = new PVulkanRenderGraph();
 	OverlayRenderGraph = new PVulkanRenderGraph();
-	DeferredFramePool = new PVulkanFramePool(DeferredFrameCount);
+	ParallelFramePool = new PVulkanFramePool(DeferredFrameCount);
 	ImmediateFramePool = new PVulkanFramePool(ImmediateFrameCount);
 	GOverlay = new PVulkanOverlay();
 
@@ -41,22 +43,53 @@ void PVulkanSceneRenderer::Init()
 	DepthImage->CreateImage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	DepthImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
 	
-	DeferredFramePool->CreateFramePool();
+	ParallelFramePool->CreateFramePool();
 	ImmediateFramePool->CreateFramePool();
 
 	GOverlay->Init();
+	
+	RenderGraph->AddCommand([&](PVulkanFrame* Frame)
+	{
+		PCamera* Camera = GetScene()->GetCamera();
+    	
+		SUniformBufferObject UBO;
+    	UBO.ViewMatrix = Camera->GetViewMatrix();
+    	UBO.ProjectionMatrix = Camera->GetProjectionMatrix();
+		
+		Frame->UBO->Submit(&UBO, sizeof(UBO));
+	});
 
-	// Draw all meshes from scene
 	RenderGraph->AddCommand([this](PVulkanFrame* Frame)
 	{
-		GetScene()->Render();
+		std::vector<SShaderStorageBufferObject> SSBOs;
+
+		GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
+		{
+    		glm::mat4 ModelMatrix = TransformComponent.Transform.ToMatrix();
+    		glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelMatrix));
+
+			SShaderStorageBufferObject SSBO;
+			SSBO.ModelMatrix = ModelMatrix;
+			SSBO.NormalMatrix = NormalMatrix;
+
+			SSBOs.push_back( SSBO );
+		});
+		
+		Frame->SSBO->Submit(SSBOs.data(), sizeof(SShaderStorageBufferObject) * SSBOs.size());
+
+		uint32_t ObjectID = 0;
+    	GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
+    	{
+    	    MeshComponent.Mesh->DrawIndirectInstanced(ObjectID);
+			ObjectID++;
+    	});
 	});
 }
 
 void PVulkanSceneRenderer::Shutdown()
 {
 	GOverlay->Shutdown();
-	DeferredFramePool->FreeFramePool();
+	ParallelFramePool->FreeFramePool();
 	ImmediateFramePool->FreeFramePool();
 	DrawImage->DestroyImage();
 	DrawImage->DestroyImageView();
@@ -65,7 +98,7 @@ void PVulkanSceneRenderer::Shutdown()
 	Swapchain->Shutdown();
 
 	delete GOverlay;
-	delete DeferredFramePool;
+	delete ParallelFramePool;
 	delete ImmediateFramePool;
 	delete DrawImage;
 	delete DepthImage;
@@ -98,12 +131,14 @@ void PVulkanSceneRenderer::Resize()
 
 void PVulkanSceneRenderer::Render()
 {
-	PVulkanFrame* Frame = DeferredFramePool->Pool[DeferredFramePool->FrameIndex % DeferredFrameCount];
+	PVulkanFrame* Frame = ParallelFramePool->Pool[ParallelFramePool->FrameIndex % DeferredFrameCount];
 	Frame->BeginFrame();
 
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	DepthImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	RenderGraph->BeginRendering();
 	RenderGraph->Execute(Frame);
+	RenderGraph->EndRendering();
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -112,7 +147,7 @@ void PVulkanSceneRenderer::Render()
 	Swapchain->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 	Frame->EndFrame();
-	DeferredFramePool->FrameIndex++;
+	ParallelFramePool->FrameIndex++;
 }
 
 PVulkanSwapchain* PVulkanSceneRenderer::GetSwapchain() const
@@ -140,9 +175,9 @@ PVulkanRenderGraph* PVulkanSceneRenderer::GetOverlayRenderGraph() const
 	return OverlayRenderGraph;
 }
 
-PVulkanFramePool* PVulkanSceneRenderer::GetFramePool() const
+PVulkanFramePool* PVulkanSceneRenderer::GetParallelFramePool() const
 {
-	return DeferredFramePool;
+	return ParallelFramePool;
 }
 
 // TODO: Move to Command

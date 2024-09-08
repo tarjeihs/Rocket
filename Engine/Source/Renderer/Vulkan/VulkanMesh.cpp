@@ -2,6 +2,7 @@
 #include "VulkanMesh.h"
 
 #include "Renderer/Common/Material.h"
+#include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -66,35 +67,23 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
     });
 }
 
-void PVulkanMesh::Draw(const STransform& Transform)
+void PVulkanMesh::DrawIndirectInstanced(uint32_t ID)
 {
-    glm::mat4 ModelMatrix = Transform.ToMatrix();
-    glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelMatrix));
+    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
-    SShaderStorageBufferObject Instance;
-    Instance.ModelMatrix = ModelMatrix;
-    Instance.NormalMatrix = NormalMatrix;
+    SUInt64PointerPushConstant PushConstant;
+    PushConstant.DeviceAddress = DeviceAddress64;
+    PushConstant.ObjectId = ID;
 
-    //BufferData.push_back(Instance);
-    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer,&Instance, sizeof(SShaderStorageBufferObject));
-    Material->GraphicsPipeline->StorageBuffer->Update(&Instance, sizeof(Instance));
+    Material->Bind();
 
-    //SubmitData.push_back([&]()
-    //{
-        SUInt64PointerPushConstant PushConstant;
-        PushConstant.DeviceAddress = DeviceAddress64;
-        PushConstant.ObjectId = 0;
+    vkCmdPushConstants(Frame->CommandBuffer->GetVkCommandBuffer(), Material->GraphicsPipeline->GetPipelineLayout()->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
+    vkCmdBindIndexBuffer(Frame->CommandBuffer->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(Frame->CommandBuffer->GetVkCommandBuffer(), static_cast<size_t>(IndexBuffer->AllocationInfo.size) / sizeof(uint32_t), 1, 0, 0, 0);
 
-        Material->Bind(Transform);
-        
-        const PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetFramePool()->FrameIndex % 2];
-        vkCmdPushConstants(Frame->CommandBuffer->GetVkCommandBuffer(), Material->GraphicsPipeline->GetPipelineLayout()->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
-        vkCmdBindIndexBuffer(Frame->CommandBuffer->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(Frame->CommandBuffer->GetVkCommandBuffer(), static_cast<size_t>(IndexBuffer->AllocationInfo.size) / sizeof(uint32_t), 1, 0, 0, 0);
-
-        Material->Unbind();
-    //});
+    Material->Unbind();
 }
+
 
 void PVulkanMesh::Destroy()
 {
@@ -108,6 +97,7 @@ void PVulkanMesh::Serialize(SBlob& Blob)
 {
 }
 
+// TODO: Properly load in the mesh asset. Are we having too many vertices and indices?
 void PVulkanMesh::Deserialize(SBlob& Blob)
 {
     tinygltf::Model model;
@@ -230,22 +220,6 @@ void PVulkanMesh::Deserialize(SBlob& Blob)
 
     CreateMesh(vertices, indices);
 }
-
-//void PVulkanMesh::BeginFrame()
-//{
-//    SubmitData.clear();
-//    BufferData.clear();
-//}
-//
-//void PVulkanMesh::EndFrame()
-//{
-//    //GetRHI()->GetMemory()->UploadBuffer(Material->GraphicsPipeline->StorageBuffer, BufferData.data(), sizeof(SShaderStorageBufferObject) * 1);
-//
-//    for (const std::function<void()>& Func : SubmitData)
-//    {
-//        Func();
-//    }
-//}
 
 void PVulkanMesh::ApplyMaterial(IMaterial* NewMaterial)
 {

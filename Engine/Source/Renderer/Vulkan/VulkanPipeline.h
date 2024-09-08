@@ -1,10 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <vulkan/vulkan_core.h>
-
-#include "Math/Transform.h"
-#include "Renderer/Vulkan/VulkanBuffer.h"
 
 class IMesh;
 class PVulkanDescriptorSet;
@@ -13,6 +9,11 @@ class PVulkanShader;
 class PVulkanCommandBuffer;
 struct SBuffer;
 struct SUniformBufferObject;
+struct VkPipeline_T;
+struct VkPipelineLayout_T;
+
+typedef struct VkPipeline_T* VkPipeline;
+typedef struct VkPipelineLayout_T* VkPipelineLayout;
 
 class PVulkanPipelineLayout
 {
@@ -32,7 +33,7 @@ public:
 	void CreatePipeline();
 	void DestroyPipeline();
 
-	void Bind(STransform Transform);
+	void Bind();
 	void Unbind();
 
 	PVulkanPipelineLayout* GetPipelineLayout() const;
@@ -40,14 +41,8 @@ public:
 
 protected:
 	PVulkanPipelineLayout* PipelineLayout;
-	PVulkanDescriptorSetLayout* DescriptorSetLayout;
-	PVulkanDescriptorSet* DescriptorSet;
 	PVulkanShader* VertexShader;
 	PVulkanShader* FragmentShader;
-
-public:
-	SVulkanBuffer* StorageBuffer; // Array of instance data (eg. model matrix)
-	SVulkanBuffer* UniformBuffer; // Global data (eg. skylight, projection and view matrix)
 
 private:
 	VkPipeline Pipeline;

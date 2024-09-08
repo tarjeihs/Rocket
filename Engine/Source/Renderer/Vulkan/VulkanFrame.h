@@ -3,6 +3,10 @@
 #include <vector>
 
 // Forward declaration
+struct SVulkanBuffer;
+class PVulkanDescriptorPool;
+class PVulkanDescriptorSetLayout;
+class PVulkanDescriptorSet;
 class PVulkanCommandPool;
 class PVulkanRHI;
 class PVulkanCommandBuffer;
@@ -33,6 +37,10 @@ public:
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
 
+	PVulkanDescriptorSet* DescriptorSet;
+	SVulkanBuffer* SSBO;
+	SVulkanBuffer* UBO;
+
 	FTransientFrameData TransientFrameData;
 };
 
@@ -47,6 +55,10 @@ public:
 
 	void CreateFramePool();
 	void FreeFramePool();
+	PVulkanFrame* GetCurrentFrame() const;
+
+
+	PVulkanDescriptorSetLayout* DescriptorSetLayout;
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

@@ -9,5 +9,5 @@ public:
 
     virtual void Allocate(size_t Size) = 0;
     virtual void Free() = 0;
-    virtual void Update(const void* Data, size_t Size) = 0;
+    virtual void Submit(const void* Data, size_t Size) = 0;
 };

@@ -15,9 +15,9 @@ void PVulkanMaterial::Destroy()
     GraphicsPipeline->DestroyPipeline();
 }
 
-void PVulkanMaterial::Bind(STransform Transform) const
+void PVulkanMaterial::Bind() const
 {
-    GraphicsPipeline->Bind(Transform);
+    GraphicsPipeline->Bind();
 }
 
 void PVulkanMaterial::Unbind() const

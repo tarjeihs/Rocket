@@ -18,7 +18,7 @@ public:
 	{
 		Swapchain = nullptr;
 		DrawImage = nullptr;
-		DeferredFramePool = nullptr;
+		ParallelFramePool = nullptr;
 		ImmediateFramePool = nullptr;
 	}
 
@@ -32,7 +32,7 @@ public:
 	PVulkanImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
 	PVulkanRenderGraph* GetOverlayRenderGraph() const;
-	PVulkanFramePool* GetFramePool() const;
+	PVulkanFramePool* GetParallelFramePool() const;
 
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
@@ -42,6 +42,6 @@ private:
 	PVulkanImage* DepthImage;
 	PVulkanRenderGraph* RenderGraph;
 	PVulkanRenderGraph* OverlayRenderGraph;
-	PVulkanFramePool* DeferredFramePool;
+	PVulkanFramePool* ParallelFramePool;
 	PVulkanFramePool* ImmediateFramePool;
 };

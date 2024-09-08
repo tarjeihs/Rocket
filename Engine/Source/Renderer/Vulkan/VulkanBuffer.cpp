@@ -28,7 +28,7 @@ void SVulkanBuffer::Free()
     Allocation = VK_NULL_HANDLE;
 }
 
-void SVulkanBuffer::Update(const void* Data, size_t Size)
+void SVulkanBuffer::Submit(const void* Data, size_t Size)
 {
     void* MappedData;
     vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), Allocation, &MappedData);

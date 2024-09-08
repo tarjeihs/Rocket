@@ -23,7 +23,7 @@ public:
     virtual ~IMesh() = default;
 
     virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) = 0;
-    virtual void Draw(const STransform& Transform) = 0;
+    virtual void DrawIndirectInstanced(uint32_t ID) = 0;
     virtual void Destroy() = 0;
     virtual void ApplyMaterial(class IMaterial* NewMaterial) = 0;
 };
