@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanRenderGraph.h"
 
-#include "Renderer/RHI.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
@@ -65,7 +63,7 @@ void PVulkanRenderGraph::BeginRendering()
 
 void PVulkanRenderGraph::EndRendering()
 {
-    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetParallelFramePool()->FrameIndex % 2];
+    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
     vkCmdEndRendering(Frame->CommandBuffer->GetVkCommandBuffer());   
 }
 

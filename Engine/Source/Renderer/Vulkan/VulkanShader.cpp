@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanShader.h"
 
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 
 void PVulkanShader::CreateShader(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile)

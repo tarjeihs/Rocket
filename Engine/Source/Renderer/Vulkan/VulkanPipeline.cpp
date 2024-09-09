@@ -1,15 +1,8 @@
+#include "EnginePCH.h"
 #include "VulkanPipeline.h"
 
-#include <cstdlib>
-
-#include "EngineMacros.h"
-#include "Renderer/RHI.h"
-#include "Renderer/Vulkan/VulkanBuffer.h"
-#include "VulkanFrame.h"
-#include "Core/Assert.h"
-#include "Core/Camera.h"
 #include "Renderer/VulkanRHI.h"
-#include "Renderer/Common/Mesh.h"
+#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
@@ -17,7 +10,6 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Scene/Scene.h"
 
 void PVulkanPipelineLayout::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
 {
@@ -187,7 +179,7 @@ void PVulkanGraphicsPipeline::DestroyPipeline()
 
 void PVulkanGraphicsPipeline::Bind()
 {
-    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->Pool[GetRHI()->GetSceneRenderer()->GetParallelFramePool()->FrameIndex % 2];
+    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
     VkDescriptorSet DescriptorSetPointer = Frame->DescriptorSet->GetVkDescriptorSet();
 

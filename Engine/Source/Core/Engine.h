@@ -12,8 +12,8 @@ class IWindow;
 class IRHI;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
-static constexpr uint32_t VIEWPORT_WIDTH = 1920;
-static constexpr uint32_t VIEWPORT_HEIGHT = 1200;
+static constexpr uint32_t VIEWPORT_WIDTH = 1440;
+static constexpr uint32_t VIEWPORT_HEIGHT = 840;
 
 class PEngine
 {

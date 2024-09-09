@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanDevice.h"
 
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 
 void PVulkanDevice::Init()
@@ -82,7 +80,8 @@ void PVulkanDevice::Init()
 				VkPhysicalDeviceProperties PhysicalDeviceProperties;
     			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 
-				RK_LOG_INFO("Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
+				//RK_LOG_INFO("Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
+				PLogger::Log(ELogCategory ::LOG_INFO, "Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
 
 				GPU = PhysicalDevice;
 				break;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "Math/Transform.h"
 #include "Utils/UUID64.h"
 #include "Renderer/Common/Mesh.h"

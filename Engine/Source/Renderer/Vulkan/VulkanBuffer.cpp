@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanBuffer.h"
 
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
 void SVulkanBuffer::Allocate(size_t Size)

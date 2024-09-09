@@ -2,8 +2,6 @@
 #include "VulkanMesh.h"
 
 #include "Renderer/Common/Material.h"
-#include "Renderer/RHI.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
@@ -100,125 +98,153 @@ void PVulkanMesh::Serialize(SBlob& Blob)
 // TODO: Properly load in the mesh asset. Are we having too many vertices and indices?
 void PVulkanMesh::Deserialize(SBlob& Blob)
 {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
+    std::vector<SVertex> Vertices;
+    std::vector<uint32_t> Indices;
 
-    std::string err;
-    std::string warn;
+    tinygltf::Model Model;
+    tinygltf::TinyGLTF Loader;
 
-    bool ret = loader.LoadBinaryFromMemory(&model, &err, &warn, Blob.Data.data(), Blob.Data.size());
+    std::string Error;
+    std::string Warning;
 
-    std::vector<SVertex> vertices;
-    std::vector<uint32_t> indices;
+    Loader.LoadBinaryFromMemory(&Model, &Error, &Warning, Blob.Data.data(), Blob.Data.size());
 
-    for (const auto& mesh : model.meshes)
+    for (const auto& Mesh : Model.meshes)
     {
-        for (const auto& primitive : mesh.primitives)
+        for (const auto& Primitive : Mesh.primitives)
         {
-            // Load vertex positions
-            const tinygltf::Accessor &posAccessor = model.accessors[primitive.attributes.find("POSITION")->second];
-            const tinygltf::BufferView &posBufferView = model.bufferViews[posAccessor.bufferView];
-            const tinygltf::Buffer &posBuffer = model.buffers[posBufferView.buffer];
-            const float* positions = reinterpret_cast<const float*>(&posBuffer.data[posBufferView.byteOffset + posAccessor.byteOffset]);
+            const float* Positions = nullptr;
+            const float* TexCoords = nullptr;
+            const float* Normals = nullptr;
+            const float* Colors = nullptr;
+            const uint8_t* indexData = nullptr;
 
-            // Calculate the stride (distance between each vertex in the buffer)
-            size_t posStride = posAccessor.ByteStride(posBufferView) ? posAccessor.ByteStride(posBufferView) : sizeof(glm::vec3);
+            size_t TexCoordStride = 0;
+            size_t PositionStride = 0;
+            size_t NormalStride = 0;
+            size_t ColorStride = 0;
+            size_t IndexStride = 0;
 
-            // Similarly, get texCoords, normals, and colors using the same approach
-            const float* texCoords = nullptr;
-            size_t texStride = 0;
-            if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end())
+            size_t VertexCount = 0;
+            size_t IndexCount = 0;
+            size_t TriangleCount = 0;
+
+            if (Primitive.attributes.find("POSITION") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor &texAccessor = model.accessors[primitive.attributes.find("TEXCOORD_0")->second];
-                const tinygltf::BufferView &texBufferView = model.bufferViews[texAccessor.bufferView];
-                const tinygltf::Buffer &texBuffer = model.buffers[texBufferView.buffer];
-                texCoords = reinterpret_cast<const float*>(&texBuffer.data[texBufferView.byteOffset + texAccessor.byteOffset]);
-                texStride = texAccessor.ByteStride(texBufferView) ? texAccessor.ByteStride(texBufferView) : sizeof(glm::vec2);
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("POSITION")->second];
+                const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
+                const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+                
+                Positions = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
+                PositionStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec3);
+                VertexCount = Accessor.count;
             }
 
-            const float* normals = nullptr;
-            size_t normStride = 0;
-            if (primitive.attributes.find("NORMAL") != primitive.attributes.end())
+            if (Primitive.attributes.find("TEXCOORD_0") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor &normAccessor = model.accessors[primitive.attributes.find("NORMAL")->second];
-                const tinygltf::BufferView &normBufferView = model.bufferViews[normAccessor.bufferView];
-                const tinygltf::Buffer &normBuffer = model.buffers[normBufferView.buffer];
-                normals = reinterpret_cast<const float*>(&normBuffer.data[normBufferView.byteOffset + normAccessor.byteOffset]);
-                normStride = normAccessor.ByteStride(normBufferView) ? normAccessor.ByteStride(normBufferView) : sizeof(glm::vec3);
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("TEXCOORD_0")->second];
+                const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
+                const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+                TexCoords = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
+                TexCoordStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec2);
             }
 
-            const float* colors = nullptr;
-            size_t colorStride = 0;
-            if (primitive.attributes.find("COLOR_0") != primitive.attributes.end())
+            if (Primitive.attributes.find("NORMAL") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor &colorAccessor = model.accessors[primitive.attributes.find("COLOR_0")->second];
-                const tinygltf::BufferView &colorBufferView = model.bufferViews[colorAccessor.bufferView];
-                const tinygltf::Buffer &colorBuffer = model.buffers[colorBufferView.buffer];
-                colors = reinterpret_cast<const float*>(&colorBuffer.data[colorBufferView.byteOffset + colorAccessor.byteOffset]);
-                colorStride = colorAccessor.ByteStride(colorBufferView) ? colorAccessor.ByteStride(colorBufferView) : sizeof(glm::vec4);
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("NORMAL")->second];
+                const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
+                const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+                Normals = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
+                NormalStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec3);
             }
 
-            // Combine all attributes into SVertex
-            for (size_t i = 0; i < posAccessor.count; ++i)
+            if (Primitive.attributes.find("COLOR_0") != Primitive.attributes.end())
             {
-                SVertex vertex = {};
-
-                const float* pos = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(positions) + i * posStride);
-                vertex.Position = glm::vec3(pos[0], pos[1], pos[2]);
-
-                if (texCoords) {
-                    const float* tex = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(texCoords) + i * texStride);
-                    vertex.TexCoord = glm::vec2(tex[0], tex[1]);
-                } else {
-                    vertex.TexCoord = glm::vec2(0.0f, 0.0f);
-                }
-
-                if (normals) {
-                    const float* norm = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(normals) + i * normStride);
-                    vertex.Normal = glm::vec3(norm[0], norm[1], norm[2]);
-                } else {
-                    vertex.Normal = glm::vec3(0.0f, 0.0f, 0.0f);
-                }
-
-                if (colors) {
-                    const float* color = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(colors) + i * colorStride);
-                    vertex.Color = glm::vec4(color[0], color[1], color[2], color[3]);
-                } else {
-                    vertex.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                }
-
-                vertices.push_back(vertex);
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("COLOR_0")->second];
+                const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
+                const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+                Colors = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
+                ColorStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec4);
             }
 
-            // Load indices (code remains the same as before)
-            const tinygltf::Accessor &indexAccessor = model.accessors[primitive.indices];
-            const tinygltf::BufferView &indexBufferView = model.bufferViews[indexAccessor.bufferView];
-            const tinygltf::Buffer &indexBuffer = model.buffers[indexBufferView.buffer];
-
-            if (indexAccessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT)
+            for (size_t Index = 0; Index < VertexCount; ++Index)
             {
-                const uint16_t* indices16 = reinterpret_cast<const uint16_t*>(&indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset]);
-                for (size_t i = 0; i < indexAccessor.count; ++i)
+                SVertex Vertex;
+
+                if (Positions)
                 {
-                    indices.push_back(static_cast<uint32_t>(indices16[i]));
+                    const float* Position = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Positions) + Index * PositionStride);
+                    Vertex.Position = glm::vec3(Position[0], Position[1], Position[2]);
                 }
-            }
-            else if (indexAccessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT)
-            {
-                const uint32_t* indices32 = reinterpret_cast<const uint32_t*>(&indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset]);
-                for (size_t i = 0; i < indexAccessor.count; ++i)
+
+                if (TexCoords) 
                 {
-                    indices.push_back(indices32[i]);
-                }
+                    const float* TexCoord = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(TexCoords) + Index * TexCoordStride);
+                    Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
+                } 
+
+                if (Normals) 
+                {
+                    const float* Normal = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Normals) + Index * NormalStride);
+                    Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
+                } 
+
+                if (Colors) 
+                {
+                    const float* Color = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Colors) + Index * ColorStride);
+                    Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
+                } 
+
+                Vertices.push_back(Vertex);
             }
-            else
+
+            if (Primitive.indices >= 0)
             {
-                std::cerr << "Unsupported index format" << std::endl;
+                const tinygltf::Accessor &indexAccessor = Model.accessors[Primitive.indices];
+                const tinygltf::BufferView &indexBufferView = Model.bufferViews[indexAccessor.bufferView];
+                const tinygltf::Buffer &indexBuffer = Model.buffers[indexBufferView.buffer];
+                indexData = &indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset];
+                IndexStride = indexAccessor.componentType;
+                IndexCount = indexAccessor.count;
+                TriangleCount = indexAccessor.count / 3;
             }
+
+            for (size_t Index = 0; Index < IndexCount; ++Index)
+            {
+                uint32_t IndexValue;
+                
+                switch (IndexStride)
+                {
+                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+                    {
+                        const uint8_t* Value8 = reinterpret_cast<const uint8_t*>(indexData);
+                        IndexValue = static_cast<uint32_t>(Value8[Index]);
+                        break;
+                    }
+                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+                    {
+                        const uint16_t* Value16 = reinterpret_cast<const uint16_t*>(indexData);
+                        IndexValue = static_cast<uint32_t>(Value16[Index]);
+                        break;
+                    }
+                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+                    {
+                        const uint32_t* Value32 = reinterpret_cast<const uint32_t*>(indexData);
+                        IndexValue = static_cast<uint32_t>(Value32[Index]);
+                        break;
+                    }
+                }
+
+                Indices.push_back(IndexValue);
+            }
+        
+            Stats.Vertices = VertexCount;
+            Stats.Triangles = TriangleCount;
         }
+
     }
 
-    CreateMesh(vertices, indices);
+    CreateMesh(Vertices, Indices);
 }
 
 void PVulkanMesh::ApplyMaterial(IMaterial* NewMaterial)

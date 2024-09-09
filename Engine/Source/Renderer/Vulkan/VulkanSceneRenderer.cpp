@@ -1,12 +1,7 @@
 #include "EnginePCH.h"
 #include "VulkanSceneRenderer.h"
 
-#include "Asset/AssetManager.h"
-#include "Core/Assert.h"
-#include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
-#include "Scene/Scene.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
@@ -131,7 +126,7 @@ void PVulkanSceneRenderer::Resize()
 
 void PVulkanSceneRenderer::Render()
 {
-	PVulkanFrame* Frame = ParallelFramePool->Pool[ParallelFramePool->FrameIndex % DeferredFrameCount];
+	PVulkanFrame* Frame = ParallelFramePool->GetCurrentFrame();
 	Frame->BeginFrame();
 
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

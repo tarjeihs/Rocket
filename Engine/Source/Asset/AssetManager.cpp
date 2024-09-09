@@ -1,11 +1,8 @@
 #include "EnginePCH.h"
 #include "AssetManager.h"
 
-#include "Asset/Asset.h"
 #include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
-#include "Utils/FileSystem.h"
-#include "Utils/Hash.h"
 
 void SAssetTable::AddAsset(SAsset&& Asset)
 {

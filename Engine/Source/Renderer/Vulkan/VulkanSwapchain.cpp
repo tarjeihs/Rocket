@@ -1,17 +1,12 @@
 #include "EnginePCH.h"
 #include "VulkanSwapchain.h"
 
-#include "Core/Assert.h"
-#include "Core/Window.h"
-#include "Renderer/RHI.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
-#include "Math/Math.h"
 
 // Prioritize VK_PRESENT_MODE_IMMEDIATE_KHR to disable V-Sync
-static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 
 namespace Utils
 {

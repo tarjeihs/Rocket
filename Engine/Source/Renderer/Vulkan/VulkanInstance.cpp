@@ -1,10 +1,7 @@
 #include "EnginePCH.h"
 #include "VulkanInstance.h"
 
-#include "Core/Assert.h"
 #include "Core/Window.h"
-#include "Renderer/RHI.h"
-#include "Renderer/VulkanRHI.h"
 
 namespace Utils
 {
@@ -31,10 +28,11 @@ namespace Utils
 	{
 		switch (Severity)
 		{
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:	{ RK_LOG_VERBOSE(CallbackData->pMessage); break; }
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:		{ RK_LOG_INFO(CallbackData->pMessage);   break; }
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:	{ RK_LOG_WARNING(CallbackData->pMessage); break; }
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:		{ RK_LOG_ERROR(CallbackData->pMessage);  break; }
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:	{ RK_LOG_DEBUG("{}", CallbackData->pMessage); break; }
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:		{ RK_LOG_INFO("{}", CallbackData->pMessage);   break; }
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:	{ RK_LOG_WARNING("{}", CallbackData->pMessage); break; }
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:		{ RK_LOG_ERROR("{}", CallbackData->pMessage);  break; }
+			default: break;
 		}
 		return VK_FALSE;
 	}

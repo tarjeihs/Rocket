@@ -1,10 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
-#include <vector>
-
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanMemory.h"

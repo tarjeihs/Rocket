@@ -4,10 +4,9 @@
 #include <vector>
 #include <string>
 
-#include "Asset/Asset.h"
-
 class IMaterial;
 class IMesh;
+struct SAsset;
 
 struct SAssetTable
 {

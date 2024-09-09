@@ -3,9 +3,6 @@
 #include <fstream>
 #include <vector>
 
-#include "Core/Assert.h"
-#include "Utils/Stopwatch.h"
-
 struct SBlob
 {
     std::string Name;

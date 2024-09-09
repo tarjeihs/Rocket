@@ -16,6 +16,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
+#include <cstdlib>
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -26,3 +27,20 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <tiny_gltf.h>
+
+#include "Asset/Asset.h"
+#include "Asset/AssetManager.h"
+#include "Core/Assert.h"
+#include "Core/Engine.h"
+#include "Core/Window.h"
+#include "Core/Delegate.h"
+#include "Scene/Scene.h"
+#include "Scene/Component.h"
+#include "Scene/Entity.h"
+#include "Scene/Registry.h"
+#include "Renderer/RHI.h"
+#include "Renderer/VulkanRHI.h"
+#include "EngineMacros.h"
+#include "Math/Math.h"
+#include "Utils/FileSystem.h"
+#include "Utils/Hash.h"

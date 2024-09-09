@@ -1,6 +1,5 @@
 #pragma once 
 
-#include "Component.h"
 #include "Core/Camera.h"
 #include "Core/Engine.h"
 #include "Scene/Registry.h"
