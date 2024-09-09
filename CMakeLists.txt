@@ -136,6 +136,11 @@ else()
     )
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Required MS extension for compiling dxcapi and suppress nullability. Enables time-trace to track compilation timers.
+    target_compile_options(Engine PRIVATE -fms-extensions -Wno-nullability-completeness -ftime-trace)
+endif()
+
 # Configuration-specific defines
 foreach(CONFIG_TYPE IN ITEMS Debug Release Dist)
     string(TOUPPER ${CONFIG_TYPE} CONFIG_NAME_UPPER)
@@ -147,3 +152,5 @@ foreach(CONFIG_TYPE IN ITEMS Debug Release Dist)
         target_compile_definitions(Engine PRIVATE RK_DIST)
     endif()
 endforeach()
+
+message("[ROCKET] Using ${CMAKE_CXX_COMPILER_ID} as CMake compiler")
