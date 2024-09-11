@@ -10,6 +10,7 @@
 #include "Renderer/Vulkan/VulkanMemory.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
+#include "Utils/Profiler.h"
 
 void PVulkanMesh::Init() 
 {
@@ -67,6 +68,8 @@ void PVulkanMesh::CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> In
 
 void PVulkanMesh::DrawIndirectInstanced(uint32_t ID)
 {
+    PROFILE_FUNC_SCOPE("PVulkanMesh::DrawIndirectInstanced")
+
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
     SUInt64PointerPushConstant PushConstant;

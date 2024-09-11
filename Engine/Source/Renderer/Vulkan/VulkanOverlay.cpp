@@ -62,7 +62,7 @@ void PVulkanOverlay::Init()
 		ImGui::Begin("Metrics");
 		ImGui::Text("Frame Rate: %f", 1.0f / GetEngine()->Timestep.GetDeltaTime());
 		ImGui::Text("Frame Time: %fms", GetEngine()->Timestep.GetDeltaTime());
-		ImGui::Text("Engine Time: %fs", GetEngine()->Timestep.GetElapsedTime());
+		ImGui::Text("Engine Time: %fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
 		ImGui::End();
 
 		OnRender.Broadcast();

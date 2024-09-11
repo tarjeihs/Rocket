@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "Utils/Timestep.h"
+#include "Utils/Timer.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -18,6 +18,7 @@ static constexpr uint32_t VIEWPORT_HEIGHT = 840;
 class PEngine
 {
 public:
+	STimer Time;
 	STimestep Timestep;
 	
 	void Start();

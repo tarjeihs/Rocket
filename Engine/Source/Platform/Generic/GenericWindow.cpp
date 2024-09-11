@@ -50,9 +50,7 @@ void PGenericWindow::CreateNativeWindow()
 			glfwWaitEvents();
 		}
 
-		GetScene()->GetCamera()->Settings.AspectRatio = Window->GetAspectRatio();
 		GetScene()->GetCamera()->ApplySettings();
-
 		GetRHI()->Resize();
 	});
 

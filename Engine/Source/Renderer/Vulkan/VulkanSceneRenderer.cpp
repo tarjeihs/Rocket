@@ -126,6 +126,8 @@ void PVulkanSceneRenderer::Resize()
 
 void PVulkanSceneRenderer::Render()
 {
+	PROFILE_FUNC_SCOPE("PVulkanSceneRenderer::Render")
+	
 	PVulkanFrame* Frame = ParallelFramePool->GetCurrentFrame();
 	Frame->BeginFrame();
 

@@ -11,6 +11,7 @@
 #include <set>
 #include <algorithm>
 #include <optional>
+#include <thread>
 #include <functional>
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
@@ -27,6 +28,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <tiny_gltf.h>
+#include <json/json.h>
 
 #include "Asset/Asset.h"
 #include "Asset/AssetManager.h"
@@ -44,3 +46,4 @@
 #include "Math/Math.h"
 #include "Utils/FileSystem.h"
 #include "Utils/Hash.h"
+#include "Utils/Profiler.h"

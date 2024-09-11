@@ -19,3 +19,6 @@
 [submodule "Vendor/tinygltf"]
 	path = Vendor/tinygltf
 	url = https://github.com/syoyo/tinygltf
+[submodule "Vendor/jsoncpp"]
+	path = Vendor/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp

@@ -52,7 +52,6 @@ public:
 	{
 		ECameraProjectionMode ProjectionMode;
 		float FoVY;
-		float AspectRatio;
 		float ZNear;
 		float ZFar;
 	} Settings;

@@ -42,7 +42,7 @@ void PCamera::ApplySettings()
 {
     switch (Settings.ProjectionMode)
     {
-        case ECameraProjectionMode::Orthographic: SetOrthographicProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
-        case ECameraProjectionMode::Perspective: SetPerspectiveProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
+        case ECameraProjectionMode::Orthographic: SetOrthographicProjection(glm::radians(Settings.FoVY), GetWindow()->GetAspectRatio(), Settings.ZNear, Settings.ZFar); break;
+        case ECameraProjectionMode::Perspective: SetPerspectiveProjection(glm::radians(Settings.FoVY), GetWindow()->GetAspectRatio(), Settings.ZNear, Settings.ZFar); break;
     }
 }

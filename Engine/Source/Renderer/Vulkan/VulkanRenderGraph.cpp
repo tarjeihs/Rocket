@@ -13,6 +13,8 @@ void PVulkanRenderGraph::AddCommand(std::function<void(PVulkanFrame*)>&& Func)
 
 void PVulkanRenderGraph::BeginRendering() 
 {
+    PROFILE_FUNC_SCOPE("PVulkanRenderGraph::BeginRendering")
+
     VkRenderingAttachmentInfo ColorAttachment{};
     ColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     ColorAttachment.pNext = nullptr;
@@ -63,6 +65,8 @@ void PVulkanRenderGraph::BeginRendering()
 
 void PVulkanRenderGraph::EndRendering()
 {
+    PROFILE_FUNC_SCOPE("PVulkanRenderGraph::EndRendering")
+    
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
     vkCmdEndRendering(Frame->CommandBuffer->GetVkCommandBuffer());   
 }

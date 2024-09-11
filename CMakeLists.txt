@@ -24,6 +24,7 @@ set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
 set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
 set(TINYGLTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/tinygltf")
+set(JSONCPP_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/jsoncpp")
 
 # Collect ImGui source files
 set(IMGUI_SRC
@@ -61,6 +62,8 @@ add_subdirectory(Vendor/glfw)
 add_library(Engine STATIC 
     ${ENGINE_FILES}
     ${IMGUI_SRC}  # Add ImGui source files to the Engine target
+    ${JSONCPP_INCLUDE_DIR}/src/lib_json/json_value.cpp
+    ${JSONCPP_INCLUDE_DIR}/src/lib_json/json_writer.cpp
 )
 
 set_source_files_properties(${ENGINE_SHADER_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -76,6 +79,7 @@ target_include_directories(Engine PRIVATE
     ${IMGUI_INCLUDE_DIR}/backends
     ${ENTT_INCLUDE_DIR}/src
     ${TINYGLTF_INCLUDE_DIR}
+    ${JSONCPP_INCLUDE_DIR}/include
 )
 
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)

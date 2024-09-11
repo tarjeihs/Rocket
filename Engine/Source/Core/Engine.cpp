@@ -1,12 +1,10 @@
+#include "EnginePCH.h"
 #include "Engine.h"
 
-#include <GLFW/glfw3.h>
-
-#include "Core/Logger.h"
-#include "Scene/Scene.h"
 #include "Core/Subsystem.h"
 #include "Platform/Generic/GenericWindow.h"
 #include "Renderer/VulkanRHI.h"
+#include "Utils/Profiler.h"
 
 PEngine* PEngine::GEngine = nullptr;
 
@@ -15,6 +13,7 @@ void PEngine::Start()
 	GEngine = this;
 
 	PLogger::Init();
+	//PProfiler::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
@@ -36,7 +35,9 @@ void PEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
-		Timestep.Validate();
+		PROFILE_FUNC_SCOPE("PEngine::Run")
+
+		Timestep.Reset();
 
 		Window->Poll();
 		
@@ -63,6 +64,8 @@ void PEngine::Stop()
 	delete Scene;
 	delete RHI;
 	delete Window;
+
+	PProfiler::Save();
 
 	GEngine = nullptr;
 }

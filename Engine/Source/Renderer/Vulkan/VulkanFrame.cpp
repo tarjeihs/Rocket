@@ -64,6 +64,8 @@ void PVulkanFrame::DestroyFrame()
 
 void PVulkanFrame::BeginFrame()
 {
+	PROFILE_FUNC_SCOPE("PVulkanFrame::BeginFrame")
+
 	vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence, VK_TRUE, UINT64_MAX);
 	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore, nullptr, &TransientFrameData.NextImageIndex);
 	vkResetFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence);
@@ -73,6 +75,8 @@ void PVulkanFrame::BeginFrame()
 
 void PVulkanFrame::EndFrame()
 {
+	PROFILE_FUNC_SCOPE("PVulkanFrame::EndFrame")
+
 	CommandBuffer->EndCommandBuffer();
 
 	VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
