@@ -39,7 +39,7 @@ struct STimer
 struct STimestep
 {
 	STimer Time;
-	STimePoint CurrentTime;
+	STimePoint Current;
 	SDuration DeltaTime;
 
 	STimestep()
@@ -51,9 +51,9 @@ struct STimestep
 	{
 		STimePoint PreviousTime = SClock::now();
 
-		DeltaTime = PreviousTime - CurrentTime;
+		DeltaTime = PreviousTime - Current;
 
-		CurrentTime = PreviousTime;
+		Current = PreviousTime;
 	}
 
 	inline float GetDeltaTime() const

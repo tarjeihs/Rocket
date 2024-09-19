@@ -13,7 +13,6 @@ void PEngine::Start()
 	GEngine = this;
 
 	PLogger::Init();
-	//PProfiler::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
@@ -65,7 +64,7 @@ void PEngine::Stop()
 	delete RHI;
 	delete Window;
 
-	PProfiler::Save();
+	PProfiler::Flush();
 
 	GEngine = nullptr;
 }

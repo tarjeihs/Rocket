@@ -28,7 +28,6 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <tiny_gltf.h>
-#include <json/json.h>
 
 #include "Asset/Asset.h"
 #include "Asset/AssetManager.h"

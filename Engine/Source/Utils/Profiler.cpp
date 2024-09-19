@@ -1,78 +1,81 @@
 #include "EnginePCH.h"
 #include "Profiler.h"
 
-std::stack<SEventData> EventStack;
-Json::Value Events;
+#include <fstream>
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
-void PProfiler::StartEvent()
+struct SEvent
 {
-    std::ostringstream oss;
-    oss << std::this_thread::get_id();
+    const char* Name;
+    const char* Phase;
+    int64_t Timestamp;
+    uint32_t ThreadID;
+    uint32_t ProcessID;
 
-    SEventData EventData = { STimer(), __FUNCTION__, oss.str() };
-    EventStack.push(EventData);
+    bool IsComplete() const
+    {
+        return std::strcmp(Phase, "E") == 0;
+    }
+};
 
-    Json::Value Event;
-    Event["name"] = EventData.Name;
-    Event["ph"] = "B";
-    Event["ts"] = GetEngine()->Time.GetElapsedTimeAsSeconds();
-    Event["pid"] = getpid();
-    Event["tid"] = EventData.ThreadID;
-    
-    Events.append(Event);
-}
+std::vector<SEvent> Timeline;
 
-void PProfiler::EndEvent()
+void PProfiler::Flush()
 {
-    SEventData EventData = EventStack.top();
-    EventStack.pop();
+    rapidjson::Document Document;
+    Document.SetObject();
+    rapidjson::Document::AllocatorType& Allocator = Document.GetAllocator();
 
-    Json::Value Event;
-    Event["name"] = EventData.Name;
-    Event["ph"] = "E";
-    Event["ts"] = GetEngine()->Time.GetElapsedTimeAsSeconds();
-    Event["pid"] = getpid();
-    Event["tid"] = EventData.ThreadID;
+    rapidjson::Value TraceEvents(rapidjson::kArrayType);
+    for (const auto& Event : Timeline) 
+    {
+        rapidjson::Value EventObject(rapidjson::kObjectType);
 
-    Events.append(Event);
-}
+        EventObject.AddMember("name", rapidjson::Value(Event.Name, Allocator), Allocator);
+        EventObject.AddMember("ph", rapidjson::Value(Event.Phase, Allocator), Allocator);
+        EventObject.AddMember("ts", Event.Timestamp, Allocator);
+        EventObject.AddMember("pid", Event.ProcessID, Allocator);
+        EventObject.AddMember("tid", Event.ThreadID, Allocator);
 
-void PProfiler::Save()
-{
-    Json::Value Trace;
-    Trace["traceEvents"] = Events;
-    Trace["displayTimeUnit"] = "s";
+        TraceEvents.PushBack(EventObject, Allocator);
+    }
+
+    Document.AddMember("traceEvents", TraceEvents, Allocator);
+
+    rapidjson::StringBuffer Buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> Writer(Buffer);
+    Document.Accept(Writer);
 
     std::ofstream File("trace.json");
-    File << Trace.toStyledString();
+    File << Buffer.GetString();
     File.close();
+
+    Timeline.clear();
 }
 
 void PProfiler::StartEventBlock(const char* Name)
 {
-    std::ostringstream oss;
-    oss << std::this_thread::get_id();
+    Timeline.emplace_back();
 
-    Json::Value Event;
-
-    Event["name"] = Name;
-    Event["ph"] = "B";
-    Event["ts"] = static_cast<Json::Value::Int64>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
-    Event["pid"] = getpid();
-    Event["tid"] = 0;
-    
-    Events.append(Event);
+    SEvent& EventData = Timeline.back();
+    EventData.Timestamp = static_cast<int64_t>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
+    EventData.Name = Name;
+    EventData.Phase = "B";
+    EventData.ProcessID = getpid();
+    EventData.ThreadID = gettid();
 }
 
 void PProfiler::EndEventBlock(const char* Name)
 {
-    Json::Value Event;
+    Timeline.emplace_back();
 
-    Event["name"] = Name;
-    Event["ph"] = "E";
-    Event["ts"] = static_cast<Json::Value::Int64>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
-    Event["pid"] = getpid();
-    Event["tid"] = 0;
-
-    Events.append(Event);
+    SEvent& EventData = Timeline.back();
+    EventData.Name = Name;
+    EventData.Phase = "E";
+    EventData.Timestamp = static_cast<int64_t>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
+    EventData.ProcessID = getpid();
+    EventData.ThreadID = gettid();
 }

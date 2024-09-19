@@ -22,3 +22,6 @@
 [submodule "Vendor/jsoncpp"]
 	path = Vendor/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp
+[submodule "Vendor/rapidjson"]
+	path = Vendor/rapidjson
+	url = https://github.com/Tencent/rapidjson
