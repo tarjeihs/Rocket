@@ -1,15 +1,17 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-#include <vector>
+struct VkInstance_T;
+struct VkSurfaceKHR_T;
+struct VkDebugUtilsMessengerEXT_T;
 
-class PVulkanRHI;
+typedef struct VkInstance_T* VkInstance;
+typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
+typedef struct VkDebugUtilsMessengerEXT_T* VkDebugUtilsMessengerEXT;
 
 class PVulkanInstance
 {
 public:
-	PVulkanInstance(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanInstance()
 	{
 		Instance = nullptr;
 		Surface = nullptr;
@@ -23,8 +25,6 @@ public:
 	VkSurfaceKHR GetVkSurfaceKHR() const;
 
 private:
-	PVulkanRHI* RHI;
-
 	VkInstance Instance;
 	VkSurfaceKHR Surface;
 	VkDebugUtilsMessengerEXT DebugMessenger;

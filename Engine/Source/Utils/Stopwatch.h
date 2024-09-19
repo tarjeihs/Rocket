@@ -1,11 +1,10 @@
 #pragma once
 
+#include "Core/Logger.h"
 #include <chrono>
 #include <iostream>
 
-#include "Core/Logger.h"
-
-#define STOPWATCH(DebugName) SStopwatch Stopwatch(##DebugName)
+#define STOPWATCH(DebugName) SStopwatch Stopwatch(DebugName)
 
 class SStopwatch
 {
@@ -21,10 +20,15 @@ public:
     ~SStopwatch()
     {
         const auto EndTime = Clock::now();
-        const long DurationS = std::chrono::duration_cast<std::chrono::seconds>(EndTime - StartTime).count();
-        const long DurationMS = std::chrono::duration_cast<std::chrono::milliseconds>(EndTime - StartTime).count();
-        const long DurationNS = std::chrono::duration_cast<std::chrono::nanoseconds>(EndTime - StartTime).count();
-        RK_LOG_TRACE("({}) Elapsed time: {}s:{}ms:{}ns", DebugName, DurationS, DurationMS, DurationNS);
+        const auto Elapsed = EndTime - StartTime;
+
+        // Total time in seconds, milliseconds, and nanoseconds
+        const long DurationS = std::chrono::duration_cast<std::chrono::seconds>(Elapsed).count();
+        const long DurationMS = std::chrono::duration_cast<std::chrono::milliseconds>(Elapsed).count() % 1000;  // Remaining milliseconds after seconds
+        const long DurationNS = std::chrono::duration_cast<std::chrono::nanoseconds>(Elapsed).count() % 1000000; // Remaining nanoseconds after milliseconds
+
+        // Log the properly formatted duration
+        RK_LOG_TRACE("({}) Elapsed time: {}s:{}ms:{}ns", DebugName, DurationS, DurationMS, DurationNS);    
     }
 
 private:

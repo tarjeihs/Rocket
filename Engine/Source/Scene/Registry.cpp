@@ -1,8 +1,6 @@
 #include "EnginePCH.h"
 #include "Registry.h"
 
-#include "Scene/Entity.h"
-
 SEntity PRegistry::CreateEntity()
 {
     SEntity Entity{};

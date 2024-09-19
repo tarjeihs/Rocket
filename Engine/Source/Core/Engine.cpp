@@ -1,12 +1,10 @@
+#include "EnginePCH.h"
 #include "Engine.h"
 
-#include <GLFW/glfw3.h>
-
-#include "Core/Logger.h"
-#include "Scene/Scene.h"
 #include "Core/Subsystem.h"
 #include "Platform/Generic/GenericWindow.h"
 #include "Renderer/VulkanRHI.h"
+#include "Utils/Profiler.h"
 
 PEngine* PEngine::GEngine = nullptr;
 
@@ -18,13 +16,13 @@ void PEngine::Start()
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
-	Scene = new PScene();
-	RHI = new PVulkanRHI();
 	Window = new PGenericWindow(WindowSpecification);
+	RHI = new PVulkanRHI();
+	Scene = new PScene();
 
-	Scene->Init();
 	Window->CreateNativeWindow();
 	RHI->Init();
+	Scene->Init();
 
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
 	{
@@ -36,7 +34,9 @@ void PEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
-		Timestep.Validate();
+		PROFILE_FUNC_SCOPE("PEngine::Run")
+
+		Timestep.Reset();
 
 		Window->Poll();
 		
@@ -57,11 +57,14 @@ void PEngine::Stop()
 	}
 
 	RHI->Shutdown();
+	Scene->Cleanup();
 	Window->DestroyNativeWindow();
 
 	delete Scene;
 	delete RHI;
 	delete Window;
+
+	PProfiler::Flush();
 
 	GEngine = nullptr;
 }

@@ -1,32 +1,34 @@
 #pragma once
 
-#include <vector>
-#include <glm/glm.hpp>
-#include <vulkan/vulkan_core.h>
+#include "Renderer/Common/Mesh.h"
+#include "Renderer/Vulkan/VulkanMemory.h"
 
-struct SVertex
-{
-	glm::vec3 position;
-	float uv_x;
-	glm::vec3 normal;
-	float uv_y;
-	glm::vec4 color;
-};
+class PVulkanMaterial;
+class SVulkanBuffer;
 
-class PVulkanCommandBuffer;
-class PVulkanPipelineLayout;
-class PVulkanRHI;
-class SBuffer;
+typedef uint64_t VkDeviceAddress;
 
-class PVulkanMesh
+class PVulkanMesh : public IMesh
 {
 public:
-    void CreateMesh(PVulkanRHI* RHI, const std::vector<SVertex>& Vertices, const std::vector<uint32_t>& Indices);
-    void DestroyMesh(PVulkanRHI* RHI);
-    void Bind(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer, PVulkanPipelineLayout* PipelineLayout);
-    void Draw(PVulkanRHI* RHI, PVulkanCommandBuffer* CommandBuffer);
+    virtual void Init() override;
+    virtual void Cleanup() override;
 
-    SBuffer* VertexBuffer;
-    SBuffer* IndexBuffer;
-    VkDeviceAddress DeviceAddress;
+    virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) override;
+    virtual void DrawIndirectInstanced(uint32_t ID) override;
+    virtual void Destroy() override;
+
+    virtual void Serialize(SBlob& Blob) override;
+    virtual void Deserialize(SBlob& Blob) override;
+
+    virtual void ApplyMaterial(IMaterial* NewMaterial) override;
+
+private:
+    PVulkanMaterial* Material;
+    SVulkanBuffer* VertexBuffer;
+    SVulkanBuffer* IndexBuffer;
+    SVulkanBuffer* StagingBuffer;
+
+    // TODO: Create a small struct wrapper for device addr in VulkanMemory.h
+    VkDeviceAddress DeviceAddress64;
 };

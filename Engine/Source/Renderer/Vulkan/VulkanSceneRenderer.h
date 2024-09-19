@@ -1,26 +1,24 @@
 #pragma once
 
-#include <vector>
 #include <functional>
-#include <vulkan/vulkan_core.h>
+
+#include "Renderer/Common/Renderer.h"
 
 class PVulkanRenderGraph;
 class PVulkanRHI;
 class PVulkanFramePool;
 class PVulkanImage;
-class PVulkanImGui;
 class PVulkanSwapchain;
 class PVulkanCommandBuffer;
 
-class PVulkanSceneRenderer
+class PVulkanSceneRenderer : public IRenderer
 {
 public:
-	PVulkanSceneRenderer(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanSceneRenderer()
 	{
 		Swapchain = nullptr;
-		RenderTarget = nullptr;
-		DeferredFramePool = nullptr;
+		DrawImage = nullptr;
+		ParallelFramePool = nullptr;
 		ImmediateFramePool = nullptr;
 	}
 
@@ -30,27 +28,20 @@ public:
 	void Render();
 
 	PVulkanSwapchain* GetSwapchain() const;
-	PVulkanImage* GetRenderTarget() const;
+	PVulkanImage* GetDrawImage() const;
+	PVulkanImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
+	PVulkanRenderGraph* GetOverlayRenderGraph() const;
+	PVulkanFramePool* GetParallelFramePool() const;
 
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
-protected:
-	void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
-	void CopyImageRegion(VkCommandBuffer CommandBuffer, VkImage Src, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
-
 private:
 	PVulkanSwapchain* Swapchain;
-	PVulkanImage* RenderTarget;
+	PVulkanImage* DrawImage;
+	PVulkanImage* DepthImage;
 	PVulkanRenderGraph* RenderGraph;
-
-	PVulkanFramePool* DeferredFramePool;
+	PVulkanRenderGraph* OverlayRenderGraph;
+	PVulkanFramePool* ParallelFramePool;
 	PVulkanFramePool* ImmediateFramePool;
-
-	PVulkanImGui* ImGui;
-
-	class PVulkanGraphicsPipeline* GraphicsPipeline;
-
-private:
-	PVulkanRHI* RHI;
 };

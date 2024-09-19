@@ -1,13 +1,19 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include <vector>
-#include <optional>
 
+// Forward declaration
+struct SVulkanBuffer;
+class PVulkanDescriptorPool;
+class PVulkanDescriptorSetLayout;
+class PVulkanDescriptorSet;
 class PVulkanCommandPool;
 class PVulkanRHI;
 class PVulkanCommandBuffer;
+struct VkSemaphore_T;
+struct VkFence_T;
+typedef struct VkSemaphore_T* VkSemaphore;
+typedef struct VkFence_T* VkFence;
 
 struct FTransientFrameData
 {
@@ -17,11 +23,11 @@ struct FTransientFrameData
 class PVulkanFrame
 {
 public:
-	void CreateFrame(PVulkanRHI* RHI);
-	void DestroyFrame(PVulkanRHI* RHI);
+	void CreateFrame();
+	void DestroyFrame();
 	
-	void BeginFrame(PVulkanRHI* RHI);
-	void EndFrame(PVulkanRHI* RHI);
+	void BeginFrame();
+	void EndFrame();
 
 	PVulkanCommandBuffer* GetCommandBuffer() const;
 	
@@ -31,7 +37,10 @@ public:
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
 
-	//std::optional<FTransientFrameData> TransientFrameData;
+	PVulkanDescriptorSet* DescriptorSet;
+	SVulkanBuffer* SSBO;
+	SVulkanBuffer* UBO;
+
 	FTransientFrameData TransientFrameData;
 };
 
@@ -44,8 +53,12 @@ public:
 		FrameIndex = 0;
 	}
 
-	void CreateFramePool(PVulkanRHI* InRHI);
-	void FreeFramePool(PVulkanRHI* InRHI);
+	void CreateFramePool();
+	void FreeFramePool();
+	PVulkanFrame* GetCurrentFrame() const;
+
+
+	PVulkanDescriptorSetLayout* DescriptorSetLayout;
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

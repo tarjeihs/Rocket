@@ -1,8 +1,6 @@
+#include "EnginePCH.h"
 #include "VulkanRHI.h"
 
-#include <GLFW/glfw3.h>
-
-#include "Core/Window.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
@@ -10,16 +8,14 @@
 
 void PVulkanRHI::Init()
 {
-	Instance = new PVulkanInstance(this);
+	Instance = new PVulkanInstance();
+	Device = new PVulkanDevice();
+	Memory = new PVulkanMemory();
+	SceneRenderer = new PVulkanSceneRenderer();
+	
 	Instance->Init();
-
-	Device = new PVulkanDevice(this);
 	Device->Init();
-
-	Memory = new PVulkanMemory(this);
 	Memory->Init();
-
-	SceneRenderer = new PVulkanSceneRenderer(this);
 	SceneRenderer->Init();
 }
 
@@ -28,15 +24,13 @@ void PVulkanRHI::Shutdown()
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
 	SceneRenderer->Shutdown();
-	delete SceneRenderer;
+  	Memory->Shutdown();
+  	Device->Shutdown();
+  	Instance->Shutdown();
 
-	Memory->Shutdown();
+  	delete SceneRenderer;
 	delete Memory;
-
-	Device->Shutdown();
 	delete Device;
-
-	Instance->Shutdown();
 	delete Instance;
 }
 

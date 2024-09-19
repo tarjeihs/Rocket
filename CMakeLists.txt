@@ -23,6 +23,8 @@ set(VMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
 set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
+set(TINYGLTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/tinygltf")
+set(RAPIDJSON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/rapidjson")
 
 # Collect ImGui source files
 set(IMGUI_SRC
@@ -38,10 +40,6 @@ set(IMGUI_SRC
 file(GLOB_RECURSE ENGINE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/*.h
-)
-file(GLOB_RECURSE EDITOR_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/Source/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/Source/*.h
 )
 # Collect all HLSL and GLSL files for the Engine project
 file(GLOB_RECURSE ENGINE_SHADER_FILES 
@@ -78,6 +76,8 @@ target_include_directories(Engine PRIVATE
     ${IMGUI_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}/backends
     ${ENTT_INCLUDE_DIR}/src
+    ${TINYGLTF_INCLUDE_DIR}
+    ${RAPIDJSON_INCLUDE_DIR}/include
 )
 
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
@@ -101,34 +101,10 @@ target_compile_definitions(Engine PRIVATE
     GLFW_INCLUDE_VULKAN
 )
 
-# Editor project
-add_executable(Editor ${EDITOR_FILES})
-
-target_include_directories(Editor PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/Source
-    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/Vendor
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Vendor
-    ${Vulkan_INCLUDE_DIR}
-    ${GLM_INCLUDE_DIR}
-    ${ENTT_INCLUDE_DIR}/src
-
-)
-
-target_link_libraries(Editor PRIVATE 
-    Engine
-    Vulkan::Vulkan
-)
-
-target_compile_definitions(Editor PRIVATE
-    _CRT_SECURE_NO_WARNINGS
-)
-
 # Platform-specific settings
 if(MSVC)
     add_compile_options(/MP)
     target_compile_options(Engine PRIVATE /std:c++20)
-    target_compile_options(Editor PRIVATE /std:c++20)
 
     set(CMAKE_CXX_FLAGS_DEBUG "/D_DEBUG /MDd /Zi /Ob0 /Od /RTC1")
     set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Ob2 /DNDEBUG")
@@ -143,14 +119,9 @@ if(MSVC)
         RK_BUILD_DLL
         RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
-    target_compile_definitions(Editor PRIVATE
-        RK_PLATFORM_WINDOWS
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
 else()
     # Non-MSVC compilers (GCC, Clang)
     target_compile_options(Engine PRIVATE -std=c++20)
-    target_compile_options(Editor PRIVATE -std=c++20)
 
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
@@ -165,10 +136,11 @@ else()
         RK_BUILD_DLL
         RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
-    target_compile_definitions(Editor PRIVATE
-        RK_PLATFORM_LINUX
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Required MS extension for compiling dxcapi and suppress nullability. Enables time-trace to track compilation timers.
+    target_compile_options(Engine PRIVATE -fms-extensions -Wno-nullability-completeness -ftime-trace)
 endif()
 
 # Configuration-specific defines
@@ -176,12 +148,11 @@ foreach(CONFIG_TYPE IN ITEMS Debug Release Dist)
     string(TOUPPER ${CONFIG_TYPE} CONFIG_NAME_UPPER)
     if(${CONFIG_TYPE} STREQUAL "Debug")
         target_compile_definitions(Engine PRIVATE RK_DEBUG)
-        target_compile_definitions(Editor PRIVATE RK_DEBUG)
     elseif(${CONFIG_TYPE} STREQUAL "Release")
         target_compile_definitions(Engine PRIVATE RK_RELEASE)
-        target_compile_definitions(Editor PRIVATE RK_RELEASE)
     elseif(${CONFIG_TYPE} STREQUAL "Dist")
         target_compile_definitions(Engine PRIVATE RK_DIST)
-        target_compile_definitions(Editor PRIVATE RK_DIST)
     endif()
 endforeach()
+
+message("[ROCKET] Using ${CMAKE_CXX_COMPILER_ID} as CMake compiler")

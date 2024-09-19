@@ -2,15 +2,25 @@
 
 #include <optional>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
-class PVulkanRHI;
+struct VkDevice_T;
+struct VkPhysicalDevice_T;
+struct VkQueue_T;
+
+typedef struct VkDevice_T* VkDevice;
+typedef struct VkPhysicalDevice_T* VkPhysicalDevice;
+typedef struct VkQueue_T* VkQueue;
+
+struct VkSurfaceFormatKHR;
+struct VkSurfaceCapabilitiesKHR;
+struct VkPhysicalDeviceProperties;
+
+enum VkPresentModeKHR;
 
 class PVulkanDevice
 {
 public:
-    PVulkanDevice(PVulkanRHI* InRHI)
-        : RHI(InRHI)
+    PVulkanDevice()
     {
         GPU = nullptr;
         Device = nullptr;
@@ -35,8 +45,6 @@ public:
     VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const;
 
 private:
-    PVulkanRHI* RHI;
-
     VkDevice Device;
     VkPhysicalDevice GPU;
 

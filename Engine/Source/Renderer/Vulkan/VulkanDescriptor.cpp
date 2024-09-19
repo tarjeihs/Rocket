@@ -1,13 +1,11 @@
+#include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
-#include <vector>
-
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
-void PVulkanDescriptorPool::CreatePool(PVulkanRHI* RHI, uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags)
+void PVulkanDescriptorPool::CreatePool(uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags)
 {
 	std::vector<VkDescriptorPoolSize> PoolSizes;
 	for (SVulkanDescriptorPoolRatio PoolRatio : PoolRatios)
@@ -25,18 +23,18 @@ void PVulkanDescriptorPool::CreatePool(PVulkanRHI* RHI, uint32_t MaxSets, std::s
 	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
 	DescriptorPoolCreateInfo.pPoolSizes = PoolSizes.data();
 
-	VkResult Result = vkCreateDescriptorPool(RHI->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Pool);
+	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Pool);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor pool.");
 }
 
-void PVulkanDescriptorPool::DestroyPool(PVulkanRHI* RHI)
+void PVulkanDescriptorPool::DestroyPool()
 {
-	vkDestroyDescriptorPool(RHI->GetDevice()->GetVkDevice(), Pool, nullptr);
+	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Pool, nullptr);
 }
 
-void PVulkanDescriptorPool::ResetPool(PVulkanRHI* RHI)
+void PVulkanDescriptorPool::ResetPool()
 {
-	vkResetDescriptorPool(RHI->GetDevice()->GetVkDevice(), Pool, 0);
+	vkResetDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Pool, 0);
 }
 
 VkDescriptorPool PVulkanDescriptorPool::GetVkDescriptorPool() const
@@ -44,32 +42,32 @@ VkDescriptorPool PVulkanDescriptorPool::GetVkDescriptorPool() const
 	return Pool;
 }
 
-void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanRHI* RHI, PVulkanDescriptorSetLayout* DescriptorSetLayout)
+void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout)
 {
 	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
 
 	VkDescriptorSetAllocateInfo DescriptorSetAllocInfo{};
 	DescriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	DescriptorSetAllocInfo.pNext = nullptr;
-	DescriptorSetAllocInfo.descriptorPool = RHI->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
+	DescriptorSetAllocInfo.descriptorPool = GetRHI()->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
 	DescriptorSetAllocInfo.descriptorSetCount = 1;
 	DescriptorSetAllocInfo.pSetLayouts = &DescriptorSetLayoutPointer;
 
-	VkResult Result = vkAllocateDescriptorSets(RHI->GetDevice()->GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
+	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
 }
 
-void PVulkanDescriptorSet::FreeDescriptorSet(PVulkanRHI* RHI)
+void PVulkanDescriptorSet::FreeDescriptorSet()
 {
 	// Note: DescriptorPool must be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT to allow for explicit, manual control.
 	//VkResult Result = vkFreeDescriptorSets(RHI->GetDevice()->GetVkDevice(), RHI->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool(), 1, &DescriptorSet);
 	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
 }
 
-void PVulkanDescriptorSet::UseDescriptorStorageBuffer(PVulkanRHI* RHI, VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer;
+	DescriptorBufferInfo.buffer = Buffer->Buffer;
 	DescriptorBufferInfo.offset = 0;
 	DescriptorBufferInfo.range = Range;
 
@@ -82,13 +80,13 @@ void PVulkanDescriptorSet::UseDescriptorStorageBuffer(PVulkanRHI* RHI, VkBuffer 
 	WriteDescriptorSet.descriptorCount = 1;
 	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
 
-	vkUpdateDescriptorSets(RHI->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
-void PVulkanDescriptorSet::UseDescriptorUniformBuffer(PVulkanRHI* RHI, VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer;
+	DescriptorBufferInfo.buffer = Buffer->Buffer;
 	DescriptorBufferInfo.offset = 0;
 	DescriptorBufferInfo.range = Range;
 
@@ -101,7 +99,7 @@ void PVulkanDescriptorSet::UseDescriptorUniformBuffer(PVulkanRHI* RHI, VkBuffer 
 	WriteDescriptorSet.descriptorCount = 1;
 	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
 
-	vkUpdateDescriptorSets(RHI->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
 VkDescriptorSet PVulkanDescriptorSet::GetVkDescriptorSet() const
@@ -109,7 +107,7 @@ VkDescriptorSet PVulkanDescriptorSet::GetVkDescriptorSet() const
 	return DescriptorSet;
 }
 
-void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(PVulkanRHI* RHI, std::vector<EDescriptorSetLayoutType> LayoutTypes)
+void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(std::vector<EDescriptorSetLayoutType> LayoutTypes)
 {
 	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
 
@@ -131,13 +129,13 @@ void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(PVulkanRHI* RHI, std:
 	DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(DescriptorSetLayoutBindings.size());
 	DescriptorSetLayoutCreateInfo.pBindings = DescriptorSetLayoutBindings.data();
 
-	VkResult Result = vkCreateDescriptorSetLayout(RHI->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout);
+	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");
 }
 
-void PVulkanDescriptorSetLayout::FreeDescriptorSetLayout(PVulkanRHI* RHI)
+void PVulkanDescriptorSetLayout::FreeDescriptorSetLayout()
 {
-	vkDestroyDescriptorSetLayout(RHI->GetDevice()->GetVkDevice(), DescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), DescriptorSetLayout, nullptr);
 }
 
 VkDescriptorSetLayout PVulkanDescriptorSetLayout::GetVkDescriptorSetLayout() const

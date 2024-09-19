@@ -1,8 +1,5 @@
+#include "EnginePCH.h"
 #include "Shader.h"
-
-#include <cstdlib>
-
-#include "Core/Assert.h"
 
 #ifdef RK_PLATFORM_WINDOWS
 void PShader::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile, std::function<void(const ComPtr<IDxcBlob>&)>&& Callback)
@@ -99,8 +96,6 @@ void PShader::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std:
 	RK_ASSERT(DxcCreateInstance, "Failed to locate DxcCreateInstance function address.");
     
 	{
-		RK_LOG_INFO("Current working directory: {}", std::filesystem::current_path().string());
-
 		CComPtr<IDxcBlob> ShaderBlob;
 		CComPtr<IDxcCompiler> Compiler;
     	CComPtr<IDxcLibrary> Library;

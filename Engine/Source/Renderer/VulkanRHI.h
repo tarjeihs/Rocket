@@ -1,8 +1,8 @@
 #pragma once
 
-#include "RHI.h"
-
 #include <vector>
+
+#include "Renderer/RHI.h"
 
 class PVulkanInstance;
 class PVulkanDevice;
@@ -23,9 +23,12 @@ public:
     PVulkanMemory* GetMemory() const;
     PVulkanSceneRenderer* GetSceneRenderer() const;
 
-    std::vector<const char*> ValidationLayerExtensions = { "VK_LAYER_KHRONOS_validation" };
-    std::vector<const char*> InstanceExtensions = { "VK_EXT_debug_utils" };
-    std::vector<const char*> PhysicalDeviceExtensions = { "VK_KHR_swapchain" };
+    struct SExtensions
+    {
+        std::vector<const char*> ValidationLayerExtensions = { "VK_LAYER_KHRONOS_validation" };
+        std::vector<const char*> InstanceExtensions = { "VK_EXT_debug_utils" };
+        std::vector<const char*> PhysicalDeviceExtensions = { "VK_KHR_swapchain" };
+    } Extensions;
 
 private:
     PVulkanInstance* Instance;

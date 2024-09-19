@@ -50,7 +50,7 @@ void PGenericWindow::CreateNativeWindow()
 			glfwWaitEvents();
 		}
 
-		GetScene()->GetCamera()->SetPerspectiveProjection(glm::radians(66.0f), Window->GetAspectRatio(), 0.1f, 1000.f);
+		GetScene()->GetCamera()->ApplySettings();
 		GetRHI()->Resize();
 	});
 
@@ -58,16 +58,12 @@ void PGenericWindow::CreateNativeWindow()
 	{
 		if (Focused)
 		{
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
 			GetWindow()->SetIsFocused(true);
 		}
 		else 
 		{
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
 
 			GetWindow()->SetIsFocused(false);

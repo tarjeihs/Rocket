@@ -2,11 +2,12 @@
 
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan_core.h>
 
 class PVulkanDescriptorPool;
-class PVulkanRHI;
+struct VmaAllocator_T;
+
+typedef VmaAllocator_T* VmaAllocator;
+typedef uint64_t VkDeviceAddress;
 
 struct SBuffer
 {
@@ -18,6 +19,7 @@ struct SBuffer
 struct SShaderStorageBufferObject
 {
 	alignas(16) glm::mat4 ModelMatrix;
+	alignas(16) glm::mat4 NormalMatrix;
 };
 
 struct SUniformBufferObject
@@ -36,8 +38,7 @@ struct SUInt64PointerPushConstant
 class PVulkanMemory
 {
 public:
-	PVulkanMemory(PVulkanRHI* InRHI)
-		: RHI(InRHI)
+	PVulkanMemory()
 	{
 		MemoryAllocator = nullptr;
 		DescriptorPool = nullptr;
@@ -46,18 +47,10 @@ public:
 	void Init();
 	void Shutdown();
 
-	SBuffer* CreateBuffer(size_t Size, VmaMemoryUsage MemoryUsage, VkBufferUsageFlags UsageFlags);
-	void FreeBuffer(SBuffer* Buffer);
-	void UploadBuffer(SBuffer* Buffer, void* Data, size_t Size);
-
 	VmaAllocator GetMemoryAllocator() const;
 	PVulkanDescriptorPool* GetDescriptorPool() const;
 
 protected:
 	VmaAllocator MemoryAllocator;
-
 	PVulkanDescriptorPool* DescriptorPool;
-
-private:
-	PVulkanRHI* RHI;
 };

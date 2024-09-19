@@ -1,10 +1,9 @@
+#include "EnginePCH.h"
 #include "VulkanShader.h"
 
-#include "Core/Assert.h"
-#include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 
-void PVulkanShader::CreateShader(PVulkanRHI* RHI, const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile)
+void PVulkanShader::CreateShader(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile)
 {
 #ifdef RK_PLATFORM_WINDOWS
 	CompileShaderHLSL(ShaderSourcePath, Entrypoint, TargetProfile, [&](const ComPtr<IDxcBlob>& ShaderBlob)
@@ -14,7 +13,7 @@ void PVulkanShader::CreateShader(PVulkanRHI* RHI, const std::wstring& ShaderSour
 		ShaderModuleCreateInfo.codeSize = ShaderBlob->GetBufferSize();
 		ShaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(ShaderBlob->GetBufferPointer());
 
-		VkResult Result = vkCreateShaderModule(RHI->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule);
+		VkResult Result = vkCreateShaderModule(GetRHI()->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule);
 		RK_ASSERT(Result == VK_SUCCESS, "Failed to create Shader Module.");
 	});
 #endif
@@ -27,15 +26,15 @@ void PVulkanShader::CreateShader(PVulkanRHI* RHI, const std::wstring& ShaderSour
 		ShaderModuleCreateInfo.codeSize = ShaderBlob->GetBufferSize();
 		ShaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(ShaderBlob->GetBufferPointer());
 
-		VkResult Result = vkCreateShaderModule(RHI->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule);
+		VkResult Result = vkCreateShaderModule(GetRHI()->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule);
 		RK_ASSERT(Result == VK_SUCCESS, "Failed to create Shader Module.");
 	});
 #endif
 }
 
-void PVulkanShader::DestroyShader(PVulkanRHI* RHI)
+void PVulkanShader::DestroyShader()
 {
-	vkDestroyShaderModule(RHI->GetDevice()->GetVkDevice(), ShaderModule, nullptr);
+	vkDestroyShaderModule(GetRHI()->GetDevice()->GetVkDevice(), ShaderModule, nullptr);
 }
 
 VkShaderModule PVulkanShader::GetVkShaderModule() const
