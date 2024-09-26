@@ -7,7 +7,6 @@
 namespace Random
 {
     static std::random_device RandomDevice;
-    static std::mt19937_64 Engine(RandomDevice());
 }
 
 struct SWELL512
@@ -55,12 +54,6 @@ private:
 
 struct SRandom
 {
-    static float GetVal() 
-    {
-        std::uniform_real_distribution<float> Dis(20'000.0f, 300'000.0f);
-        return Dis(Random::Engine);
-    }
-
     static int32_t GetInt32Value()
     {
         thread_local SWELL512 Instance;
