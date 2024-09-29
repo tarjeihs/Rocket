@@ -12,9 +12,10 @@ typedef uint32_t VkBufferUsageFlags;
 
 enum VmaMemoryUsage;
 
-struct SVulkanBuffer : public IBuffer
+class PVulkanBuffer : public IBuffer
 {
-    SVulkanBuffer(VkBufferUsageFlags InUsageFlags, VmaMemoryUsage InMemoryUsageFlags)
+public:
+    PVulkanBuffer(VkBufferUsageFlags InUsageFlags, VmaMemoryUsage InMemoryUsageFlags)
         : UsageFlags(InUsageFlags), MemoryUsageFlags(InMemoryUsageFlags)
     {
     }

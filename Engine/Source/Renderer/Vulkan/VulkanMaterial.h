@@ -3,7 +3,7 @@
 #include "Renderer/Common/Material.h"
 
 class PVulkanGraphicsPipeline;
-struct SVulkanBuffer;
+struct PVulkanBuffer;
 
 class PVulkanMaterial : public IMaterial
 {

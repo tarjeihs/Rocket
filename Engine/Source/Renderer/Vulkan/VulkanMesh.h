@@ -4,7 +4,7 @@
 #include "Renderer/Vulkan/VulkanMemory.h"
 
 class PVulkanMaterial;
-class SVulkanBuffer;
+class PVulkanBuffer;
 
 typedef uint64_t VkDeviceAddress;
 
@@ -25,9 +25,9 @@ public:
 
 private:
     PVulkanMaterial* Material;
-    SVulkanBuffer* VertexBuffer;
-    SVulkanBuffer* IndexBuffer;
-    SVulkanBuffer* StagingBuffer;
+    PVulkanBuffer* VertexBuffer;
+    PVulkanBuffer* IndexBuffer;
+    PVulkanBuffer* StagingBuffer;
 
     // TODO: Create a small struct wrapper for device addr in VulkanMemory.h
     VkDeviceAddress DeviceAddress64;

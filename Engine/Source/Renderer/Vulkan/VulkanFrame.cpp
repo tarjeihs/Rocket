@@ -36,10 +36,10 @@ void PVulkanFrame::CreateFrame()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
 
 	{
-    	SSBO = new SVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    	SSBO = new PVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     	SSBO->Allocate(sizeof(SShaderStorageBufferObject) * 100);
 
-    	UBO = new SVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    	UBO = new PVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
     	UBO->Allocate(sizeof(SUniformBufferObject));
 
     	DescriptorSet = new PVulkanDescriptorSet();

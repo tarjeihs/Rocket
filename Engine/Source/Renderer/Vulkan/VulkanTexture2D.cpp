@@ -18,7 +18,7 @@ void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
     Image->Init(Extent, ImageFormat);  // Initialize the image with the extent and format
     Image->CreateImage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-    SVulkanBuffer StagingBuffer = SVulkanBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    PVulkanBuffer StagingBuffer = PVulkanBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     StagingBuffer.Allocate(Width * Height * Channels);
 
     void* MappedData = nullptr;

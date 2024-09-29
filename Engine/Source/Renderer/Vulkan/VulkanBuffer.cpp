@@ -3,7 +3,7 @@
 
 #include "Renderer/Vulkan/VulkanMemory.h"
 
-void SVulkanBuffer::Allocate(size_t Size)
+void PVulkanBuffer::Allocate(size_t Size)
 {
     VkBufferCreateInfo BufferCreateInfo{};
     BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -19,14 +19,14 @@ void SVulkanBuffer::Allocate(size_t Size)
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate buffer.");
 }
 
-void SVulkanBuffer::Free()
+void PVulkanBuffer::Free()
 {
     vmaDestroyBuffer(GetRHI()->GetMemory()->GetMemoryAllocator(), Buffer, Allocation);
     Buffer = VK_NULL_HANDLE;
     Allocation = VK_NULL_HANDLE;
 }
 
-void SVulkanBuffer::Submit(const void* Data, size_t Size)
+void PVulkanBuffer::Submit(const void* Data, size_t Size)
 {
     void* MappedData;
     vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), Allocation, &MappedData);

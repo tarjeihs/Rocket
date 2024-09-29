@@ -3,7 +3,7 @@
 #include <vector>
 
 // Forward declaration
-struct SVulkanBuffer;
+struct PVulkanBuffer;
 class PVulkanDescriptorPool;
 class PVulkanDescriptorSetLayout;
 class PVulkanDescriptorSet;
@@ -38,8 +38,8 @@ public:
 	VkFence RenderFence;
 
 	PVulkanDescriptorSet* DescriptorSet;
-	SVulkanBuffer* SSBO;
-	SVulkanBuffer* UBO;
+	PVulkanBuffer* SSBO;
+	PVulkanBuffer* UBO;
 
 	FTransientFrameData TransientFrameData;
 };

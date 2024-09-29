@@ -64,7 +64,7 @@ void PVulkanDescriptorSet::FreeDescriptorSet()
 	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
 }
 
-void PVulkanDescriptorSet::UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorStorageBuffer(PVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
 	DescriptorBufferInfo.buffer = Buffer->Buffer;
@@ -83,7 +83,7 @@ void PVulkanDescriptorSet::UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkD
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
-void PVulkanDescriptorSet::UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
+void PVulkanDescriptorSet::UseDescriptorUniformBuffer(PVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo{};
 	DescriptorBufferInfo.buffer = Buffer->Buffer;

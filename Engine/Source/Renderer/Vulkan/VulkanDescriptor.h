@@ -6,7 +6,7 @@
 #include "Renderer/Vulkan/VulkanBuffer.h"
 
 class PVulkanRHI;
-struct SVulkanBuffer;
+struct PVulkanBuffer;
 struct VkDescriptorPool_T;
 struct VkDescriptorSet_T;
 struct VkDescriptorSetLayout_T;
@@ -61,8 +61,8 @@ public:
     void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout);
     void FreeDescriptorSet();
 
-    void UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
-    void UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorStorageBuffer(PVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void UseDescriptorUniformBuffer(PVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
 
     VkDescriptorSet GetVkDescriptorSet() const;
 
