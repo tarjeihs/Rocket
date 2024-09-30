@@ -30,6 +30,6 @@ void PVulkanBuffer::Submit(const void* Data, size_t Size)
 {
     void* MappedData;
     vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), Allocation, &MappedData);
-    memcpy(MappedData, Data, Size);
+    memcpy(static_cast<uint8_t*>(MappedData) + Offset, Data, Size);
     vmaUnmapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), Allocation);
 }
