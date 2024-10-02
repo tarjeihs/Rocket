@@ -18,7 +18,7 @@ typedef struct VkPipelineLayout_T* VkPipelineLayout;
 class PVulkanPipelineLayout
 {
 public:
-	void CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
+	void CreatePipelineLayout(const std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
 	void DestroyPipelineLayout();
 
 	VkPipelineLayout GetVkPipelineLayout() const;
@@ -30,10 +30,10 @@ private:
 class PVulkanGraphicsPipeline
 {
 public:
-	void CreatePipeline();
+	void CreatePipeline(std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, PVulkanShader* VertexShader, PVulkanShader* FragmentShader);
 	void DestroyPipeline();
 
-	void Bind();
+	void Bind(std::vector<VkDescriptorSet> DescriptorSetData);
 	void Unbind();
 
 	PVulkanPipelineLayout* GetPipelineLayout() const;

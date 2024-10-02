@@ -25,12 +25,18 @@ private:
     std::vector<SAsset> Assets;
 };
 
+struct SAssetArgumentInfo {};
+
+struct SShaderAssetArgumentInfo : public SAssetArgumentInfo
+{
+    const std::string Entrypoint;
+    const std::string Version;
+};
+
 class PAssetManager
 {
 public:
-    void LoadAsset(const std::string& FilePath, const std::string& Type, const std::string& Name);
-    void SaveAsset(const std::string& FilePath, const std::string& Type, const std::string& Name);
-
+    void LoadAsset(const std::string& FilePath, const std::string& Type, const std::string& Name, SAssetArgumentInfo* Info = nullptr);
     const SAsset* GetAsset(const std::string& Type, const std::string& Name) const;
 
     auto BeginTableIterator() const { return Tables.begin(); }

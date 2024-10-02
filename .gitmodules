@@ -22,3 +22,6 @@
 [submodule "Vendor/rapidjson"]
 	path = Vendor/rapidjson
 	url = https://github.com/Tencent/rapidjson
+[submodule "Vendor/SPIRV-Cross"]
+	path = Vendor/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross

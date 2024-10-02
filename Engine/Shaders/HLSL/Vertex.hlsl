@@ -15,9 +15,10 @@ struct SShaderStorageBufferObject
     float4x4 NormalMatrix;
 };
 
-StructuredBuffer<SShaderStorageBufferObject> SSBO : register(t0);
+StructuredBuffer<SShaderStorageBufferObject> SSBO : register(t0, space0);
 
-cbuffer UBO : register(b1) // Binding 1 in Vulkan
+// A cbuffer is fixed in size, and is NOT an array.
+cbuffer UBO : register(b1, space1) // Binding 1 in Vulkan
 {
     float4x4 m_ModelMatrix;
     float4x4 m_ViewMatrix;

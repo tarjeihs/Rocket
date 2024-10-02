@@ -3,17 +3,9 @@
 #include <vector>
 
 // Forward declaration
-struct PVulkanBuffer;
-class PVulkanDescriptorPool;
-class PVulkanDescriptorSetLayout;
-class PVulkanDescriptorSet;
 class PVulkanCommandPool;
 class PVulkanRHI;
 class PVulkanCommandBuffer;
-struct VkSemaphore_T;
-struct VkFence_T;
-typedef struct VkSemaphore_T* VkSemaphore;
-typedef struct VkFence_T* VkFence;
 
 struct FTransientFrameData
 {
@@ -36,11 +28,6 @@ public:
 	VkSemaphore SwapchainSemaphore;
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
-
-	PVulkanDescriptorSet* DescriptorSet;
-	PVulkanBuffer* SSBO;
-	PVulkanBuffer* UBO;
-
 	FTransientFrameData TransientFrameData;
 };
 
@@ -55,10 +42,9 @@ public:
 
 	void CreateFramePool();
 	void FreeFramePool();
+	
 	PVulkanFrame* GetCurrentFrame() const;
-
-
-	PVulkanDescriptorSetLayout* DescriptorSetLayout;
+	size_t GetCurrentFrameIndex() const;
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

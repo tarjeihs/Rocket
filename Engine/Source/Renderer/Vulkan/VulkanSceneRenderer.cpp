@@ -45,39 +45,39 @@ void PVulkanSceneRenderer::Init()
 	
 	RenderGraph->AddCommand([&](PVulkanFrame* Frame)
 	{
-		PCamera* Camera = GetScene()->GetCamera();
-    	
-		SUniformBufferObject UBO;
-    	UBO.ViewMatrix = Camera->GetViewMatrix();
-    	UBO.ProjectionMatrix = Camera->GetProjectionMatrix();
-		
-		Frame->UBO->Submit(&UBO, sizeof(UBO));
+		//PCamera* Camera = GetScene()->GetCamera();
+    	//
+		//SUniformBufferObject UBO;
+    	//UBO.ViewMatrix = Camera->GetViewMatrix();
+    	//UBO.ProjectionMatrix = Camera->GetProjectionMatrix();
+		//
+		//Frame->UBO->Submit(&UBO, sizeof(UBO));
 	});
 
 	RenderGraph->AddCommand([this](PVulkanFrame* Frame)
 	{
-		std::vector<SShaderStorageBufferObject> SSBOs;
-
-		GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
-		{
-    		glm::mat4 ModelMatrix = TransformComponent.Transform.ToMatrix();
-    		glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelMatrix));
-
-			SShaderStorageBufferObject SSBO;
-			SSBO.ModelMatrix = ModelMatrix;
-			SSBO.NormalMatrix = NormalMatrix;
-
-			SSBOs.push_back( SSBO );
-		});
-		
-		Frame->SSBO->Submit(SSBOs.data(), sizeof(SShaderStorageBufferObject) * SSBOs.size());
-
-		uint32_t ObjectID = 0;
-    	GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
-    	{
-    	    MeshComponent.Mesh->DrawIndirectInstanced(ObjectID);
-			ObjectID++;
-    	});
+		//std::vector<SShaderStorageBufferObject> SSBOs;
+//
+		//GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
+		//{
+    	//	glm::mat4 ModelMatrix = TransformComponent.Transform.ToMatrix();
+    	//	glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelMatrix));
+//
+		//	SShaderStorageBufferObject SSBO;
+		//	SSBO.ModelMatrix = ModelMatrix;
+		//	SSBO.NormalMatrix = NormalMatrix;
+//
+		//	SSBOs.push_back( SSBO );
+		//});
+		//
+		//Frame->SSBO->Submit(SSBOs.data(), sizeof(SShaderStorageBufferObject) * SSBOs.size());
+//
+		//uint32_t ObjectID = 0;
+    	//GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
+    	//{
+    	//    MeshComponent.Mesh->DrawIndirectInstanced(ObjectID);
+		//	ObjectID++;
+    	//});
 	});
 }
 

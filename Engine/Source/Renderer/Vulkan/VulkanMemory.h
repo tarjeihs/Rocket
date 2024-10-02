@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Renderer/Settings.h"
+#include "Renderer/Vulkan/VulkanDescriptor.h"
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
 
@@ -52,5 +54,6 @@ public:
 
 protected:
 	VmaAllocator MemoryAllocator;
+
 	PVulkanDescriptorPool* DescriptorPool;
 };

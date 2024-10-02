@@ -8,6 +8,7 @@
 #include "Renderer/Vulkan/VulkanMemory.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VulkanSampler.h"
 
 void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
 {

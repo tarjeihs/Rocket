@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 
 #include "Asset/Asset.h"
+#include "Renderer/Common/Material.h"
 
 struct STransform;
 
@@ -23,12 +24,6 @@ struct SVertex
     glm::vec4 Color;
 };
 
-struct SMeshStats
-{
-    uint32_t Vertices;
-    uint32_t Triangles;
-};
-
 class IMesh : public IAssetMarshalInterface
 {
 public:
@@ -37,7 +32,7 @@ public:
     virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) = 0;
     virtual void DrawIndirectInstanced(uint32_t ID) = 0;
     virtual void Destroy() = 0;
+    
+    virtual IMaterial* GetMaterial() const = 0;
     virtual void ApplyMaterial(class IMaterial* NewMaterial) = 0;
-
-    SMeshStats Stats;
 };

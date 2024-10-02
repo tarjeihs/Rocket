@@ -3,6 +3,7 @@
 
 #include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
+#include "Renderer/Vulkan/VulkanShader.h"
 
 void SAssetTable::AddAsset(SAsset&& Asset)
 {
@@ -43,7 +44,7 @@ const SAsset* SAssetTable::GetAssetByName(const std::string& Name) const
     return nullptr;
 }
 
-void PAssetManager::LoadAsset(const std::string& FilePath, const std::string& Type, const std::string& Name)
+void PAssetManager::LoadAsset(const std::string& FilePath, const std::string& Type, const std::string& Name, SAssetArgumentInfo* Info)
 {
     SBlob Blob = PFileSystem::ReadFileBinary(FilePath);
     SAsset Asset;
@@ -57,9 +58,21 @@ void PAssetManager::LoadAsset(const std::string& FilePath, const std::string& Ty
     {
         Asset.Object = new PVulkanMaterial();
     }
+    else if (Type == "VertexShader")
+    {
+        PVulkanShader* Shader = new PVulkanShader();
+        Asset.Object = Shader;
+        Shader->CreateShader(FilePath, "main", "vs_6_0");
+    }
+    else if (Type == "FragmentShader")
+    {
+        PVulkanShader* Shader = new PVulkanShader();
+        Asset.Object = Shader;
+        Shader->CreateShader(FilePath, "main", "ps_6_0");
+    }
 
     Asset.UUID = FNV1aHash(Name);
-    Asset.Object->Deserialize(Blob); 
+    Asset.Object->Deserialize(Blob);
     Table.AddAsset(Asset);
 }
 

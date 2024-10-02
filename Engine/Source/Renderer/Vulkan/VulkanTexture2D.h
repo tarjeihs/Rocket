@@ -3,6 +3,7 @@
 #include "Renderer/Common/Texture2D.h"
 
 class PVulkanImage;
+class PVulkanSampler;
 
 class PVulkanTexture2D : public ITexture2D
 {
@@ -19,4 +20,5 @@ protected:
     int Channels;
 
     PVulkanImage* Image;
+    PVulkanSampler* Sampler;
 };

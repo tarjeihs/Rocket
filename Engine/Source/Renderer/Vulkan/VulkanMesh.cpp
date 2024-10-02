@@ -241,8 +241,8 @@ void PVulkanMesh::Deserialize(SBlob& Blob)
                 Indices.push_back(IndexValue);
             }
         
-            Stats.Vertices = VertexCount;
-            Stats.Triangles = TriangleCount;
+            //Stats.Vertices = VertexCount;
+            //Stats.Triangles = TriangleCount;
         }
 
     }
@@ -250,9 +250,14 @@ void PVulkanMesh::Deserialize(SBlob& Blob)
     CreateMesh(Vertices, Indices);
 }
 
+IMaterial* PVulkanMesh::GetMaterial() const
+{
+    return Material;
+}
+
+
 void PVulkanMesh::ApplyMaterial(IMaterial* NewMaterial)
 {
     Material = static_cast<PVulkanMaterial*>(NewMaterial);
-
-    Material->Init();
+//    Material->Init();
 }

@@ -11,14 +11,20 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 
-void PVulkanPipelineLayout::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
+void PVulkanPipelineLayout::CreatePipelineLayout(const std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges)
 {
+    std::vector<VkDescriptorSetLayout> DescriptorSetLayoutData;
+    for (PVulkanDescriptorSetLayout* DescriptorSetLayout : DescriptorSetLayouts)
+    {
+        DescriptorSetLayoutData.push_back(DescriptorSetLayout->GetVkDescriptorSetLayout());
+    }
+
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo{};
     PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     PipelineLayoutCreateInfo.pNext = nullptr;
     PipelineLayoutCreateInfo.flags = 0;
-    PipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(DescriptorSetLayouts.size());
-    PipelineLayoutCreateInfo.pSetLayouts = DescriptorSetLayouts.data();
+    PipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(DescriptorSetLayoutData.size());
+    PipelineLayoutCreateInfo.pSetLayouts = DescriptorSetLayoutData.data();
     PipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32_t>(PushConstantRanges.size());
     PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges.data();
 
@@ -36,13 +42,13 @@ VkPipelineLayout PVulkanPipelineLayout::GetVkPipelineLayout() const
     return PipelineLayout;
 }
 
-void PVulkanGraphicsPipeline::CreatePipeline()
+void PVulkanGraphicsPipeline::CreatePipeline(std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, PVulkanShader* VertexShader, PVulkanShader* FragmentShader)
 {
-    VertexShader = new PVulkanShader();
-    VertexShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
-
-    FragmentShader = new PVulkanShader();
-    FragmentShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
+    //VertexShader = new PVulkanShader();
+    //VertexShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
+//
+    //FragmentShader = new PVulkanShader();
+    //FragmentShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
 
     VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
     VertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -65,8 +71,7 @@ void PVulkanGraphicsPipeline::CreatePipeline()
 
     PipelineLayout = new PVulkanPipelineLayout(); 
     PipelineLayout->CreatePipelineLayout(
-        { GetRHI()->GetSceneRenderer()->GetParallelFramePool()->DescriptorSetLayout->GetVkDescriptorSetLayout() }, 
-        { UInt64PointerPushConstantRange }
+        DescriptorSetLayouts, { UInt64PointerPushConstantRange }
     );
 
     VkFormat ColorAttachmentFormat = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetVkFormat();
@@ -167,24 +172,18 @@ void PVulkanGraphicsPipeline::CreatePipeline()
 
 void PVulkanGraphicsPipeline::DestroyPipeline()
 {
-    VertexShader->DestroyShader();
-    FragmentShader->DestroyShader();
     PipelineLayout->DestroyPipelineLayout();
     vkDestroyPipeline(GetRHI()->GetDevice()->GetVkDevice(), Pipeline, nullptr);
 
-    delete VertexShader;
-    delete FragmentShader;
     delete PipelineLayout;
 }
 
-void PVulkanGraphicsPipeline::Bind()
+void PVulkanGraphicsPipeline::Bind(std::vector<VkDescriptorSet> DescriptorSetData)
 {
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
-    VkDescriptorSet DescriptorSetPointer = Frame->DescriptorSet->GetVkDescriptorSet();
-
     vkCmdBindPipeline(Frame->CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-    vkCmdBindDescriptorSets(Frame->CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(), 0, 1, &DescriptorSetPointer, 0, nullptr);
+    vkCmdBindDescriptorSets(Frame->CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(), 0, DescriptorSetData.size(), DescriptorSetData.data(), 0, nullptr);
 }
 
 void PVulkanGraphicsPipeline::Unbind()

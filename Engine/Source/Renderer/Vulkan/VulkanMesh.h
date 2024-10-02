@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Renderer/Common/Mesh.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 
 class PVulkanMaterial;
 class PVulkanBuffer;
@@ -21,6 +20,7 @@ public:
     virtual void Serialize(SBlob& Blob) override;
     virtual void Deserialize(SBlob& Blob) override;
 
+    virtual IMaterial* GetMaterial() const override;
     virtual void ApplyMaterial(IMaterial* NewMaterial) override;
 
 private:
