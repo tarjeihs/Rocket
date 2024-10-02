@@ -71,10 +71,10 @@ void PVulkanInstance::Init()
 	VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
 
-	#if VALIDATION_LAYER
+#if VALIDATION_LAYER
 	Result = Utils::CreateDebugUtilsMessengerEXT(Instance, &DebugMessengerCreateInfo, nullptr, &DebugMessenger);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create debug messenger.");
-	#endif
+#endif
 
 	Result = glfwCreateWindowSurface(Instance, (GLFWwindow*)GetWindow()->GetNativeWindow(), nullptr, &Surface);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
@@ -84,9 +84,9 @@ void PVulkanInstance::Shutdown()
 {
 	vkDestroySurfaceKHR(Instance, Surface, nullptr);
 
-	#if VALIDATION_LAYER
+#if VALIDATION_LAYER
 	Utils::DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
-	#endif
+#endif
 
 	vkDestroyInstance(Instance, nullptr);
 }

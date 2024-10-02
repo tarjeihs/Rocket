@@ -8,10 +8,10 @@
 
 void PVulkanRHI::Init()
 {
-	#if VALIDATION_LAYER
+#if VALIDATION_LAYER
 	Extensions.ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
 	Extensions.InstanceExtensions.push_back("VK_EXT_debug_utils");
-	#endif
+#endif
 
 	Instance = new PVulkanInstance();
 	Device = new PVulkanDevice();
