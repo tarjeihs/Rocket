@@ -103,7 +103,6 @@ std::span<const SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBind
     return std::span<const SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
 }
 
-
 void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout)
 {
 	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
@@ -187,6 +186,16 @@ void PVulkanDescriptorSet::DestroyDescriptorSet()
 	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
 	for (auto& Binding : Bindings)
 	{
+		switch (Binding.Layout->Type)
+		{
+			case EDescriptorSetBindingType::Uniform:
+			case EDescriptorSetBindingType::Storage:
+			{
+				PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
+				Buffer->Free();
+				break;
+			}
+		}
 	}
 }
 

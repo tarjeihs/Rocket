@@ -86,6 +86,15 @@ void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShade
 void PVulkanMaterial::Destroy()
 {
     GraphicsPipeline->DestroyPipeline();
+
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+    for (const auto& FrameData : MaterialFrameData)
+    {
+        for (const auto& DescriptorSet : FrameData.DescriptorSets)
+        {
+            DescriptorSet->DestroyDescriptorSet();
+        }
+    }
 }
 
 void PVulkanMaterial::Bind() const

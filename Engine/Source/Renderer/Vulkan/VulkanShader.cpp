@@ -117,6 +117,16 @@ void PVulkanShader::CreateShader(const std::string& ShaderSourcePath, const std:
 void PVulkanShader::DestroyShader()
 {
 	vkDestroyShaderModule(GetRHI()->GetDevice()->GetVkDevice(), ShaderModule, nullptr);
+
+	for (PVulkanDescriptorSetLayout* Layout : DescriptorSetLayouts)
+	{
+		Layout->DestroyDescriptorSetLayout();
+	}
+}
+
+void PVulkanShader::Cleanup()
+{
+	DestroyShader();
 }
 
 VkShaderModule PVulkanShader::GetVkShaderModule() const

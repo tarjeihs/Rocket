@@ -10,6 +10,8 @@ public:
 	void CreateShader(const std::string& ShaderSourcePath, const std::string& Entrypoint, const std::string& TargetProfile);
 	void DestroyShader();
 
+	virtual void Cleanup() override;
+
 	VkShaderModule GetVkShaderModule() const;
 	const std::vector<PVulkanDescriptorSetLayout*>& GetDescriptorSetLayouts() const;
 
