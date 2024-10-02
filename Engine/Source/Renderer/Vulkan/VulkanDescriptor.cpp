@@ -3,6 +3,8 @@
 
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
 void PVulkanDescriptorPool::CreatePool(uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags)
@@ -103,14 +105,14 @@ std::span<const SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBind
     return std::span<const SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
 }
 
-void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout)
+void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout, PVulkanFrame* Frame)
 {
 	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
 
 	VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {};
 	DescriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	DescriptorSetAllocateInfo.pNext = nullptr;
-	DescriptorSetAllocateInfo.descriptorPool = GetRHI()->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
+	DescriptorSetAllocateInfo.descriptorPool = Frame->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
 	DescriptorSetAllocateInfo.descriptorSetCount = 1;
 	DescriptorSetAllocateInfo.pSetLayouts = &DescriptorSetLayoutPointer;
 
@@ -181,9 +183,6 @@ void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* Descr
 
 void PVulkanDescriptorSet::DestroyDescriptorSet()
 {
-	// Note: DescriptorPool must be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT to allow for explicit, manual control.
-	//VkResult Result = vkFreeDescriptorSets(RHI->GetDevice()->GetVkDevice(), RHI->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool(), 1, &DescriptorSet);
-	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
 	for (auto& Binding : Bindings)
 	{
 		switch (Binding.Layout->Type)

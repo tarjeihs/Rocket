@@ -20,7 +20,6 @@ public:
 
     PVulkanInstance* GetInstance() const;
     PVulkanDevice* GetDevice() const;
-    PVulkanMemory* GetMemory() const;
     PVulkanSceneRenderer* GetSceneRenderer() const;
 
     struct SExtensions
@@ -33,6 +32,5 @@ public:
 private:
     PVulkanInstance* Instance;
     PVulkanDevice* Device;
-    PVulkanMemory* Memory;
     PVulkanSceneRenderer* SceneRenderer;
 };

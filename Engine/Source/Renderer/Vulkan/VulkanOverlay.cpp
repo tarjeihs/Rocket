@@ -69,7 +69,7 @@ void PVulkanOverlay::Init()
 
 		ImGui::Render();
 
-		PVulkanImage* Image = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->TransientFrameData.NextImageIndex];
+		PVulkanImage* Image = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex];
 
 		VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
 		ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;

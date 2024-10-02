@@ -6,6 +6,7 @@
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanMemory.h"
 
 void PVulkanFrame::CreateFrame()
 {
@@ -14,6 +15,9 @@ void PVulkanFrame::CreateFrame()
 
 	CommandBuffer = new PVulkanCommandBuffer();
 	CommandBuffer->Create(CommandPool);
+
+	Memory = new PVulkanMemory();
+	Memory->Init();
 
 	VkFenceCreateInfo FenceCreateInfo{};
 	FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -42,6 +46,9 @@ void PVulkanFrame::DestroyFrame()
 
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), RenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), nullptr);
+
+	Memory->Shutdown();
+	delete Memory;
 }
 
 void PVulkanFrame::BeginFrame()
@@ -100,9 +107,39 @@ void PVulkanFrame::EndFrame()
 	vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &presentInfo);
 }
 
+PVulkanCommandPool* PVulkanFrame::GetCommandPool() const
+{
+	return CommandPool;
+}
+
 PVulkanCommandBuffer* PVulkanFrame::GetCommandBuffer() const
 {
 	return CommandBuffer;
+}
+
+PVulkanMemory* PVulkanFrame::GetMemory() const
+{
+	return Memory;
+}
+
+VkSemaphore PVulkanFrame::GetSwapchainSemaphore() const
+{
+	return SwapchainSemaphore;
+}
+
+VkSemaphore PVulkanFrame::GetRenderSemaphore() const
+{
+	return RenderSemaphore;
+}
+
+VkFence PVulkanFrame::GetRenderFence() const
+{
+	return RenderFence;
+}
+
+FTransientFrameData& PVulkanFrame::GetTransientFrameData()
+{
+	return TransientFrameData;
 }
 
 void PVulkanFramePool::CreateFramePool()

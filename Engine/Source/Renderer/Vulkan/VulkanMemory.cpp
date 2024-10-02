@@ -16,22 +16,25 @@ void PVulkanMemory::Init()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create memory allocator.");
 
 	// Create a descriptor pool that will hold 10 sets with 1 image each
-	std::vector<SVulkanDescriptorPoolRatio> Sizes = { { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } };
+	std::vector<SVulkanDescriptorPoolRatio> Sizes = { 
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
+	};
 	DescriptorPool = new PVulkanDescriptorPool();
-	DescriptorPool->CreatePool(10, Sizes);
+	DescriptorPool->CreatePool(1024, Sizes);
 }
 
 void PVulkanMemory::Shutdown()
 {
+	for (PVulkanDescriptorSet* DescriptorSet : DescriptorSets)
+	{
+		DescriptorSet->DestroyDescriptorSet();
+		delete DescriptorSet;
+	}
+	
 	DescriptorPool->DestroyPool();
-	vmaDestroyAllocator(MemoryAllocator);
-
 	delete DescriptorPool;
-}
-
-VmaAllocator PVulkanMemory::GetMemoryAllocator() const
-{
-	return MemoryAllocator;
 }
 
 PVulkanDescriptorPool* PVulkanMemory::GetDescriptorPool() const

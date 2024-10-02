@@ -5,8 +5,8 @@
 
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanSampler.h"
 
@@ -23,9 +23,9 @@ void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
     StagingBuffer.Allocate(Width * Height * Channels);
 
     void* MappedData = nullptr;
-    vmaMapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), StagingBuffer.Allocation, &MappedData);
+    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation, &MappedData);
     memcpy(MappedData, Data, Width * Height * Channels);
-    vmaUnmapMemory(GetRHI()->GetMemory()->GetMemoryAllocator(), StagingBuffer.Allocation);
+    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation);
 
     GetRHI()->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
     {

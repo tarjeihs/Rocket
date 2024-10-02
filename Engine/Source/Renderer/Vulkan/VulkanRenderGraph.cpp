@@ -58,9 +58,9 @@ void PVulkanRenderGraph::BeginRendering()
     Scissor.extent.height = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetImageExtent2D().height;
 
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
-    vkCmdBeginRendering(Frame->CommandBuffer->GetVkCommandBuffer(), &RenderingInfo);
-    vkCmdSetViewport(Frame->CommandBuffer->GetVkCommandBuffer(), 0, 1, &Viewport);
-    vkCmdSetScissor(Frame->CommandBuffer->GetVkCommandBuffer(), 0, 1, &Scissor);
+    vkCmdBeginRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer(), &RenderingInfo);
+    vkCmdSetViewport(Frame->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &Viewport);
+    vkCmdSetScissor(Frame->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &Scissor);
 }
 
 void PVulkanRenderGraph::EndRendering()
@@ -68,7 +68,7 @@ void PVulkanRenderGraph::EndRendering()
     PROFILE_FUNC_SCOPE("PVulkanRenderGraph::EndRendering")
     
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
-    vkCmdEndRendering(Frame->CommandBuffer->GetVkCommandBuffer());   
+    vkCmdEndRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer());   
 }
 
 void PVulkanRenderGraph::Execute(PVulkanFrame* Frame)

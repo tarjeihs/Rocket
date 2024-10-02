@@ -10,6 +10,7 @@
 #include "Renderer/Vulkan/VulkanTexture2D.h"
 
 class PVulkanRHI;
+class PVulkanFrame;
 struct PVulkanBuffer;
 struct VkDescriptorPool_T;
 struct VkDescriptorSet_T;
@@ -96,7 +97,7 @@ private:
 class PVulkanDescriptorSet
 {
 public:
-    void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout);
+    void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout, PVulkanFrame* Frame);
     void DestroyDescriptorSet();
 
     VkDescriptorSet GetVkDescriptorSet() const;

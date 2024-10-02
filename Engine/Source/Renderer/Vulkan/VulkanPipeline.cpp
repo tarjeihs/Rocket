@@ -182,8 +182,8 @@ void PVulkanGraphicsPipeline::Bind(std::vector<VkDescriptorSet> DescriptorSetDat
 {
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
-    vkCmdBindPipeline(Frame->CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-    vkCmdBindDescriptorSets(Frame->CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(), 0, DescriptorSetData.size(), DescriptorSetData.data(), 0, nullptr);
+    vkCmdBindPipeline(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+    vkCmdBindDescriptorSets(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->GetVkPipelineLayout(), 0, DescriptorSetData.size(), DescriptorSetData.data(), 0, nullptr);
 }
 
 void PVulkanGraphicsPipeline::Unbind()

@@ -10,12 +10,10 @@ void PVulkanRHI::Init()
 {
 	Instance = new PVulkanInstance();
 	Device = new PVulkanDevice();
-	Memory = new PVulkanMemory();
 	SceneRenderer = new PVulkanSceneRenderer();
 	
 	Instance->Init();
 	Device->Init();
-	Memory->Init();
 	SceneRenderer->Init();
 }
 
@@ -24,12 +22,10 @@ void PVulkanRHI::Shutdown()
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
 	SceneRenderer->Shutdown();
-  	Memory->Shutdown();
   	Device->Shutdown();
   	Instance->Shutdown();
 
   	delete SceneRenderer;
-	delete Memory;
 	delete Device;
 	delete Instance;
 }
@@ -54,11 +50,6 @@ PVulkanInstance* PVulkanRHI::GetInstance() const
 PVulkanDevice* PVulkanRHI::GetDevice() const
 {
 	return Device;
-}
-
-PVulkanMemory* PVulkanRHI::GetMemory() const
-{
-	return Memory;
 }
 
 PVulkanSceneRenderer* PVulkanRHI::GetSceneRenderer() const

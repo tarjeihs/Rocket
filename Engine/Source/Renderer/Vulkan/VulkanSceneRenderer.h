@@ -10,6 +10,7 @@ class PVulkanFramePool;
 class PVulkanImage;
 class PVulkanSwapchain;
 class PVulkanCommandBuffer;
+class PVulkanAllocator;
 
 class PVulkanSceneRenderer : public IRenderer
 {
@@ -27,6 +28,7 @@ public:
 	void Resize();
 	void Render();
 
+	PVulkanAllocator* GetAllocator() const;
 	PVulkanSwapchain* GetSwapchain() const;
 	PVulkanImage* GetDrawImage() const;
 	PVulkanImage* GetDepthImage() const;
@@ -37,6 +39,7 @@ public:
 	void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
 private:
+	PVulkanAllocator* Allocator;
 	PVulkanSwapchain* Swapchain;
 	PVulkanImage* DrawImage;
 	PVulkanImage* DepthImage;

@@ -49,11 +49,13 @@ public:
 	void Init();
 	void Shutdown();
 
-	VmaAllocator GetMemoryAllocator() const;
 	PVulkanDescriptorPool* GetDescriptorPool() const;
 
 protected:
 	VmaAllocator MemoryAllocator;
 
 	PVulkanDescriptorPool* DescriptorPool;
+
+public:
+	std::vector<PVulkanDescriptorSet*> DescriptorSets;
 };

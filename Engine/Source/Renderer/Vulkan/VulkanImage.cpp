@@ -2,7 +2,8 @@
 #include "VulkanImage.h"
 
 #include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
+#include "Renderer/Vulkan/VulkanAllocator.h"
+#include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 
 void PVulkanImage::Init(VkExtent2D Extent, VkFormat Format)
@@ -39,7 +40,7 @@ void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
 	VmaAllocationCreateInfo ImageAllocationCreateInfo{};
 	ImageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	ImageAllocationCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vmaCreateImage(GetRHI()->GetMemory()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
+	vmaCreateImage(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
 }
 
 void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
@@ -77,7 +78,7 @@ void PVulkanImage::ApplyImageView(VkImageView ImageView)
 
 void PVulkanImage::DestroyImage()
 {
-	vmaDestroyImage(GetRHI()->GetMemory()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
+	vmaDestroyImage(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
 }
 
 void PVulkanImage::DestroyImageView()

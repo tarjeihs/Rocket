@@ -16,13 +16,13 @@ void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShade
     PVulkanShader* VertexShader = static_cast<PVulkanShader*>(BaseVertexShader);
     PVulkanShader* FragmentShader = static_cast<PVulkanShader*>(BaseFragmentShader);
     
-    for (int32_t Index = 0; Index < 3; ++Index)
+    for (const auto& Frame : *GetRHI()->GetSceneRenderer()->GetParallelFramePool())
     {
         for (const auto& DescriptorSetLayout : VertexShader->GetDescriptorSetLayouts())
         {
             PVulkanDescriptorSet* DescriptorSet = new PVulkanDescriptorSet();
-            DescriptorSet->CreateDescriptorSet(DescriptorSetLayout);
-            MaterialFrameData[Index].DescriptorSets.push_back(DescriptorSet);
+            DescriptorSet->CreateDescriptorSet(DescriptorSetLayout, Frame);
+            Frame->GetMemory()->DescriptorSets.push_back(DescriptorSet);
         }
     }
 
@@ -61,7 +61,7 @@ void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShade
 		});
 		
         PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-        PVulkanDescriptorSet* DescriptorSet = MaterialFrameData[FramePool->GetCurrentFrameIndex()].DescriptorSets[0];
+        PVulkanDescriptorSet* DescriptorSet = FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets[0];
         for (const auto& Binding : DescriptorSet->GetBindings())
         {
             if (Binding.Layout->Name == "SSBO")
@@ -88,9 +88,9 @@ void PVulkanMaterial::Destroy()
     GraphicsPipeline->DestroyPipeline();
 
     PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-    for (const auto& FrameData : MaterialFrameData)
+    for (const auto& FrameData : *FramePool)
     {
-        for (const auto& DescriptorSet : FrameData.DescriptorSets)
+        for (const auto& DescriptorSet : FrameData->GetMemory()->DescriptorSets)
         {
             DescriptorSet->DestroyDescriptorSet();
         }
@@ -102,7 +102,7 @@ void PVulkanMaterial::Bind() const
     PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
 
     std::vector<VkDescriptorSet> DescriptorSetData;
-    for (const auto& DescriptorSet : MaterialFrameData[FramePool->GetCurrentFrameIndex()].DescriptorSets)
+    for (const auto& DescriptorSet : FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets)
     {
         DescriptorSetData.push_back(DescriptorSet->GetVkDescriptorSet());
     }
@@ -115,21 +115,10 @@ void PVulkanMaterial::Unbind() const
     GraphicsPipeline->Unbind();
 }
 
-void PVulkanMaterial::SetValue(const uint32_t Set, const std::string& Name, const void* Data, const size_t Size, const size_t Offset)
-{
-    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-    PVulkanDescriptorSet* DescriptorSet = MaterialFrameData[FramePool->GetCurrentFrameIndex()].DescriptorSets[Set];
-    //PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(DescriptorSet->GetBinding(Name)->Data);
-    //Buffer->Submit(Data, Size, Offset);
-}
-
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat4 Value)
 {
-    // TODO: Store the frame data inside descriptor set instead.
-    //PVulkanDescriptorSet* DescriptorSet = DescriptorSets[Set]->GetCurrentFrame();
-    
     PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-    PVulkanDescriptorSet* DescriptorSet = MaterialFrameData[FramePool->GetCurrentFrameIndex()].DescriptorSets[Set];
+    PVulkanDescriptorSet* DescriptorSet = FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets[Set];
     
     for (const SDescriptorSetBinding& Binding : DescriptorSet->GetBindings())
     {
