@@ -41,6 +41,7 @@
 #include "Scene/Registry.h"
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
+#include "Renderer/Settings.h"
 #include "EngineMacros.h"
 #include "Math/Math.h"
 #include "Utils/FileSystem.h"

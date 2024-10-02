@@ -13,7 +13,7 @@
 
 // 3 swapchain images, 2 frames.
 // 1 frame is currently being processed by CPU, 1 is being drawn by GPU, hence no need for a third frame.
-static constexpr size_t DeferredFrameCount = 3;
+static constexpr size_t DeferredFrameCount = 2;
 static constexpr size_t ImmediateFrameCount = 1;
 
 void PVulkanSceneRenderer::Init()

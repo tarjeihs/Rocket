@@ -24,8 +24,8 @@ public:
 
     struct SExtensions
     {
-        std::vector<const char*> ValidationLayerExtensions = { "VK_LAYER_KHRONOS_validation" };
-        std::vector<const char*> InstanceExtensions = { "VK_EXT_debug_utils" };
+        std::vector<const char*> ValidationLayerExtensions = {};
+        std::vector<const char*> InstanceExtensions = {};
         std::vector<const char*> PhysicalDeviceExtensions = { "VK_KHR_swapchain" };
     } Extensions;
 
