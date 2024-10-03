@@ -1,6 +1,8 @@
 #include "EnginePCH.h"
 #include "VulkanMaterial.h"
 
+#include "Renderer/Common/Material.h"
+#include "Renderer/Common/Shader.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
@@ -11,23 +13,61 @@
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
-void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShader)
+void PVulkanMaterial::CreateMaterial(const SMaterialBinaryData& MaterialData)
 {
-    PVulkanShader* VertexShader = static_cast<PVulkanShader*>(BaseVertexShader);
-    PVulkanShader* FragmentShader = static_cast<PVulkanShader*>(BaseFragmentShader);
     
+}
+
+void PVulkanMaterial::Destroy()
+{
+    GraphicsPipeline->DestroyPipeline();
+
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+    for (const auto& FrameData : *FramePool)
+    {
+        for (const auto& DescriptorSet : FrameData->GetMemory()->DescriptorSets)
+        {
+            DescriptorSet->DestroyDescriptorSet();
+        }
+    }
+}
+
+void PVulkanMaterial::Bind() const
+{
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+
+    std::vector<VkDescriptorSet> DescriptorSetData;
+    for (const auto& DescriptorSet : FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets)
+    {
+        DescriptorSetData.push_back(DescriptorSet->GetVkDescriptorSet());
+    }
+
+    GraphicsPipeline->Bind(DescriptorSetData);
+}
+
+void PVulkanMaterial::Unbind() const
+{
+    GraphicsPipeline->Unbind();
+}
+
+void PVulkanMaterial::SetShader(IShader* Shader)
+{
     for (const auto& Frame : *GetRHI()->GetSceneRenderer()->GetParallelFramePool())
     {
-        for (const auto& DescriptorSetLayout : VertexShader->GetDescriptorSetLayouts())
+        PVulkanShader* VShader = Cast<PVulkanShader>(Shader);
+        for (const SShaderModule& ShaderModule : VShader->GetShaderModules())
         {
-            PVulkanDescriptorSet* DescriptorSet = new PVulkanDescriptorSet();
-            DescriptorSet->CreateDescriptorSet(DescriptorSetLayout, Frame);
-            Frame->GetMemory()->DescriptorSets.push_back(DescriptorSet);
+            for (const auto& DescriptorSetLayout : ShaderModule.DescriptorSetLayouts)
+            {
+                PVulkanDescriptorSet* DescriptorSet = new PVulkanDescriptorSet();
+                DescriptorSet->CreateDescriptorSet(DescriptorSetLayout, Frame);
+                Frame->GetMemory()->DescriptorSets.push_back(DescriptorSet);
+            }
         }
     }
 
     GraphicsPipeline = new PVulkanGraphicsPipeline();
-    GraphicsPipeline->CreatePipeline(VertexShader->GetDescriptorSetLayouts(), VertexShader, FragmentShader);
+    GraphicsPipeline->CreatePipeline(Cast<PVulkanShader>(Shader));
 
     GetRHI()->GetSceneRenderer()->GetRenderGraph()->AddCommand([&](PVulkanFrame* Frame)
 	{
@@ -47,6 +87,7 @@ void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShade
 
 		GetScene()->GetRegistry()->View<STransformComponent, SMeshComponent>([&](const STransformComponent& TransformComponent, const SMeshComponent& MeshComponent)
 		{
+            PVulkanMesh* Mesh = static_cast<PVulkanMesh*>(MeshComponent.Mesh);
             if (MeshComponent.Mesh->GetMaterial() == this)
             {
                 glm::mat4 ModelMatrix = TransformComponent.Transform.ToMatrix();
@@ -83,38 +124,6 @@ void PVulkanMaterial::Init(PShader* BaseVertexShader, PShader* BaseFragmentShade
 	});
 }
 
-void PVulkanMaterial::Destroy()
-{
-    GraphicsPipeline->DestroyPipeline();
-
-    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-    for (const auto& FrameData : *FramePool)
-    {
-        for (const auto& DescriptorSet : FrameData->GetMemory()->DescriptorSets)
-        {
-            DescriptorSet->DestroyDescriptorSet();
-        }
-    }
-}
-
-void PVulkanMaterial::Bind() const
-{
-    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-
-    std::vector<VkDescriptorSet> DescriptorSetData;
-    for (const auto& DescriptorSet : FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets)
-    {
-        DescriptorSetData.push_back(DescriptorSet->GetVkDescriptorSet());
-    }
-
-    GraphicsPipeline->Bind(DescriptorSetData);
-}
-
-void PVulkanMaterial::Unbind() const
-{
-    GraphicsPipeline->Unbind();
-}
-
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat4 Value)
 {
     PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
@@ -134,4 +143,29 @@ void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& Uni
             }        
         }
     }
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec2 Value)
+{
+
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec3 Value)
+{
+
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec4 Value)
+{
+
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat2 Value)
+{
+
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat3 Value)
+{
+
 }

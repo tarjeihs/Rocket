@@ -12,6 +12,40 @@
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 
+class FrameMetrics {
+public:
+    std::vector<float> frameRates;
+    int maxFrames;
+    int currentFrame;
+
+    FrameMetrics(int maxFrames = 100) : maxFrames(maxFrames), currentFrame(0) {
+        frameRates.resize(maxFrames, 0.0f);  // Initialize buffer with zeros
+    }
+
+    // Add a new frame rate to the buffer
+    void AddFrameRate(float frameRate) {
+        frameRates[currentFrame] = frameRate;
+        currentFrame = (currentFrame + 1) % maxFrames;  // Circular buffer
+    }
+
+    // Get a pointer to the frame rate data
+    const float* GetFrameRates() const {
+        return frameRates.data();
+    }
+
+    // Calculate the maximum frame rate for scaling
+    float GetMaxFrameRate() const {
+        return *std::max_element(frameRates.begin(), frameRates.end());
+    }
+
+    // Calculate moving average of frame rates
+    float GetMovingAverage(int frames) const {
+        int count = std::min(frames, maxFrames);
+        return std::accumulate(frameRates.end() - count, frameRates.end(), 0.0f) / count;
+    }
+};
+FrameMetrics frameMetrics(100);
+
 void PVulkanOverlay::Init()
 {
 	std::vector<SVulkanDescriptorPoolRatio> Sizes = {
@@ -59,11 +93,27 @@ void PVulkanOverlay::Init()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Metrics");
-		ImGui::Text("Frame Rate: %f", 1.0f / GetEngine()->Timestep.GetDeltaTime());
-		ImGui::Text("Frame Time: %fms", GetEngine()->Timestep.GetDeltaTime());
-		ImGui::Text("Engine Time: %fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
-		ImGui::End();
+    ImGui::Begin("Metrics");
+
+    float deltaTime = GetEngine()->Timestep.GetDeltaTime();
+    float frameRate = 1.0f / deltaTime;
+
+    frameMetrics.AddFrameRate(frameRate);
+
+    ImGui::Text("Frame Rate Histogram (FPS):");
+    float avgFrameRate = frameMetrics.GetMovingAverage(30);
+    float maxFrameRate = frameMetrics.GetMaxFrameRate();
+    float maxScale = std::max(maxFrameRate, 120.0f);
+
+    ImGui::PlotHistogram("", frameMetrics.GetFrameRates(), frameMetrics.maxFrames, frameMetrics.currentFrame,
+                         nullptr, 0.0f, maxScale, ImVec2(0, 50));
+
+    ImGui::Text("Current Frame Rate: %.1f FPS", frameRate);
+    ImGui::Text("Current Frame Time: %.3f ms", deltaTime * 1000.0f);
+    ImGui::Text("Moving Average Frame Rate: %.1f FPS", avgFrameRate);
+    ImGui::Text("Engine Time: %.3fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
+
+    ImGui::End();
 
 		OnRender.Broadcast();
 

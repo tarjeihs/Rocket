@@ -11,9 +11,6 @@ public:
     virtual void CreateTexture2D(unsigned char* Data) override;
     virtual void DestroyTexture2D() override;
 
-    virtual void Deserialize(SBlob& Blob) override;
-    virtual void Cleanup() override;
-
 protected:
     int Width;
     int Height;

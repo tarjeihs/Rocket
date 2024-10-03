@@ -10,18 +10,12 @@ typedef uint64_t VkDeviceAddress;
 class PVulkanMesh : public IMesh
 {
 public:
-    virtual void Init() override;
-    virtual void Cleanup() override;
-
-    virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) override;
+    virtual void CreateMesh(const SMeshBinaryData& MeshBinaryObject) override;
     virtual void DrawIndirectInstanced(uint32_t ID) override;
     virtual void Destroy() override;
 
-    virtual void Serialize(SBlob& Blob) override;
-    virtual void Deserialize(SBlob& Blob) override;
-
     virtual IMaterial* GetMaterial() const override;
-    virtual void ApplyMaterial(IMaterial* NewMaterial) override;
+    virtual void SetMaterial(IMaterial* NewMaterial) override;
 
 private:
     PVulkanMaterial* Material;

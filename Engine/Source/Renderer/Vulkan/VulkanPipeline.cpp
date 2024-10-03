@@ -1,12 +1,12 @@
 #include "EnginePCH.h"
 #include "VulkanPipeline.h"
 
+#include "Renderer/Vulkan/VulkanShader.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
-#include "Renderer/Vulkan/VulkanShader.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
@@ -42,27 +42,25 @@ VkPipelineLayout PVulkanPipelineLayout::GetVkPipelineLayout() const
     return PipelineLayout;
 }
 
-void PVulkanGraphicsPipeline::CreatePipeline(std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, PVulkanShader* VertexShader, PVulkanShader* FragmentShader)
+void PVulkanGraphicsPipeline::CreatePipeline(PVulkanShader* Shader)
 {
-    //VertexShader = new PVulkanShader();
-    //VertexShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Vertex.hlsl", L"main", "vs_6_0");
-//
-    //FragmentShader = new PVulkanShader();
-    //FragmentShader->CreateShader(WIDEN(RK_ENGINE_DIR) L"/Shaders/HLSL/Pixel.hlsl", L"main", "ps_6_0");
+    std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
+    std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts;
 
-    VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
-    VertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    VertexShaderStageCreateInfo.pNext = nullptr;
-    VertexShaderStageCreateInfo.pName = "main";
-    VertexShaderStageCreateInfo.module = VertexShader->GetVkShaderModule();
-    VertexShaderStageCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-
-    VkPipelineShaderStageCreateInfo FragmentShaderStageCreateInfo{};
-    FragmentShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    FragmentShaderStageCreateInfo.pNext = nullptr;
-    FragmentShaderStageCreateInfo.pName = "main";
-    FragmentShaderStageCreateInfo.module = FragmentShader->GetVkShaderModule();
-    FragmentShaderStageCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    for (const SShaderModule& ShaderModule : Shader->GetShaderModules()) 
+    {
+        VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
+        VertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        VertexShaderStageCreateInfo.pNext = nullptr;
+        VertexShaderStageCreateInfo.pName = "main";
+        VertexShaderStageCreateInfo.module = ShaderModule.ShaderModule;
+        VertexShaderStageCreateInfo.stage = ShaderModule.Flag;
+        
+        ShaderStageCreateInfos.push_back(VertexShaderStageCreateInfo);
+        
+        DescriptorSetLayouts.resize(DescriptorSetLayouts.size() + ShaderModule.DescriptorSetLayouts.size());
+        memcpy(DescriptorSetLayouts.data() + DescriptorSetLayouts.size() - ShaderModule.DescriptorSetLayouts.size(), ShaderModule.DescriptorSetLayouts.data(), ShaderModule.DescriptorSetLayouts.size() * sizeof(PVulkanDescriptorSetLayout*));
+    }
 
     VkPushConstantRange UInt64PointerPushConstantRange{};
     UInt64PointerPushConstantRange.offset = 0;
@@ -70,13 +68,10 @@ void PVulkanGraphicsPipeline::CreatePipeline(std::vector<PVulkanDescriptorSetLay
     UInt64PointerPushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     PipelineLayout = new PVulkanPipelineLayout(); 
-    PipelineLayout->CreatePipelineLayout(
-        DescriptorSetLayouts, { UInt64PointerPushConstantRange }
-    );
+    PipelineLayout->CreatePipelineLayout(DescriptorSetLayouts, { UInt64PointerPushConstantRange });
 
     VkFormat ColorAttachmentFormat = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetVkFormat();
     std::vector<VkDynamicState> DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos = { VertexShaderStageCreateInfo, FragmentShaderStageCreateInfo };
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyStateCreateInfo{};
     InputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

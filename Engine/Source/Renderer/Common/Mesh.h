@@ -1,9 +1,7 @@
 #pragma once
 
-#include <span>
 #include <glm/glm.hpp>
 
-#include "Asset/Asset.h"
 #include "Renderer/Common/Material.h"
 
 struct STransform;
@@ -24,15 +22,26 @@ struct SVertex
     glm::vec4 Color;
 };
 
-class IMesh : public IAssetMarshalInterface
+struct SMeshBinaryData
+{
+    std::vector<SVertex> Vertices;
+    std::vector<uint32_t> Indices;
+};
+
+struct SMeshSettings
+{
+    IMaterial* Material;
+};
+
+class IMesh
 {
 public:
     virtual ~IMesh() = default;
 
-    virtual void CreateMesh(std::span<SVertex> Vertices, std::span<uint32_t> Indices) = 0;
+    virtual void CreateMesh(const SMeshBinaryData& MeshBinaryObject) = 0;
     virtual void DrawIndirectInstanced(uint32_t ID) = 0;
     virtual void Destroy() = 0;
     
     virtual IMaterial* GetMaterial() const = 0;
-    virtual void ApplyMaterial(class IMaterial* NewMaterial) = 0;
+    virtual void SetMaterial(IMaterial* NewMaterial) = 0;
 };

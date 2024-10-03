@@ -1,12 +1,18 @@
 #pragma once
 
-#include <string>
-#include <functional>
+#include <vector>
 
-#include "Asset/Asset.h"
+struct SShaderModuleBinary
+{
+	void* Data;
+	size_t Size;
+};
 
-class PShader : public IAssetMarshalInterface
+class IShader
 {
 public:
-	virtual ~PShader() = default;
+	virtual ~IShader() = default;
+
+	virtual void CreateShader(std::vector<SShaderModuleBinary> ShaderBinaryObject) = 0;
+	virtual void DestroyShader() = 0;
 };

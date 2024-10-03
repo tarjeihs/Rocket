@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Asset/Asset.h"
 #include "Utils/FileSystem.h"
 
-class ITexture2D : public IAssetMarshalInterface
+class ITexture2D
 {
 public:
     ~ITexture2D() = default;

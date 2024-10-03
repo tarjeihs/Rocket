@@ -47,8 +47,6 @@ void PVulkanSceneRenderer::Init()
 
 void PVulkanSceneRenderer::Shutdown()
 {
-	GetScene()->GetAssetManager()->Dispose();
-	
 	GOverlay->Shutdown();
 	ParallelFramePool->FreeFramePool();
 	ImmediateFramePool->FreeFramePool();

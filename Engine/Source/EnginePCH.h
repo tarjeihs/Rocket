@@ -29,12 +29,11 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <tiny_gltf.h>
 
-#include "Asset/Asset.h"
-#include "Asset/AssetManager.h"
 #include "Core/Assert.h"
 #include "Core/Engine.h"
 #include "Core/Window.h"
 #include "Core/Delegate.h"
+#include "Memory/Memory.h"
 #include "Scene/Scene.h"
 #include "Scene/Component.h"
 #include "Scene/Entity.h"

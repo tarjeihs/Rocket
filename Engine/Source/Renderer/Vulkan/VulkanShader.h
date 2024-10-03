@@ -4,19 +4,22 @@
 
 class PVulkanDescriptorSetLayout;
 
-class PVulkanShader : public PShader
+struct SShaderModule
 {
-public:
-	void CreateShader(const std::string& ShaderSourcePath, const std::string& Entrypoint, const std::string& TargetProfile);
-	void DestroyShader();
-
-	virtual void Cleanup() override;
-
-	VkShaderModule GetVkShaderModule() const;
-	const std::vector<PVulkanDescriptorSetLayout*>& GetDescriptorSetLayouts() const;
-
-private: 	
 	VkShaderModule ShaderModule;
+	VkShaderStageFlagBits Flag;
 
 	std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts;
+};
+
+class PVulkanShader : public IShader
+{
+public:
+	virtual void CreateShader(std::vector<SShaderModuleBinary> ShaderBinaryObject) override;
+	virtual void DestroyShader() override;
+
+	std::span<SShaderModule> GetShaderModules();
+
+private: 	
+	std::vector<SShaderModule> ShaderModules;
 };

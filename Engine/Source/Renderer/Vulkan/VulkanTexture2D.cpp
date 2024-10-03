@@ -55,14 +55,9 @@ void PVulkanTexture2D::DestroyTexture2D()
     delete Image;
 }
 
-void PVulkanTexture2D::Deserialize(SBlob& Blob)
-{
-    unsigned char* Data = stbi_load_from_memory(Blob.Data.data(), static_cast<int>(Blob.Data.size()), &Width, &Height, &Channels, STBI_rgb_alpha);
-    CreateTexture2D(Data);
-    stbi_image_free(Data);
-}
-
-void PVulkanTexture2D::Cleanup()
-{
-    DestroyTexture2D();
-}
+//void PVulkanTexture2D::Deserialize(SBlob& Blob)
+//{
+//    unsigned char* Data = stbi_load_from_memory(Blob.Data.data(), static_cast<int>(Blob.Data.size()), &Width, &Height, &Channels, STBI_rgb_alpha);
+//    CreateTexture2D(Data);
+//    stbi_image_free(Data);
+//}
