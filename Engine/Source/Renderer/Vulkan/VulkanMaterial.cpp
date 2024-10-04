@@ -79,6 +79,7 @@ void PVulkanMaterial::SetShader(IShader* Shader)
 		
         SetUniformValue(1, "UBO", "m_ViewMatrix", Camera->GetViewMatrix());
         SetUniformValue(1, "UBO", "m_ProjectionMatrix", Camera->GetProjectionMatrix());
+        SetUniformValue(1, "UBO", "CameraWorldPosition", Camera->GetPosition());
 	});
     
     GetRHI()->GetSceneRenderer()->GetRenderGraph()->AddCommand([this](PVulkanFrame* Frame)
@@ -152,12 +153,78 @@ void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& Uni
 
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec3 Value)
 {
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+    PVulkanDescriptorSet* DescriptorSet = FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets[Set];
+    
+    for (PVulkanFrame* Frame : *FramePool)
+    {
 
+    for (const SDescriptorSetBinding& Binding : Frame->GetMemory()->DescriptorSets[Set]->GetBindings())
+    {
+        if (Binding.Layout->Name == UniformName)
+        {
+            for (auto& Member : Binding.Layout->Members)
+            {
+                if (Member.Name == MemberName)
+                {
+                    PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
+                    Buffer->Submit(&Value, Member.Size, Member.Offset);
+                }
+            }
+        }
+    }
+    }
+
+}
+
+void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, float Value)
+{
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+    PVulkanDescriptorSet* DescriptorSet = FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets[Set];
+    
+    for (PVulkanFrame* Frame : *FramePool)
+    {
+
+    for (const SDescriptorSetBinding& Binding : Frame->GetMemory()->DescriptorSets[Set]->GetBindings())
+    {
+        if (Binding.Layout->Name == UniformName)
+        {
+            for (auto& Member : Binding.Layout->Members)
+            {
+                if (Member.Name == MemberName)
+                {
+                    PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
+                    Buffer->Submit(&Value, Member.Size, Member.Offset);
+                }
+            }
+        }
+    }
+    }
 }
 
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec4 Value)
 {
+    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
+    PVulkanDescriptorSet* DescriptorSet = FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets[Set];
+    
+    for (PVulkanFrame* Frame : *FramePool)
+    {
 
+    for (const SDescriptorSetBinding& Binding : Frame->GetMemory()->DescriptorSets[Set]->GetBindings())
+    {
+        if (Binding.Layout->Name == UniformName)
+        {
+            for (auto& Member : Binding.Layout->Members)
+            {
+                if (Member.Name == MemberName)
+                {
+                    PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
+                    Buffer->Submit(&Value, Member.Size, Member.Offset);
+                }
+            }
+        }
+    }
+    }
 }
 
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat2 Value)

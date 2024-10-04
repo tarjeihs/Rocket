@@ -49,14 +49,14 @@ void PVulkanGraphicsPipeline::CreatePipeline(PVulkanShader* Shader)
 
     for (const SShaderModule& ShaderModule : Shader->GetShaderModules()) 
     {
-        VkPipelineShaderStageCreateInfo VertexShaderStageCreateInfo{};
-        VertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        VertexShaderStageCreateInfo.pNext = nullptr;
-        VertexShaderStageCreateInfo.pName = "main";
-        VertexShaderStageCreateInfo.module = ShaderModule.ShaderModule;
-        VertexShaderStageCreateInfo.stage = ShaderModule.Flag;
+        VkPipelineShaderStageCreateInfo ShaderStageCreateInfo{};
+        ShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStageCreateInfo.pNext = nullptr;
+        ShaderStageCreateInfo.pName = "main";
+        ShaderStageCreateInfo.module = ShaderModule.ShaderModule;
+        ShaderStageCreateInfo.stage = ShaderModule.Flag;
         
-        ShaderStageCreateInfos.push_back(VertexShaderStageCreateInfo);
+        ShaderStageCreateInfos.push_back(ShaderStageCreateInfo);
         
         DescriptorSetLayouts.resize(DescriptorSetLayouts.size() + ShaderModule.DescriptorSetLayouts.size());
         memcpy(DescriptorSetLayouts.data() + DescriptorSetLayouts.size() - ShaderModule.DescriptorSetLayouts.size(), ShaderModule.DescriptorSetLayouts.data(), ShaderModule.DescriptorSetLayouts.size() * sizeof(PVulkanDescriptorSetLayout*));

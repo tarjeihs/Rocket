@@ -15,6 +15,7 @@ public:
     virtual void Unbind() const override;
     virtual void SetShader(IShader* Shader) override;
 
+    virtual void SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, float Value) override;
     virtual void SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec2 Value) override;
     virtual void SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec3 Value) override;
     virtual void SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::vec4 Value) override;

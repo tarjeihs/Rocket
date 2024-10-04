@@ -22,7 +22,7 @@ void PVulkanRenderGraph::BeginRendering()
     ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    ColorAttachment.clearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
+    ColorAttachment.clearValue = { 0.0033f, 0.0033f, 0.0033f, 1.0f };
 
     VkRenderingAttachmentInfo DepthAttachment{};
     DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;

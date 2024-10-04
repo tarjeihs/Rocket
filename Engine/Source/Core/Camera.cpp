@@ -28,14 +28,16 @@ void PCamera::SetPerspectiveProjection(float FovY, float AspectRatio, float ZNea
     Projection[1][1] *= -1.0f; // Invert Y-Axis Screen Space Scaling
 }
 
-void PCamera::CalculateViewMatrix(const glm::vec3& Position, const glm::vec3& Rotation)
+void PCamera::CalculateViewMatrix(const glm::vec3& NewPosition, const glm::vec3& NewRotation)
 {
-    const glm::vec3 Forward = glm::vec3(glm::cos(Rotation.y) * glm::cos(Rotation.x), glm::sin(Rotation.x), glm::sin(Rotation.y) * glm::cos(Rotation.x));
+    const glm::vec3 Forward = glm::vec3(glm::cos(NewRotation.y) * glm::cos(NewRotation.x), glm::sin(NewRotation.x), glm::sin(NewRotation.y) * glm::cos(NewRotation.x));
     const glm::vec3 Direction = glm::normalize(Forward);
     const glm::vec3 Right = glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), Direction));
     const glm::vec3 Up = glm::cross(Direction, Right);
 
-    ViewMatrix = glm::lookAt(Position, Position + Direction, Up);
+    ViewMatrix = glm::lookAt(NewPosition, NewPosition + Direction, Up);
+    Position = NewPosition;
+    Rotation = NewRotation;
 }
 
 void PCamera::ApplySettings()

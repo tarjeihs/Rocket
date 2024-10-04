@@ -16,10 +16,12 @@ struct SVertex
         Color = glm::vec4(1.0f);
     }
 
-    glm::vec3 Position;
-    glm::vec2 TexCoord;
-    glm::vec3 Normal;
-    glm::vec4 Color;
+    alignas(16) glm::vec3 Position;
+    alignas(16) glm::vec2 TexCoord;
+    alignas(16) glm::vec3 Normal;
+    alignas(16) glm::vec4 Color;
+    alignas(16) glm::vec3 Tangent;
+    alignas(16) glm::vec3 Bitangent;
 };
 
 struct SMeshBinaryData
