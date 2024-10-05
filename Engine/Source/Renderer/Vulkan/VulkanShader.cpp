@@ -4,7 +4,6 @@
 #include <spirv_cross/spirv.hpp>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_cross_containers.hpp>
-#include <vulkan/vulkan_core.h>
 
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"

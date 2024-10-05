@@ -126,7 +126,7 @@ void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* Descr
 			case EDescriptorSetBindingType::Storage: 
 			{
 				PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-				Buffer->Allocate(1024 * 10 * 10);
+				Buffer->Allocate(1024 * 1024);
 				
 				SDescriptorSetBinding Binding;
 				Binding.Layout = &BindingLayout;
