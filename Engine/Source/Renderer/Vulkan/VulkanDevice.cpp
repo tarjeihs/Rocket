@@ -120,6 +120,7 @@ void PVulkanDevice::Init()
 
 	VkPhysicalDeviceFeatures DeviceFeatures{};
 	DeviceFeatures.shaderInt64 = VK_TRUE;
+	DeviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	VkDeviceCreateInfo DeviceCreateInfo{};
 	DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

@@ -48,6 +48,16 @@ public:
 		return Projection;
 	}
 
+	inline const glm::vec3& GetPosition() const
+	{
+		return Position;
+	}
+
+	inline const glm::vec3& GetRotation() const
+	{
+		return Rotation;
+	}
+
 	struct SCameraSettings 
 	{
 		ECameraProjectionMode ProjectionMode;
@@ -59,4 +69,7 @@ public:
 private:
 	glm::mat4 Projection = glm::identity<glm::mat4>();
 	glm::mat4 ViewMatrix = glm::identity<glm::mat4>();
+
+	glm::vec3 Position;
+	glm::vec3 Rotation;
 };

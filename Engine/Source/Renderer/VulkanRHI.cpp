@@ -8,14 +8,17 @@
 
 void PVulkanRHI::Init()
 {
+#if VALIDATION_LAYER
+	Extensions.ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
+	Extensions.InstanceExtensions.push_back("VK_EXT_debug_utils");
+#endif
+
 	Instance = new PVulkanInstance();
 	Device = new PVulkanDevice();
-	Memory = new PVulkanMemory();
 	SceneRenderer = new PVulkanSceneRenderer();
 	
 	Instance->Init();
 	Device->Init();
-	Memory->Init();
 	SceneRenderer->Init();
 }
 
@@ -24,12 +27,10 @@ void PVulkanRHI::Shutdown()
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
 	SceneRenderer->Shutdown();
-  	Memory->Shutdown();
   	Device->Shutdown();
   	Instance->Shutdown();
 
   	delete SceneRenderer;
-	delete Memory;
 	delete Device;
 	delete Instance;
 }
@@ -54,11 +55,6 @@ PVulkanInstance* PVulkanRHI::GetInstance() const
 PVulkanDevice* PVulkanRHI::GetDevice() const
 {
 	return Device;
-}
-
-PVulkanMemory* PVulkanRHI::GetMemory() const
-{
-	return Memory;
 }
 
 PVulkanSceneRenderer* PVulkanRHI::GetSceneRenderer() const

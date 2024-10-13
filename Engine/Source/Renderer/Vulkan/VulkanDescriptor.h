@@ -1,12 +1,17 @@
 #pragma once
 
 #include <span>
+#include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #include "Renderer/Vulkan/VulkanBuffer.h"
+#include "Renderer/Vulkan/VulkanSampler.h"
+#include "Renderer/Vulkan/VulkanTexture2D.h"
 
 class PVulkanRHI;
-struct SVulkanBuffer;
+class PVulkanFrame;
+struct PVulkanBuffer;
 struct VkDescriptorPool_T;
 struct VkDescriptorSet_T;
 struct VkDescriptorSetLayout_T;
@@ -37,35 +42,71 @@ private:
     VkDescriptorPool Pool;
 };
 
+enum class EDescriptorSetBindingType : uint8_t
+{
+    Storage, Uniform
+};
+
+enum class EDescriptorSetBindingFlag : uint8_t
+{
+    Vertex, Fragment
+};
+
+struct SDescriptorSetBindingMemberLayout
+{
+    std::string Name;
+    size_t Size;
+    size_t Offset;
+};
+
+struct SDescriptorSetBindingLayout
+{
+    std::string Name;
+    uint32_t Binding;
+    size_t Size;
+
+    EDescriptorSetBindingType Type;
+    EDescriptorSetBindingFlag Flag;
+
+    std::vector<SDescriptorSetBindingMemberLayout> Members;
+};
+
+struct SDescriptorSetBinding
+{
+    SDescriptorSetBindingLayout* Layout;
+    void* Data;
+};
+
 class PVulkanDescriptorSetLayout
 {
 public:
-    enum class EDescriptorSetLayoutType { Storage, Uniform };
-
-    void CreateDescriptorSetLayout(std::vector<EDescriptorSetLayoutType> LayoutTypes);
-    void FreeDescriptorSetLayout();
+    void CreateDescriptorSetLayout(const std::vector<SDescriptorSetBindingLayout>& Data);
+    void DestroyDescriptorSetLayout();
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout() const;
-
-protected:
-    VkDescriptorSetLayoutBinding CreateStorageBufferBinding(uint32_t Binding);
-    VkDescriptorSetLayoutBinding CreateUniformBufferBinding(uint32_t Binding);
+    
+    std::span<SDescriptorSetBindingLayout> GetBindings();
+    std::span<const SDescriptorSetBindingLayout> GetBindings() const;
 
 private:
+    std::vector<SDescriptorSetBindingLayout> Bindings;
+
     VkDescriptorSetLayout DescriptorSetLayout;
 };
 
 class PVulkanDescriptorSet
 {
 public:
-    void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout);
-    void FreeDescriptorSet();
-
-    void UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
-    void UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding);
+    void CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout, PVulkanFrame* Frame);
+    void DestroyDescriptorSet();
 
     VkDescriptorSet GetVkDescriptorSet() const;
+    
+    std::span<SDescriptorSetBinding> GetBindings();
+    std::span<const SDescriptorSetBinding> GetBindings() const;
 
 private:
+    std::vector<SDescriptorSetBinding> Bindings;
+
 	VkDescriptorSet DescriptorSet;
 };

@@ -6,19 +6,11 @@ class IMesh;
 class PVulkanDescriptorSet;
 class PVulkanDescriptorSetLayout;
 class PVulkanShader;
-class PVulkanCommandBuffer;
-struct SBuffer;
-struct SUniformBufferObject;
-struct VkPipeline_T;
-struct VkPipelineLayout_T;
-
-typedef struct VkPipeline_T* VkPipeline;
-typedef struct VkPipelineLayout_T* VkPipelineLayout;
 
 class PVulkanPipelineLayout
 {
 public:
-	void CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
+	void CreatePipelineLayout(const std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
 	void DestroyPipelineLayout();
 
 	VkPipelineLayout GetVkPipelineLayout() const;
@@ -30,10 +22,10 @@ private:
 class PVulkanGraphicsPipeline
 {
 public:
-	void CreatePipeline();
+	void CreatePipeline(PVulkanShader* Shader);
 	void DestroyPipeline();
 
-	void Bind();
+	void Bind(std::vector<VkDescriptorSet> Data);
 	void Unbind();
 
 	PVulkanPipelineLayout* GetPipelineLayout() const;
@@ -41,8 +33,6 @@ public:
 
 protected:
 	PVulkanPipelineLayout* PipelineLayout;
-	PVulkanShader* VertexShader;
-	PVulkanShader* FragmentShader;
 
 private:
 	VkPipeline Pipeline;

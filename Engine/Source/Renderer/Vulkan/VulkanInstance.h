@@ -12,7 +12,7 @@ class PVulkanInstance
 {
 public:
 	PVulkanInstance()
-	{
+	{		
 		Instance = nullptr;
 		Surface = nullptr;
 		DebugMessenger = nullptr;

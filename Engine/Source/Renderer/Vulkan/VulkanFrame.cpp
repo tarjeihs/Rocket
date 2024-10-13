@@ -16,6 +16,9 @@ void PVulkanFrame::CreateFrame()
 	CommandBuffer = new PVulkanCommandBuffer();
 	CommandBuffer->Create(CommandPool);
 
+	Memory = new PVulkanMemory();
+	Memory->Init();
+
 	VkFenceCreateInfo FenceCreateInfo{};
 	FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	FenceCreateInfo.pNext = nullptr;
@@ -34,19 +37,6 @@ void PVulkanFrame::CreateFrame()
 
 	Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
-
-	{
-    	SSBO = new SVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    	SSBO->Allocate(sizeof(SShaderStorageBufferObject) * 100);
-
-    	UBO = new SVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    	UBO->Allocate(sizeof(SUniformBufferObject));
-
-    	DescriptorSet = new PVulkanDescriptorSet();
-    	DescriptorSet->CreateDescriptorSet(GetRHI()->GetSceneRenderer()->GetParallelFramePool()->DescriptorSetLayout);
-    	DescriptorSet->UseDescriptorStorageBuffer(SSBO, 0, sizeof(SShaderStorageBufferObject) * 100, 0);
-    	DescriptorSet->UseDescriptorUniformBuffer(UBO, 0, sizeof(SUniformBufferObject), 1);
-	}
 }
 
 void PVulkanFrame::DestroyFrame()
@@ -57,9 +47,8 @@ void PVulkanFrame::DestroyFrame()
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), RenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), nullptr);
 
-	DescriptorSet->FreeDescriptorSet();
-	SSBO->Free();
-	UBO->Free();
+	Memory->Shutdown();
+	delete Memory;
 }
 
 void PVulkanFrame::BeginFrame()
@@ -118,22 +107,43 @@ void PVulkanFrame::EndFrame()
 	vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &presentInfo);
 }
 
+PVulkanCommandPool* PVulkanFrame::GetCommandPool() const
+{
+	return CommandPool;
+}
+
 PVulkanCommandBuffer* PVulkanFrame::GetCommandBuffer() const
 {
 	return CommandBuffer;
 }
 
+PVulkanMemory* PVulkanFrame::GetMemory() const
+{
+	return Memory;
+}
+
+VkSemaphore PVulkanFrame::GetSwapchainSemaphore() const
+{
+	return SwapchainSemaphore;
+}
+
+VkSemaphore PVulkanFrame::GetRenderSemaphore() const
+{
+	return RenderSemaphore;
+}
+
+VkFence PVulkanFrame::GetRenderFence() const
+{
+	return RenderFence;
+}
+
+FTransientFrameData& PVulkanFrame::GetTransientFrameData()
+{
+	return TransientFrameData;
+}
+
 void PVulkanFramePool::CreateFramePool()
 {
-	std::vector<PVulkanDescriptorSetLayout::EDescriptorSetLayoutType> DescriptorSetLayoutTypes =
-    {
-        PVulkanDescriptorSetLayout::EDescriptorSetLayoutType::Storage,
-        PVulkanDescriptorSetLayout::EDescriptorSetLayoutType::Uniform,
-    };
-
-	DescriptorSetLayout = new PVulkanDescriptorSetLayout();
-	DescriptorSetLayout->CreateDescriptorSetLayout(DescriptorSetLayoutTypes);
-	
 	for (size_t Index = 0; Index < PoolSize; ++Index)
 	{
 		PVulkanFrame* Frame = new PVulkanFrame();
@@ -150,11 +160,14 @@ void PVulkanFramePool::FreeFramePool()
 		delete Pool[Index];
 		Pool[Index] = nullptr;
 	}
-
-	DescriptorSetLayout->FreeDescriptorSetLayout();
 }
 
 PVulkanFrame* PVulkanFramePool::GetCurrentFrame() const
 {
 	return Pool[FrameIndex % PoolSize];
+}
+
+size_t PVulkanFramePool::GetCurrentFrameIndex() const
+{
+	return FrameIndex % PoolSize;
 }

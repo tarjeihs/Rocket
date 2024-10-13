@@ -3,6 +3,8 @@
 
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanMemory.h"
 
 void PVulkanDescriptorPool::CreatePool(uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags)
@@ -42,86 +44,34 @@ VkDescriptorPool PVulkanDescriptorPool::GetVkDescriptorPool() const
 	return Pool;
 }
 
-void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout)
-{
-	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
-
-	VkDescriptorSetAllocateInfo DescriptorSetAllocInfo{};
-	DescriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	DescriptorSetAllocInfo.pNext = nullptr;
-	DescriptorSetAllocInfo.descriptorPool = GetRHI()->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
-	DescriptorSetAllocInfo.descriptorSetCount = 1;
-	DescriptorSetAllocInfo.pSetLayouts = &DescriptorSetLayoutPointer;
-
-	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
-	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
-}
-
-void PVulkanDescriptorSet::FreeDescriptorSet()
-{
-	// Note: DescriptorPool must be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT to allow for explicit, manual control.
-	//VkResult Result = vkFreeDescriptorSets(RHI->GetDevice()->GetVkDevice(), RHI->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool(), 1, &DescriptorSet);
-	//RK_ASSERT(Result == VK_SUCCESS, "Failed to free descriptor set from memory.");
-}
-
-void PVulkanDescriptorSet::UseDescriptorStorageBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
-{
-	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer->Buffer;
-	DescriptorBufferInfo.offset = 0;
-	DescriptorBufferInfo.range = Range;
-
-	VkWriteDescriptorSet WriteDescriptorSet{};
-	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	WriteDescriptorSet.dstSet = DescriptorSet;
-	WriteDescriptorSet.dstBinding = Binding;
-	WriteDescriptorSet.dstArrayElement = 0;
-	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	WriteDescriptorSet.descriptorCount = 1;
-	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
-
-	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-}
-
-void PVulkanDescriptorSet::UseDescriptorUniformBuffer(SVulkanBuffer* Buffer, VkDeviceSize Offset, VkDeviceSize Range, uint32_t Binding)
-{
-	VkDescriptorBufferInfo DescriptorBufferInfo{};
-	DescriptorBufferInfo.buffer = Buffer->Buffer;
-	DescriptorBufferInfo.offset = 0;
-	DescriptorBufferInfo.range = Range;
-
-	VkWriteDescriptorSet WriteDescriptorSet{};
-	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	WriteDescriptorSet.dstSet = DescriptorSet;
-	WriteDescriptorSet.dstBinding = Binding;
-	WriteDescriptorSet.dstArrayElement = 0;
-	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	WriteDescriptorSet.descriptorCount = 1;
-	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
-
-	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-}
-
-VkDescriptorSet PVulkanDescriptorSet::GetVkDescriptorSet() const
-{
-	return DescriptorSet;
-}
-
-void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(std::vector<EDescriptorSetLayoutType> LayoutTypes)
+void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(const std::vector<SDescriptorSetBindingLayout>& Data)
 {
 	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
 
-	for (uint32_t Index = 0; Index < static_cast<uint32_t>(LayoutTypes.size()); ++Index) 
+	for (const auto& Binding : Data)
 	{
-		EDescriptorSetLayoutType LayoutType = LayoutTypes[Index];
-		if (LayoutType == EDescriptorSetLayoutType::Storage)
+		VkDescriptorType DescriptorType;
+		switch (Binding.Type)
 		{
-			DescriptorSetLayoutBindings.push_back(CreateStorageBufferBinding(Index));
+			case EDescriptorSetBindingType::Uniform:
+			{
+				DescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				break;
+			}
+			case EDescriptorSetBindingType::Storage:
+			{
+				DescriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				break;
+			}
 		}
-		else if (LayoutType == EDescriptorSetLayoutType::Uniform)
-		{
-			DescriptorSetLayoutBindings.push_back(CreateUniformBufferBinding(Index));
-		}
+
+		VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding = {};
+		DescriptorSetLayoutBinding.binding = Binding.Binding;
+		DescriptorSetLayoutBinding.descriptorType = DescriptorType;
+		DescriptorSetLayoutBinding.descriptorCount = 1;
+		DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		DescriptorSetLayoutBindings.push_back(DescriptorSetLayoutBinding);
 	}
 
 	VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo{};
@@ -130,10 +80,12 @@ void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(std::vector<EDescript
 	DescriptorSetLayoutCreateInfo.pBindings = DescriptorSetLayoutBindings.data();
 
 	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout);
-	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");	
+
+	Bindings = Data;
 }
 
-void PVulkanDescriptorSetLayout::FreeDescriptorSetLayout()
+void PVulkanDescriptorSetLayout::DestroyDescriptorSetLayout()
 {
 	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), DescriptorSetLayout, nullptr);
 }
@@ -143,24 +95,120 @@ VkDescriptorSetLayout PVulkanDescriptorSetLayout::GetVkDescriptorSetLayout() con
 	return DescriptorSetLayout;
 }
 
-VkDescriptorSetLayoutBinding PVulkanDescriptorSetLayout::CreateStorageBufferBinding(uint32_t Binding)
+std::span<SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBindings()
 {
-	VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding{};
-	DescriptorSetLayoutBinding.binding = Binding;
-	DescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	DescriptorSetLayoutBinding.descriptorCount = 1;
-	//DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	return DescriptorSetLayoutBinding;
+    return std::span<SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
 }
 
-VkDescriptorSetLayoutBinding PVulkanDescriptorSetLayout::CreateUniformBufferBinding(uint32_t Binding)
+std::span<const SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBindings() const
 {
-	VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding{};
-	DescriptorSetLayoutBinding.binding = Binding;
-	DescriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	DescriptorSetLayoutBinding.descriptorCount = 1;
-	//DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	return DescriptorSetLayoutBinding;
+    return std::span<const SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
+}
+
+void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout, PVulkanFrame* Frame)
+{
+	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
+
+	VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {};
+	DescriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	DescriptorSetAllocateInfo.pNext = nullptr;
+	DescriptorSetAllocateInfo.descriptorPool = Frame->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
+	DescriptorSetAllocateInfo.descriptorSetCount = 1;
+	DescriptorSetAllocateInfo.pSetLayouts = &DescriptorSetLayoutPointer;
+
+	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocateInfo, &DescriptorSet);
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
+
+	for (SDescriptorSetBindingLayout& BindingLayout : DescriptorSetLayout->GetBindings())
+	{
+		switch (BindingLayout.Type)
+		{
+			case EDescriptorSetBindingType::Storage: 
+			{
+				PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+				Buffer->Allocate(1024 * 1024);
+				
+				SDescriptorSetBinding Binding;
+				Binding.Layout = &BindingLayout;
+				Binding.Data = Buffer;
+				Bindings.push_back(Binding);
+				
+				VkDescriptorBufferInfo DescriptorBufferInfo{};
+				DescriptorBufferInfo.buffer = Buffer->Buffer;
+				DescriptorBufferInfo.offset = 0;
+				DescriptorBufferInfo.range = VK_WHOLE_SIZE;
+
+				VkWriteDescriptorSet WriteDescriptorSet{};
+				WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				WriteDescriptorSet.dstSet = DescriptorSet;
+				WriteDescriptorSet.dstBinding = BindingLayout.Binding;
+				WriteDescriptorSet.dstArrayElement = 0;
+				WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				WriteDescriptorSet.descriptorCount = 1;
+				WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+
+				vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+				break;
+			}
+			case EDescriptorSetBindingType::Uniform:
+			{
+				PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+				Buffer->Allocate(BindingLayout.Size);
+				
+				SDescriptorSetBinding Binding;
+				Binding.Layout = &BindingLayout;
+				Binding.Data = Buffer;
+				Bindings.push_back(Binding);
+				
+				VkDescriptorBufferInfo DescriptorBufferInfo{};
+				DescriptorBufferInfo.buffer = Buffer->Buffer;
+				DescriptorBufferInfo.offset = 0;
+				DescriptorBufferInfo.range = BindingLayout.Size;
+
+				VkWriteDescriptorSet WriteDescriptorSet{};
+				WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				WriteDescriptorSet.dstSet = DescriptorSet;
+				WriteDescriptorSet.dstBinding = BindingLayout.Binding;
+				WriteDescriptorSet.dstArrayElement = 0;
+				WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				WriteDescriptorSet.descriptorCount = 1;
+				WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+
+				vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+				break;
+			}
+		}
+	}
+}
+
+void PVulkanDescriptorSet::DestroyDescriptorSet()
+{
+	for (auto& Binding : Bindings)
+	{
+		switch (Binding.Layout->Type)
+		{
+			case EDescriptorSetBindingType::Uniform:
+			case EDescriptorSetBindingType::Storage:
+			{
+				PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
+				Buffer->Free();
+				break;
+			}
+		}
+	}
+}
+
+VkDescriptorSet PVulkanDescriptorSet::GetVkDescriptorSet() const
+{
+	return DescriptorSet;
+}
+
+std::span<SDescriptorSetBinding> PVulkanDescriptorSet::GetBindings()
+{
+    return std::span<SDescriptorSetBinding>(Bindings.data(), Bindings.size());
+}
+
+std::span<const SDescriptorSetBinding> PVulkanDescriptorSet::GetBindings() const 
+{
+    return std::span<const SDescriptorSetBinding>(Bindings.data(), Bindings.size());
 }

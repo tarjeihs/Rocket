@@ -1,36 +1,18 @@
 #pragma once
 
 #include <vector>
-#include <string>
-#include <functional>
-#include <cstdint>
 
-#ifdef RK_PLATFORM_WINDOWS
-	#include <Windows.h>
-	#include <wrl.h>
-	#include <dxc/dxcapi.h>
-	
-	using Microsoft::WRL::ComPtr;
-#endif
+struct SShaderModuleBinary
+{
+	void* Data;
+	size_t Size;
+};
 
-#ifdef RK_PLATFORM_LINUX
-	#include <dlfcn.h>
-	#include <wchar.h>
-	#include <dxc/dxcapi.h>
-#endif
-
-class PShader
+class IShader
 {
 public:
-	virtual ~PShader() = default;
+	virtual ~IShader() = default;
 
-protected:
-
-#ifdef RK_PLATFORM_WINDOWS
-	static void CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile, std::function<void(const ComPtr<IDxcBlob>&)>&& Callback);
-#endif
-
-#ifdef RK_PLATFORM_LINUX
-	static void CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile, std::function<void(const CComPtr<IDxcBlob>&)>&& Callback);
-#endif
+	virtual void CreateShader(std::vector<SShaderModuleBinary> ShaderBinaryObject) = 0;
+	virtual void DestroyShader() = 0;
 };

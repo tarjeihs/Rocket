@@ -2,19 +2,24 @@
 
 #include "Renderer/Common/Shader.h"
 
-class PVulkanRHI;
-struct VkShaderModule_T;
+class PVulkanDescriptorSetLayout;
 
-typedef VkShaderModule_T* VkShaderModule;
+struct SShaderModule
+{
+	VkShaderModule ShaderModule;
+	VkShaderStageFlagBits Flag;
 
-class PVulkanShader : public PShader
+	std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts;
+};
+
+class PVulkanShader : public IShader
 {
 public:
-	void CreateShader(const std::wstring& ShaderSourcePath, const std::wstring& Entrypoint, const std::string& TargetProfile);
-	void DestroyShader();
+	virtual void CreateShader(std::vector<SShaderModuleBinary> ShaderBinaryObject) override;
+	virtual void DestroyShader() override;
 
-	VkShaderModule GetVkShaderModule() const;
+	std::span<SShaderModule> GetShaderModules();
 
-private:
-	VkShaderModule ShaderModule;
+private: 	
+	std::vector<SShaderModule> ShaderModules;
 };

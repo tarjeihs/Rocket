@@ -25,6 +25,7 @@ set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
 set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
 set(TINYGLTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/tinygltf")
 set(RAPIDJSON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/rapidjson")
+set(SPIRVCROSS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/SPIRV-Cross")
 
 # Collect ImGui source files
 set(IMGUI_SRC
@@ -83,11 +84,13 @@ target_include_directories(Engine PRIVATE
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
 
 if(UNIX AND NOT APPLE)
-    target_link_libraries(Engine PRIVATE
+    target_link_libraries(Engine PUBLIC
         glfw
         Vulkan::Vulkan
         X11
         X11-xcb
+        spirv-cross-c 
+        spirv-cross-core
     )
 else()
     target_link_libraries(Engine PRIVATE

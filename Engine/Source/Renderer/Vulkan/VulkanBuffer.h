@@ -12,16 +12,17 @@ typedef uint32_t VkBufferUsageFlags;
 
 enum VmaMemoryUsage;
 
-struct SVulkanBuffer : public IBuffer
+class PVulkanBuffer : public IBuffer
 {
-    SVulkanBuffer(VkBufferUsageFlags InUsageFlags, VmaMemoryUsage InMemoryUsageFlags)
+public:
+    PVulkanBuffer(VkBufferUsageFlags InUsageFlags, VmaMemoryUsage InMemoryUsageFlags)
         : UsageFlags(InUsageFlags), MemoryUsageFlags(InMemoryUsageFlags)
     {
     }
 
     virtual void Allocate(size_t Size) override;
     virtual void Free() override;
-    virtual void Submit(const void* Data, size_t Size) override;
+    virtual void Submit(const void* Data, size_t Size, size_t Offset = 0) override;
 
     VkBuffer Buffer;
     VmaAllocation Allocation;
