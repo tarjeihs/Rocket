@@ -99,7 +99,7 @@ void PHLSL::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::w
 #endif
 
 #ifdef RK_PLATFORM_LINUX
-void PHLSL::ImportHLSL(const std::string& ShaderSourcePath, const std::string& Entrypoint, const std::string& TargetProfile, SShaderModuleBinary& ShaderBinaryObject)
+FHLSL Format::ImportHLSL(const std::string& ShaderSourcePath, const std::string& Entrypoint, const std::string& TargetProfile)
 {
 	// Load the DXC shared library (libdxcompiler.so)
 	std::string Path = std::string("/usr/lib/dxc/libdxcompiler.so");
@@ -179,7 +179,9 @@ void PHLSL::ImportHLSL(const std::string& ShaderSourcePath, const std::string& E
 	void* Copy = malloc(Size);
 	memcpy(Copy, Data, Size);
 
-	ShaderBinaryObject.Data = Copy;
-	ShaderBinaryObject.Size = Size;
+	FHLSL HLSL;
+	HLSL.Data = Copy;
+	HLSL.Size = Size;
+	return HLSL;
 }
 #endif
