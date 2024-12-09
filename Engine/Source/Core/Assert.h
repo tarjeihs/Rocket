@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 #include "Core/Logger.h"
 
 #define RK_EXPAND_MACRO(x) x

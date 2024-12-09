@@ -1,15 +1,7 @@
 #pragma once
 
-#include "Renderer/Settings.h"
-#include "Renderer/Vulkan/VulkanDescriptor.h"
 #include <glm/fwd.hpp>
 #include <glm/matrix.hpp>
-
-class PVulkanDescriptorPool;
-struct VmaAllocator_T;
-
-typedef VmaAllocator_T* VmaAllocator;
-typedef uint64_t VkDeviceAddress;
 
 struct SBuffer
 {
@@ -40,22 +32,6 @@ struct SUInt64PointerPushConstant
 class PVulkanMemory
 {
 public:
-	PVulkanMemory()
-	{
-		MemoryAllocator = nullptr;
-		DescriptorPool = nullptr;
-	}
-
 	void Init();
 	void Shutdown();
-
-	PVulkanDescriptorPool* GetDescriptorPool() const;
-
-protected:
-	VmaAllocator MemoryAllocator;
-
-	PVulkanDescriptorPool* DescriptorPool;
-
-public:
-	std::vector<PVulkanDescriptorSet*> DescriptorSets;
 };

@@ -1,214 +1,166 @@
 #include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
-#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
+#include <vulkan/vulkan_core.h>
 
-void PVulkanDescriptorPool::CreatePool(uint32_t MaxSets, std::span<SVulkanDescriptorPoolRatio> PoolRatios, uint32_t Flags)
+void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 {
-	std::vector<VkDescriptorPoolSize> PoolSizes;
-	for (SVulkanDescriptorPoolRatio PoolRatio : PoolRatios)
+	TArray<VkDescriptorPoolSize> PoolSizes;
+	
+	for (FVkDescriptorPoolRatio& PoolRatio : CreateInfo.PoolRatios)
 	{
 		VkDescriptorPoolSize DescriptorPoolSize{};
 		DescriptorPoolSize.type = PoolRatio.Type;
-		DescriptorPoolSize.descriptorCount = PoolRatio.Ratio * MaxSets;
-		PoolSizes.push_back(DescriptorPoolSize);
+		DescriptorPoolSize.descriptorCount = PoolRatio.Ratio * CreateInfo.MaxSetCount;
+		
+		PoolSizes.Add(DescriptorPoolSize);
 	}
 
 	VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo{};
 	DescriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	DescriptorPoolCreateInfo.flags = Flags;
-	DescriptorPoolCreateInfo.maxSets = MaxSets;
-	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
-	DescriptorPoolCreateInfo.pPoolSizes = PoolSizes.data();
+	DescriptorPoolCreateInfo.flags = CreateInfo.Flags;
+	DescriptorPoolCreateInfo.maxSets = CreateInfo.MaxSetCount;
+	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.GetSize());
+	DescriptorPoolCreateInfo.pPoolSizes = PoolSizes.GetData();
 
-	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Pool);
+	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Info.DescriptorPool);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor pool.");
 }
 
-void PVulkanDescriptorPool::DestroyPool()
+void FVkDescriptorPool::Destroy()
 {
-	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Pool, nullptr);
+	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorPool, nullptr);
 }
 
-void PVulkanDescriptorPool::ResetPool()
+namespace Utils
 {
-	vkResetDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Pool, 0);
-}
-
-VkDescriptorPool PVulkanDescriptorPool::GetVkDescriptorPool() const
-{
-	return Pool;
-}
-
-void PVulkanDescriptorSetLayout::CreateDescriptorSetLayout(const std::vector<SDescriptorSetBindingLayout>& Data)
-{
-	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
-
-	for (const auto& Binding : Data)
+	VkDescriptorType GetVkDescriptorType(EVkDescriptorType DescriptorType)
 	{
-		VkDescriptorType DescriptorType;
-		switch (Binding.Type)
+		switch (DescriptorType)
 		{
-			case EDescriptorSetBindingType::Uniform:
-			{
-				DescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				break;
-			}
-			case EDescriptorSetBindingType::Storage:
-			{
-				DescriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-				break;
-			}
+			case EVkDescriptorType::Storage: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			case EVkDescriptorType::StorageImage: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case EVkDescriptorType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
+			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		}
-
-		VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding = {};
-		DescriptorSetLayoutBinding.binding = Binding.Binding;
-		DescriptorSetLayoutBinding.descriptorType = DescriptorType;
-		DescriptorSetLayoutBinding.descriptorCount = 1;
-		DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		DescriptorSetLayoutBindings.push_back(DescriptorSetLayoutBinding);
 	}
+}
+
+void FVkDescriptorSetLayout::Initialize(FVkDescriptorSetLayoutCreateInfo& CreateInfo)
+{
+	TArray<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
+	TArray<VkDescriptorBindingFlags> DescriptorBindingFlags;
+
+	for (uint32_t Index = 0; Index < CreateInfo.Descriptors.GetSize(); ++Index)
+	{
+		VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding = {};
+		DescriptorSetLayoutBinding.binding = Index;
+		DescriptorSetLayoutBinding.descriptorType = Utils::GetVkDescriptorType(CreateInfo.Descriptors[Index].DescriptorType);
+		DescriptorSetLayoutBinding.descriptorCount = CreateInfo.Descriptors[Index].DescriptorCount;
+		DescriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
+
+		DescriptorSetLayoutBindings.Add(DescriptorSetLayoutBinding);
+		DescriptorBindingFlags.Add(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT);
+	}
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT DescriptorSetLayoutBindingExtraCreateInfo = {};
+	DescriptorSetLayoutBindingExtraCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+	DescriptorSetLayoutBindingExtraCreateInfo.bindingCount = static_cast<uint32_t>(DescriptorBindingFlags.GetSize());
+	DescriptorSetLayoutBindingExtraCreateInfo.pBindingFlags = DescriptorBindingFlags.GetData();
 
 	VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo{};
 	DescriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(DescriptorSetLayoutBindings.size());
-	DescriptorSetLayoutCreateInfo.pBindings = DescriptorSetLayoutBindings.data();
+	DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(DescriptorSetLayoutBindings.GetSize());
+	DescriptorSetLayoutCreateInfo.pBindings = DescriptorSetLayoutBindings.GetData();
+	DescriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+	DescriptorSetLayoutCreateInfo.pNext = &DescriptorSetLayoutBindingExtraCreateInfo;
 
-	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout);
+	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &Info.DescriptorSetLayout);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");	
-
-	Bindings = Data;
 }
 
-void PVulkanDescriptorSetLayout::DestroyDescriptorSetLayout()
+void FVkDescriptorSetLayout::Destroy()
 {
-	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), DescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorSetLayout, nullptr);
 }
 
-VkDescriptorSetLayout PVulkanDescriptorSetLayout::GetVkDescriptorSetLayout() const
+void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 {
-	return DescriptorSetLayout;
-}
-
-std::span<SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBindings()
-{
-    return std::span<SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
-}
-
-std::span<const SDescriptorSetBindingLayout> PVulkanDescriptorSetLayout::GetBindings() const
-{
-    return std::span<const SDescriptorSetBindingLayout>(Bindings.data(), Bindings.size());
-}
-
-void PVulkanDescriptorSet::CreateDescriptorSet(PVulkanDescriptorSetLayout* DescriptorSetLayout, PVulkanFrame* Frame)
-{
-	VkDescriptorSetLayout DescriptorSetLayoutPointer = DescriptorSetLayout->GetVkDescriptorSetLayout();
-
 	VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {};
 	DescriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	DescriptorSetAllocateInfo.pNext = nullptr;
-	DescriptorSetAllocateInfo.descriptorPool = Frame->GetMemory()->GetDescriptorPool()->GetVkDescriptorPool();
+	DescriptorSetAllocateInfo.descriptorPool = CreateInfo.DescriptorPool->Info.DescriptorPool;
 	DescriptorSetAllocateInfo.descriptorSetCount = 1;
-	DescriptorSetAllocateInfo.pSetLayouts = &DescriptorSetLayoutPointer;
+	DescriptorSetAllocateInfo.pSetLayouts = &CreateInfo.DescriptorSetLayout->Info.DescriptorSetLayout;
 
-	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocateInfo, &DescriptorSet);
+	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocateInfo, &Info.Handle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
 
-	for (SDescriptorSetBindingLayout& BindingLayout : DescriptorSetLayout->GetBindings())
-	{
-		switch (BindingLayout.Type)
-		{
-			case EDescriptorSetBindingType::Storage: 
-			{
-				PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-				Buffer->Allocate(1024 * 1024);
-				
-				SDescriptorSetBinding Binding;
-				Binding.Layout = &BindingLayout;
-				Binding.Data = Buffer;
-				Bindings.push_back(Binding);
-				
-				VkDescriptorBufferInfo DescriptorBufferInfo{};
-				DescriptorBufferInfo.buffer = Buffer->Buffer;
-				DescriptorBufferInfo.offset = 0;
-				DescriptorBufferInfo.range = VK_WHOLE_SIZE;
-
-				VkWriteDescriptorSet WriteDescriptorSet{};
-				WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				WriteDescriptorSet.dstSet = DescriptorSet;
-				WriteDescriptorSet.dstBinding = BindingLayout.Binding;
-				WriteDescriptorSet.dstArrayElement = 0;
-				WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-				WriteDescriptorSet.descriptorCount = 1;
-				WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
-
-				vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-				break;
-			}
-			case EDescriptorSetBindingType::Uniform:
-			{
-				PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-				Buffer->Allocate(BindingLayout.Size);
-				
-				SDescriptorSetBinding Binding;
-				Binding.Layout = &BindingLayout;
-				Binding.Data = Buffer;
-				Bindings.push_back(Binding);
-				
-				VkDescriptorBufferInfo DescriptorBufferInfo{};
-				DescriptorBufferInfo.buffer = Buffer->Buffer;
-				DescriptorBufferInfo.offset = 0;
-				DescriptorBufferInfo.range = BindingLayout.Size;
-
-				VkWriteDescriptorSet WriteDescriptorSet{};
-				WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				WriteDescriptorSet.dstSet = DescriptorSet;
-				WriteDescriptorSet.dstBinding = BindingLayout.Binding;
-				WriteDescriptorSet.dstArrayElement = 0;
-				WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				WriteDescriptorSet.descriptorCount = 1;
-				WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
-
-				vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-				break;
-			}
-		}
-	}
+	//for (SDescriptorSetBindingLayout& BindingLayout : DescriptorSetLayout->GetBindings())
+	//{
+	//	switch (BindingLayout.Type)
+	//	{
+	//		case EDescriptorSetBindingType::Storage: 
+	//		{
+	//			PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	//			Buffer->Allocate(1024 * 1024);
+	//			
+	//			SDescriptorSetBinding Binding;
+	//			Binding.Layout = &BindingLayout;
+	//			Binding.Data = Buffer;
+	//			Bindings.push_back(Binding);
+	//			
+	//			VkDescriptorBufferInfo DescriptorBufferInfo{};
+	//			DescriptorBufferInfo.buffer = Buffer->Buffer;
+	//			DescriptorBufferInfo.offset = 0;
+	//			DescriptorBufferInfo.range = VK_WHOLE_SIZE;
+//
+	//			VkWriteDescriptorSet WriteDescriptorSet{};
+	//			WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//			WriteDescriptorSet.dstSet = DescriptorSet;
+	//			WriteDescriptorSet.dstBinding = BindingLayout.Binding;
+	//			WriteDescriptorSet.dstArrayElement = 0;
+	//			WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	//			WriteDescriptorSet.descriptorCount = 1;
+	//			WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+//
+	//			vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+	//			break;
+	//		}
+	//		case EDescriptorSetBindingType::Uniform:
+	//		{
+	//			PVulkanBuffer* Buffer = new PVulkanBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	//			Buffer->Allocate(BindingLayout.Size);
+	//			
+	//			SDescriptorSetBinding Binding;
+	//			Binding.Layout = &BindingLayout;
+	//			Binding.Data = Buffer;
+	//			Bindings.push_back(Binding);
+	//			
+	//			VkDescriptorBufferInfo DescriptorBufferInfo{};
+	//			DescriptorBufferInfo.buffer = Buffer->Buffer;
+	//			DescriptorBufferInfo.offset = 0;
+	//			DescriptorBufferInfo.range = BindingLayout.Size;
+//
+	//			VkWriteDescriptorSet WriteDescriptorSet{};
+	//			WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//			WriteDescriptorSet.dstSet = DescriptorSet;
+	//			WriteDescriptorSet.dstBinding = BindingLayout.Binding;
+	//			WriteDescriptorSet.dstArrayElement = 0;
+	//			WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//			WriteDescriptorSet.descriptorCount = 1;
+	//			WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+//
+	//			vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+	//			break;
+	//		}
+	//	}
+	//}
 }
 
-void PVulkanDescriptorSet::DestroyDescriptorSet()
+void FVkDescriptorSet::Destroy()
 {
-	for (auto& Binding : Bindings)
-	{
-		switch (Binding.Layout->Type)
-		{
-			case EDescriptorSetBindingType::Uniform:
-			case EDescriptorSetBindingType::Storage:
-			{
-				PVulkanBuffer* Buffer = static_cast<PVulkanBuffer*>(Binding.Data);
-				Buffer->Free();
-				break;
-			}
-		}
-	}
-}
-
-VkDescriptorSet PVulkanDescriptorSet::GetVkDescriptorSet() const
-{
-	return DescriptorSet;
-}
-
-std::span<SDescriptorSetBinding> PVulkanDescriptorSet::GetBindings()
-{
-    return std::span<SDescriptorSetBinding>(Bindings.data(), Bindings.size());
-}
-
-std::span<const SDescriptorSetBinding> PVulkanDescriptorSet::GetBindings() const 
-{
-    return std::span<const SDescriptorSetBinding>(Bindings.data(), Bindings.size());
 }

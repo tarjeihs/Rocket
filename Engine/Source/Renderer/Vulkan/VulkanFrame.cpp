@@ -4,9 +4,12 @@
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
+#include "Types/SharedPtr.h"
+#include "Types/UniquePtr.h"
+#include <vulkan/vulkan_core.h>
 
 void PVulkanFrame::CreateFrame()
 {
@@ -15,9 +18,6 @@ void PVulkanFrame::CreateFrame()
 
 	CommandBuffer = new PVulkanCommandBuffer();
 	CommandBuffer->Create(CommandPool);
-
-	Memory = new PVulkanMemory();
-	Memory->Init();
 
 	VkFenceCreateInfo FenceCreateInfo{};
 	FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -37,6 +37,67 @@ void PVulkanFrame::CreateFrame()
 
 	Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
+
+	TArray<FVkDescriptorPoolRatio> PoolRatio = {
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 65536 },
+		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 65536 },
+		{VK_DESCRIPTOR_TYPE_SAMPLER, 65536 },
+		{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 65536 },
+	};
+
+	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
+	DescriptorPoolCreateInfo.PoolRatios = PoolRatio;
+	DescriptorPoolCreateInfo.MaxSetCount = 1;
+	DescriptorPoolCreateInfo.Flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+	
+	TSharedPtr<FVkDescriptorPool> DescriptorPool = MakeShared<FVkDescriptorPool>();
+	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
+
+	TArray<FVkDescriptor> DescriptorStorage = { { EVkDescriptorType::Storage, 65536} };
+	TArray<FVkDescriptor> DescriptorStorageImage = { { EVkDescriptorType::StorageImage, 65536} };
+	TArray<FVkDescriptor> DescriptorSampler = { { EVkDescriptorType::Sampler, 65536} };
+	TArray<FVkDescriptor> DescriptorSamplerImage = { { EVkDescriptorType::SamplerImage, 65536} };
+
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutStorageCreateInfo = { .Descriptors = DescriptorStorage };
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutStorageImageCreateInfo = { .Descriptors = DescriptorStorageImage };
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutSamplerCreateInfo = { .Descriptors = DescriptorSampler };
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutSamplerImageCreateInfo = { .Descriptors = DescriptorSamplerImage };
+
+	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutStorage = MakeShared<FVkDescriptorSetLayout>();
+	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutStorageImage = MakeShared<FVkDescriptorSetLayout>();
+	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutSampler = MakeShared<FVkDescriptorSetLayout>();
+	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutSamplerImage = MakeShared<FVkDescriptorSetLayout>();
+
+	BindlessDescriptorSetLayoutStorage->Initialize(DescriptorSetLayoutStorageCreateInfo);
+	BindlessDescriptorSetLayoutStorageImage->Initialize(DescriptorSetLayoutStorageCreateInfo);
+	BindlessDescriptorSetLayoutSampler->Initialize(DescriptorSetLayoutStorageCreateInfo);
+	BindlessDescriptorSetLayoutSamplerImage->Initialize(DescriptorSetLayoutStorageCreateInfo);
+
+	FVkDescriptorSetCreateInfo BindlessDescriptorSetStorageCreateInfo;
+	BindlessDescriptorSetStorageCreateInfo.DescriptorPool = DescriptorPool;
+	BindlessDescriptorSetStorageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutStorage;
+
+	FVkDescriptorSetCreateInfo BindlessDescriptorSetStorageImageCreateInfo;
+	BindlessDescriptorSetStorageImageCreateInfo.DescriptorPool = DescriptorPool;
+	BindlessDescriptorSetStorageImageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutStorageImage;
+
+	FVkDescriptorSetCreateInfo BindlessDescriptorSetSamplerCreateInfo;
+	BindlessDescriptorSetSamplerCreateInfo.DescriptorPool = DescriptorPool;
+	BindlessDescriptorSetSamplerCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutSampler;
+
+	FVkDescriptorSetCreateInfo BindlessDescriptorSetSamplerImageCreateInfo;
+	BindlessDescriptorSetSamplerImageCreateInfo.DescriptorPool = DescriptorPool;
+	BindlessDescriptorSetSamplerImageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutSamplerImage;
+
+	BindlessDescriptorSetStorageBuffer = MakeShared<FVkDescriptorSet>();
+	BindlessDescriptorSetStorageImage = MakeShared<FVkDescriptorSet>();
+	BindlessDescriptorSetSampler = MakeShared<FVkDescriptorSet>();
+	BindlessDescriptorSetSamplerImage = MakeShared<FVkDescriptorSet>();
+	
+	BindlessDescriptorSetStorageBuffer->Initialize(BindlessDescriptorSetStorageCreateInfo);
+	BindlessDescriptorSetStorageImage->Initialize(BindlessDescriptorSetStorageImageCreateInfo);
+	BindlessDescriptorSetSampler->Initialize(BindlessDescriptorSetSamplerCreateInfo);
+	BindlessDescriptorSetSamplerImage->Initialize(BindlessDescriptorSetSamplerImageCreateInfo);
 }
 
 void PVulkanFrame::DestroyFrame()
@@ -46,9 +107,6 @@ void PVulkanFrame::DestroyFrame()
 
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), RenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), nullptr);
-
-	Memory->Shutdown();
-	delete Memory;
 }
 
 void PVulkanFrame::BeginFrame()
@@ -117,11 +175,6 @@ PVulkanCommandBuffer* PVulkanFrame::GetCommandBuffer() const
 	return CommandBuffer;
 }
 
-PVulkanMemory* PVulkanFrame::GetMemory() const
-{
-	return Memory;
-}
-
 VkSemaphore PVulkanFrame::GetSwapchainSemaphore() const
 {
 	return SwapchainSemaphore;
@@ -150,6 +203,8 @@ void PVulkanFramePool::CreateFramePool()
 		Frame->CreateFrame();
 		Pool.push_back(Frame);
 	}
+
+	PipelineStateData = new PVulkanPipelineStateData();
 }
 
 void PVulkanFramePool::FreeFramePool()

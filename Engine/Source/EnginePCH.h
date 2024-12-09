@@ -13,21 +13,23 @@
 #include <optional>
 #include <thread>
 #include <functional>
+#include <cstdlib>
+
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
-#include <cstdlib>
-
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <vulkan/vulkan_core.h>
 #include <vk_mem_alloc.h>
-
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <tiny_gltf.h>
+#include <spirv_cross/spirv.hpp>
+#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross/spirv_cross_containers.hpp>
 
 #include "Core/Assert.h"
 #include "Core/Engine.h"
@@ -41,8 +43,18 @@
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Settings.h"
-#include "EngineMacros.h"
 #include "Math/Math.h"
 #include "Utils/FileSystem.h"
 #include "Utils/Hash.h"
 #include "Utils/Profiler.h"
+#include "Types/Array.h"
+#include "Types/SharedPtr.h"
+#include "Types/DoubleLinkedList.h"
+#include "Types/Map.h"
+#include "Types/Pair.h"
+#include "Types/String.h"
+#include "Types/UniquePtr.h"
+#include "EngineTypes.h"
+#include "EngineMacros.h"
+
+#include "Renderer/Vulkan/VulkanDescriptor.h"

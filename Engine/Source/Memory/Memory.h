@@ -1,7 +1,16 @@
 #pragma once
 
-template<typename TTarget, typename TSource>
-TTarget* Cast(TSource* Object)
+#include <type_traits>
+
+template<typename TClassTo>
+static inline TClassTo* Cast(void* Pointer)
 {
-    return static_cast<TTarget*>(Object);
+    if constexpr (std::is_convertible_v<void*, TClassTo*>)
+    {
+        return static_cast<TClassTo*>(Pointer);
+    }
+    else
+    {
+        return reinterpret_cast<TClassTo*>(Pointer);
+    }
 }

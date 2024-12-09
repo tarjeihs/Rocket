@@ -2,8 +2,8 @@
 
 #include "Renderer/Common/Material.h"
 
-class PVulkanGraphicsPipeline;
-class PVulkanDescriptorSet;
+class FVulkanPipeline;
+class FVkDescriptorSet;
 class PVulkanShader;
 
 class PVulkanMaterial : public IMaterial
@@ -24,5 +24,5 @@ public:
     virtual void SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat4 Value) override;
 
 public:
-    PVulkanGraphicsPipeline* GraphicsPipeline;
+    FVulkanPipeline* GraphicsPipeline;
 };

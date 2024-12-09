@@ -1,39 +1,54 @@
 #pragma once
 
-#include <vector>
+#include "Types/SharedPtr.h"
 
-class IMesh;
-class PVulkanDescriptorSet;
-class PVulkanDescriptorSetLayout;
+class FVkDescriptorSet;
+class FVkDescriptorSetLayout;
 class PVulkanShader;
 
-class PVulkanPipelineLayout
+struct FVulkanPipelineLayoutCreateInfo
 {
-public:
-	void CreatePipelineLayout(const std::vector<PVulkanDescriptorSetLayout*> DescriptorSetLayouts, const std::vector<VkPushConstantRange>& PushConstantRanges);
-	void DestroyPipelineLayout();
-
-	VkPipelineLayout GetVkPipelineLayout() const;
-
-private:
-	VkPipelineLayout PipelineLayout;
+	TArray<VkDescriptorSetLayout> DescriptorSetLayouts;
 };
 
-class PVulkanGraphicsPipeline
+struct FVulkanPipelineLayout
+{
+	VkPipelineLayout Handle;
+};
+
+class PVulkanPipelineLayoutData
 {
 public:
-	void CreatePipeline(PVulkanShader* Shader);
-	void DestroyPipeline();
+	void AddPipelineLayout(const FString& Name, const FVulkanPipelineLayoutCreateInfo& CreateInfo);
 
-	void Bind(std::vector<VkDescriptorSet> Data);
-	void Unbind();
-
-	PVulkanPipelineLayout* GetPipelineLayout() const;
-	VkPipeline GetVkPipeline() const;
-
-protected:
-	PVulkanPipelineLayout* PipelineLayout;
+	TSharedPtr<FVulkanPipelineLayout> GetPipelineLayout(const FString& Name);
 
 private:
-	VkPipeline Pipeline;
+	TMap<FString, FVulkanPipelineLayout> PipelineStateCache; 
+};
+
+
+
+
+struct FVulkanPipelineStateCreateInfo
+{
+	TArray<TSharedPtr<PVulkanShader>> Stages;
+
+	TSharedPtr<FVulkanPipelineLayout> PipelineLayout;
+};
+
+struct FVulkanPipelineState
+{
+	VkPipeline Handle;
+};
+
+class PVulkanPipelineStateData
+{
+public:
+	void AddPipelineState(const FString& Name, const FVulkanPipelineStateCreateInfo& CreateInfo);
+
+	TSharedPtr<FVulkanPipelineState> GetPipelineState(const FString& Name);
+
+private:
+	TMap<FString, FVulkanPipelineState> PipelineStateCache; 
 };

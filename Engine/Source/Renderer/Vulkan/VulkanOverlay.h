@@ -4,7 +4,7 @@
 
 class PVulkanRHI;
 class PVulkanCommandBuffer;
-class PVulkanDescriptorPool;
+class FVkDescriptorPool;
 
 class PVulkanOverlay : public POverlay
 {
@@ -13,5 +13,5 @@ public:
 	virtual void Shutdown() override;
 
 private:
-	PVulkanDescriptorPool* DescriptorPool;
+	FVkDescriptorPool* DescriptorPool;
 };

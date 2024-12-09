@@ -2,6 +2,8 @@
 #include "VulkanDevice.h"
 
 #include "Renderer/Vulkan/VulkanInstance.h"
+#include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "Renderer/Vulkan/VulkanPipeline.h"
 
 void PVulkanDevice::Init()
 {
@@ -113,7 +115,13 @@ void PVulkanDevice::Init()
 	VkPhysicalDeviceVulkan12Features Features_1_2{};
 	Features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	Features_1_2.bufferDeviceAddress = VK_TRUE;
+	Features_1_2.bufferDeviceAddressCaptureReplay = VK_TRUE;
 	Features_1_2.descriptorIndexing = VK_TRUE;
+	Features_1_2.runtimeDescriptorArray = VK_TRUE;
+	Features_1_2.descriptorBindingPartiallyBound = VK_TRUE;
+	Features_1_2.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	Features_1_2.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+	Features_1_2.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
 
 	// Chain the features together
 	Features_1_3.pNext = &Features_1_2;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
-#include <vulkan/vulkan_core.h>
+#include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "Renderer/Vulkan/VulkanPipeline.h"
 
 // Forward declaration
 class PVulkanCommandPool;
@@ -17,6 +17,16 @@ struct FTransientFrameData
 class PVulkanFrame
 {
 public:
+	static const uint32 BINDLESS_DESCRIPTOR_SET_STORAGE_BUFFER_LOCATION = 1;
+	static const uint32 BINDLESS_DESCRIPTOR_SET_SAMPLER_LOCATION = 2;
+	static const uint32 BINDLESS_DESCRIPTOR_SET_SAMPLER_IMAGE_LOCATION = 3;
+	static const uint32 BINDLESS_DESCRIPTOR_SET_STORAGE_IMAGE_LOCATION = 4;
+
+	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetStorageBuffer;
+	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetStorageImage;
+	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetSampler;
+	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetSamplerImage;
+
 	void CreateFrame();
 	void DestroyFrame();
 	
@@ -25,7 +35,6 @@ public:
 
 	PVulkanCommandPool* GetCommandPool() const;
 	PVulkanCommandBuffer* GetCommandBuffer() const;
-	PVulkanMemory* GetMemory() const;
 
 	VkSemaphore GetSwapchainSemaphore() const;
 	VkSemaphore GetRenderSemaphore() const;
@@ -39,7 +48,6 @@ private:
 	VkSemaphore SwapchainSemaphore;
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
-	PVulkanMemory* Memory;
 	FTransientFrameData TransientFrameData;
 };
 
@@ -65,6 +73,9 @@ public:
     std::vector<PVulkanFrame*>::const_iterator end() const { return Pool.end(); }
 
 private:
+	PVulkanPipelineLayoutData* PipelineLayoutData;
+	PVulkanPipelineStateData* PipelineStateData;
+
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;
 	size_t PoolSize;

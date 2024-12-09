@@ -1,11 +1,19 @@
 #pragma once
 
-#include <vector>
-
-struct SShaderModuleBinary
+enum class EShaderStage
 {
-	void* Data;
-	size_t Size;
+	Vertex,
+	Fragment,
+	Compute
+};
+
+struct FShaderCreateInfo
+{
+	EShaderStage Stage;
+
+	std::string Name;
+	std::string Path;
+	std::string Entrypoint;
 };
 
 class IShader
@@ -13,6 +21,6 @@ class IShader
 public:
 	virtual ~IShader() = default;
 
-	virtual void CreateShader(std::vector<SShaderModuleBinary> ShaderBinaryObject) = 0;
+	virtual void CreateShader(FShaderCreateInfo& CreateInfo) = 0;
 	virtual void DestroyShader() = 0;
 };

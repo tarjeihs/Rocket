@@ -1,43 +1,47 @@
 #include "EnginePCH.h"
 #include "VulkanMemory.h"
 
-#include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanInstance.h"
-#include "Renderer/Vulkan/VulkanDescriptor.h"
-
 void PVulkanMemory::Init()
 {
-	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
-	AllocatorCreateInfo.physicalDevice = GetRHI()->GetDevice()->GetVkPhysicalDevice();
-	AllocatorCreateInfo.device = GetRHI()->GetDevice()->GetVkDevice();
-	AllocatorCreateInfo.instance = GetRHI()->GetInstance()->GetVkInstance();
-	AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-	VkResult Result = vmaCreateAllocator(&AllocatorCreateInfo, &MemoryAllocator);
-	RK_ASSERT(Result == VK_SUCCESS, "Failed to create memory allocator.");
-
-	// Create a descriptor pool that will hold 10 sets with 1 image each
-	std::vector<SVulkanDescriptorPoolRatio> Sizes = { 
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
-	};
-	DescriptorPool = new PVulkanDescriptorPool();
-	DescriptorPool->CreatePool(1024, Sizes);
+//	TArray<FVkDescriptorPoolRatio> PoolRatio = {
+//
+//		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 65536 },
+//		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 65536 },
+//	};
+//
+//	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
+//	DescriptorPoolCreateInfo.PoolRatios = PoolRatio;
+//	DescriptorPoolCreateInfo.MaxSetCount = 1;
+//	DescriptorPoolCreateInfo.Flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+//
+//	TSharedPtr<FVkDescriptorPool> DescriptorPool = MakeShared<FVkDescriptorPool>();
+//	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
+//
+//	FVkDescriptorSetLayoutCreateInfo StorageBufferDescriptorSetLayoutCreateInfo;
+//	StorageBufferDescriptorSetLayoutCreateInfo.Descriptors = {
+//		{ EVkDescriptorType::Storage, 65536 },
+//	};
+//
+//	StorageBufferDescriptorSetLayout = MakeShared<FVkDescriptorSetLayout>();
+//	StorageBufferDescriptorSetLayout->CreateDescriptorSetLayout(StorageBufferDescriptorSetLayoutCreateInfo);
+//
+//	FVkDescriptorSetCreateInfo DescriptorSetCreateInfo;
+//	DescriptorSetCreateInfo.DescriptorPool = DescriptorPool;
+//	DescriptorSetCreateInfo.DescriptorSetLayout = StorageBufferDescriptorSetLayout;
+//	
+//	StorageBufferDescriptorSet = MakeShared<PVulkanDescriptorSet>();
+//	StorageBufferDescriptorSet->CreateDescriptorSet(DescriptorSetCreateInfo);
+//
+//	//DescriptorPoolCache.Insert("G_DP_Shared", DescriptorPool);
+//	//DescriptorSetLayoutCache.Insert("G_DSL_StorageBuffer", StorageBufferDescriptorSetLayout);
+//	//DescriptorSetCache.Insert("G_DS_StorageBuffer", StorageBufferDescriptorSet);
+//
+//	
+//}
 }
-
 void PVulkanMemory::Shutdown()
 {
-	for (PVulkanDescriptorSet* DescriptorSet : DescriptorSets)
-	{
-		DescriptorSet->DestroyDescriptorSet();
-		delete DescriptorSet;
-	}
-	
-	DescriptorPool->DestroyPool();
-	delete DescriptorPool;
-}
-
-PVulkanDescriptorPool* PVulkanMemory::GetDescriptorPool() const
-{
-	return DescriptorPool;
+//	TSharedPtr<FVkDescriptorPool> DescriptorPool = *DescriptorPoolCache.Find("G_DP_Shared");
+//	DescriptorPool->Destroy();
+//	StorageBufferDescriptorSetLayout->DestroyDescriptorSetLayout();
 }

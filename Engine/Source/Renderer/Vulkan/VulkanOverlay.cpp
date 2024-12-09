@@ -48,7 +48,7 @@ FrameMetrics frameMetrics(100);
 
 void PVulkanOverlay::Init()
 {
-	std::vector<SVulkanDescriptorPoolRatio> Sizes = {
+	TArray<FVkDescriptorPoolRatio> Sizes = {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
 		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
@@ -62,8 +62,13 @@ void PVulkanOverlay::Init()
 		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
 	};
 
-	DescriptorPool = new PVulkanDescriptorPool();
-	DescriptorPool->CreatePool(1000, Sizes, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
+	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
+	DescriptorPoolCreateInfo.PoolRatios = Sizes;
+	DescriptorPoolCreateInfo.Flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	DescriptorPoolCreateInfo.MaxSetCount = 1000;
+
+	DescriptorPool = new FVkDescriptorPool();
+	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
 
 	VkFormat ColorAttachmentFormatPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSurfaceFormat().format;
 
@@ -75,7 +80,7 @@ void PVulkanOverlay::Init()
 	ImGuiInitInfo.PhysicalDevice = GetRHI()->GetDevice()->GetVkPhysicalDevice();
 	ImGuiInitInfo.Device = GetRHI()->GetDevice()->GetVkDevice();
 	ImGuiInitInfo.Queue = GetRHI()->GetDevice()->GetGraphicsQueue();
-	ImGuiInitInfo.DescriptorPool = DescriptorPool->GetVkDescriptorPool();
+	ImGuiInitInfo.DescriptorPool = DescriptorPool->Info.DescriptorPool;
 	ImGuiInitInfo.MinImageCount = 3;
 	ImGuiInitInfo.ImageCount = 3;
 	ImGuiInitInfo.UseDynamicRendering = true;
@@ -153,7 +158,7 @@ void PVulkanOverlay::Shutdown()
 {
 	ImGui_ImplVulkan_Shutdown();
 	
-	DescriptorPool->DestroyPool();
+	DescriptorPool->Destroy();
 	delete DescriptorPool;
 
 	OnRender.Clear();
