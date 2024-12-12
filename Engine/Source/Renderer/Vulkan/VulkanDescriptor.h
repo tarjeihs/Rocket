@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Types/SharedPtr.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 
 class PVulkanRHI;
 class PVulkanFrame;
@@ -15,9 +17,7 @@ struct FVkDescriptorPoolRatio
 struct FVkDescriptorPoolCreateInfo
 {
     TArray<FVkDescriptorPoolRatio> PoolRatios;
-    
     uint32_t MaxSetCount;
-    
     uint32_t Flags;
 };
 
@@ -78,7 +78,7 @@ struct FVkDescriptorSetInfo
 {
     VkDescriptorSet Handle;
 
-    TArray<PVulkanBuffer*> Buffers;
+    TArray<TSharedPtr<FVkBuffer>> Buffers;
 };
 
 class FVkDescriptorSet
@@ -88,4 +88,10 @@ public:
 
     void Initialize(FVkDescriptorSetCreateInfo& CreateInfo);
     void Destroy();
+
+    void AttachBuffer(uint32 Index, const TSharedPtr<FVkBuffer>& Buffer);
+    void AddSampler();
+    void AddImage();
+
+    void Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout);
 };

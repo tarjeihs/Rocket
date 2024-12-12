@@ -3,7 +3,6 @@
 
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
-#include "Renderer/Vulkan/VulkanPipeline.h"
 
 void PVulkanDevice::Init()
 {

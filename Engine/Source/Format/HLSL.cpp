@@ -102,7 +102,7 @@ void PHLSL::CompileShaderHLSL(const std::wstring& ShaderSourcePath, const std::w
 FHLSL Format::ImportHLSL(const std::string& ShaderSourcePath, const std::string& Entrypoint, const std::string& TargetProfile)
 {
 	// Load the DXC shared library (libdxcompiler.so)
-	std::string Path = std::string("/usr/lib/dxc/libdxcompiler.so");
+	std::string Path = std::string("/usr/lib/libdxcompiler.so");
 	void* DxcLibHandle = dlopen(Path.c_str(), RTLD_LAZY);
 	RK_ASSERT(DxcLibHandle, "Failed to dynamically load DXC library (Ensure that the DLL is installed and environment is set).");
 

@@ -1,15 +1,17 @@
 #include "EnginePCH.h"
 #include "VulkanFrame.h"
 
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanShader.h"
 #include "Types/SharedPtr.h"
-#include "Types/UniquePtr.h"
-#include <vulkan/vulkan_core.h>
+
+TSharedPtr<FVkDescriptorSetLayout> StorageBufferDescriptorSetLayout = MakeShared<FVkDescriptorSetLayout>();
 
 void PVulkanFrame::CreateFrame()
 {
@@ -39,10 +41,7 @@ void PVulkanFrame::CreateFrame()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
 
 	TArray<FVkDescriptorPoolRatio> PoolRatio = {
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 65536 },
-		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 65536 },
-		{VK_DESCRIPTOR_TYPE_SAMPLER, 65536 },
-		{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 65536 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 65536 },
 	};
 
 	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
@@ -53,51 +52,35 @@ void PVulkanFrame::CreateFrame()
 	TSharedPtr<FVkDescriptorPool> DescriptorPool = MakeShared<FVkDescriptorPool>();
 	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
 
-	TArray<FVkDescriptor> DescriptorStorage = { { EVkDescriptorType::Storage, 65536} };
-	TArray<FVkDescriptor> DescriptorStorageImage = { { EVkDescriptorType::StorageImage, 65536} };
-	TArray<FVkDescriptor> DescriptorSampler = { { EVkDescriptorType::Sampler, 65536} };
-	TArray<FVkDescriptor> DescriptorSamplerImage = { { EVkDescriptorType::SamplerImage, 65536} };
+	/* Descriptor Set Layout - Storage Buffer */
 
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutStorageCreateInfo = { .Descriptors = DescriptorStorage };
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutStorageImageCreateInfo = { .Descriptors = DescriptorStorageImage };
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutSamplerCreateInfo = { .Descriptors = DescriptorSampler };
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutSamplerImageCreateInfo = { .Descriptors = DescriptorSamplerImage };
+	FVkBufferCreateInfo StorageBufferCreateInfo;
+	StorageBufferCreateInfo.Size = 1024 * 1024 * 10;
+	StorageBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	StorageBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutStorage = MakeShared<FVkDescriptorSetLayout>();
-	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutStorageImage = MakeShared<FVkDescriptorSetLayout>();
-	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutSampler = MakeShared<FVkDescriptorSetLayout>();
-	TSharedPtr<FVkDescriptorSetLayout> BindlessDescriptorSetLayoutSamplerImage = MakeShared<FVkDescriptorSetLayout>();
+	GlobalStorageBuffer = MakeShared<FVkBuffer>();
+	GlobalStorageBuffer->Initialize(StorageBufferCreateInfo);
 
-	BindlessDescriptorSetLayoutStorage->Initialize(DescriptorSetLayoutStorageCreateInfo);
-	BindlessDescriptorSetLayoutStorageImage->Initialize(DescriptorSetLayoutStorageCreateInfo);
-	BindlessDescriptorSetLayoutSampler->Initialize(DescriptorSetLayoutStorageCreateInfo);
-	BindlessDescriptorSetLayoutSamplerImage->Initialize(DescriptorSetLayoutStorageCreateInfo);
+	CameraStorageBuffer = MakeShared<FVkBuffer>();
+	CameraStorageBuffer->Initialize(StorageBufferCreateInfo);
 
-	FVkDescriptorSetCreateInfo BindlessDescriptorSetStorageCreateInfo;
-	BindlessDescriptorSetStorageCreateInfo.DescriptorPool = DescriptorPool;
-	BindlessDescriptorSetStorageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutStorage;
+	MaterialStorageBuffer = MakeShared<FVkBuffer>();
+	MaterialStorageBuffer->Initialize(StorageBufferCreateInfo);
 
-	FVkDescriptorSetCreateInfo BindlessDescriptorSetStorageImageCreateInfo;
-	BindlessDescriptorSetStorageImageCreateInfo.DescriptorPool = DescriptorPool;
-	BindlessDescriptorSetStorageImageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutStorageImage;
+	ObjectStorageBuffer = MakeShared<FVkBuffer>();
+	ObjectStorageBuffer->Initialize(StorageBufferCreateInfo);
 
-	FVkDescriptorSetCreateInfo BindlessDescriptorSetSamplerCreateInfo;
-	BindlessDescriptorSetSamplerCreateInfo.DescriptorPool = DescriptorPool;
-	BindlessDescriptorSetSamplerCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutSampler;
+	FVkDescriptorSetCreateInfo StorageBufferDescriptorSetCreateInfo;
+	StorageBufferDescriptorSetCreateInfo.DescriptorPool = DescriptorPool;
+	StorageBufferDescriptorSetCreateInfo.DescriptorSetLayout = StorageBufferDescriptorSetLayout;
 
-	FVkDescriptorSetCreateInfo BindlessDescriptorSetSamplerImageCreateInfo;
-	BindlessDescriptorSetSamplerImageCreateInfo.DescriptorPool = DescriptorPool;
-	BindlessDescriptorSetSamplerImageCreateInfo.DescriptorSetLayout = BindlessDescriptorSetLayoutSamplerImage;
-
-	BindlessDescriptorSetStorageBuffer = MakeShared<FVkDescriptorSet>();
-	BindlessDescriptorSetStorageImage = MakeShared<FVkDescriptorSet>();
-	BindlessDescriptorSetSampler = MakeShared<FVkDescriptorSet>();
-	BindlessDescriptorSetSamplerImage = MakeShared<FVkDescriptorSet>();
-	
-	BindlessDescriptorSetStorageBuffer->Initialize(BindlessDescriptorSetStorageCreateInfo);
-	BindlessDescriptorSetStorageImage->Initialize(BindlessDescriptorSetStorageImageCreateInfo);
-	BindlessDescriptorSetSampler->Initialize(BindlessDescriptorSetSamplerCreateInfo);
-	BindlessDescriptorSetSamplerImage->Initialize(BindlessDescriptorSetSamplerImageCreateInfo);
+	StorageBufferDescriptorSet = MakeShared<FVkDescriptorSet>();	
+	StorageBufferDescriptorSet->Initialize(StorageBufferDescriptorSetCreateInfo);
+	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL, GlobalStorageBuffer);
+	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA, CameraStorageBuffer);
+	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL, MaterialStorageBuffer);
+	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT, ObjectStorageBuffer);
 }
 
 void PVulkanFrame::DestroyFrame()
@@ -116,6 +99,7 @@ void PVulkanFrame::BeginFrame()
 	vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence, VK_TRUE, UINT64_MAX);
 	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore, nullptr, &TransientFrameData.NextImageIndex);
 	vkResetFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence);
+	
 	CommandBuffer->ResetCommandBuffer();
 	CommandBuffer->BeginCommandBuffer();
 }
@@ -153,16 +137,16 @@ void PVulkanFrame::EndFrame()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
 	VkSwapchainKHR SwapchainPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain();
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.pNext = nullptr;
-	presentInfo.pSwapchains = &SwapchainPointer;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pWaitSemaphores = &RenderSemaphore;
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pImageIndices = &TransientFrameData.NextImageIndex;
+	VkPresentInfoKHR PresentInfo = {};
+	PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	PresentInfo.pNext = nullptr;
+	PresentInfo.pSwapchains = &SwapchainPointer;
+	PresentInfo.swapchainCount = 1;
+	PresentInfo.pWaitSemaphores = &RenderSemaphore;
+	PresentInfo.waitSemaphoreCount = 1;
+	PresentInfo.pImageIndices = &TransientFrameData.NextImageIndex;
 
-	vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &presentInfo);
+	vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &PresentInfo);
 }
 
 PVulkanCommandPool* PVulkanFrame::GetCommandPool() const
@@ -197,14 +181,47 @@ FTransientFrameData& PVulkanFrame::GetTransientFrameData()
 
 void PVulkanFramePool::CreateFramePool()
 {
+	TArray<FVkDescriptor> StorageBufferDescriptors = { 
+		{ EVkDescriptorType::Storage, 1 },
+		{ EVkDescriptorType::Storage, 1 },
+		{ EVkDescriptorType::Storage, 1 },
+		{ EVkDescriptorType::Storage, 1 }
+	};
+
+	FVkDescriptorSetLayoutCreateInfo StorageBufferDescriptorSetLayoutCreateInfo = { .Descriptors = StorageBufferDescriptors };
+
+	StorageBufferDescriptorSetLayout->Initialize(StorageBufferDescriptorSetLayoutCreateInfo);
+
+	FVkPipelineLayoutCreateInfo GraphicsPipelineLayoutCreateInfo;
+	GraphicsPipelineLayoutCreateInfo.DescriptorSetLayouts = {
+		StorageBufferDescriptorSetLayout->Info.DescriptorSetLayout
+	};
+
+	GraphicsPipelineLayout = MakeShared<FVkPipelineLayout>();
+	GraphicsPipelineLayout->Initialize(GraphicsPipelineLayoutCreateInfo);
+
+    FShaderCreateInfo ShaderCreateInfo;
+    ShaderCreateInfo.Entrypoint = "main";
+    ShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Opaque.hlsl";
+    ShaderCreateInfo.Name = "Vertex";
+    ShaderCreateInfo.Stage = EShaderStage::Vertex;
+    
+	TSharedPtr<PVulkanShader> DefaultLitShader = MakeShared<PVulkanShader>();
+	DefaultLitShader->CreateShader(ShaderCreateInfo);
+
+	FVkPipelineCreateInfo GraphicsPipelineCreateInfo;
+	GraphicsPipelineCreateInfo.PipelineLayout = GraphicsPipelineLayout;
+	GraphicsPipelineCreateInfo.Shaders = {DefaultLitShader};
+
+	GraphicsPipeline = MakeShared<FVkPipeline>();
+	GraphicsPipeline->Initialize(GraphicsPipelineCreateInfo);
+	
 	for (size_t Index = 0; Index < PoolSize; ++Index)
 	{
 		PVulkanFrame* Frame = new PVulkanFrame();
 		Frame->CreateFrame();
 		Pool.push_back(Frame);
 	}
-
-	PipelineStateData = new PVulkanPipelineStateData();
 }
 
 void PVulkanFramePool::FreeFramePool()

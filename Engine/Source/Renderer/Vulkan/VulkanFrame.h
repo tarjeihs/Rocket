@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 
 // Forward declaration
@@ -14,18 +15,27 @@ struct FTransientFrameData
 	uint32_t NextImageIndex;
 };
 
+static const uint32 BINDLESS_DESCRIPTOR_SET_INDEX_STORAGE_BUFFER 	= 0;
+static const uint32 BINDLESS_DESCRIPTOR_SET_INDEX_STORAGE_IMAGE 	= 1;
+static const uint32 BINDLESS_DESCRIPTOR_SET_INDEX_SAMPLER 			= 2;
+static const uint32 BINDLESS_DESCRIPTOR_SET_INDEX_SAMPLER_IMAGE 	= 3;
+
+static const uint32 STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL 			= 0;
+static const uint32 STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA 			= 1;
+static const uint32 STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL 		= 2;
+static const uint32 STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT 			= 3;
+
 class PVulkanFrame
 {
 public:
-	static const uint32 BINDLESS_DESCRIPTOR_SET_STORAGE_BUFFER_LOCATION = 1;
-	static const uint32 BINDLESS_DESCRIPTOR_SET_SAMPLER_LOCATION = 2;
-	static const uint32 BINDLESS_DESCRIPTOR_SET_SAMPLER_IMAGE_LOCATION = 3;
-	static const uint32 BINDLESS_DESCRIPTOR_SET_STORAGE_IMAGE_LOCATION = 4;
+	TSharedPtr<FVkDescriptorSet> UniformBufferDescriptorSet;
+	TSharedPtr<FVkDescriptorSet> StorageBufferDescriptorSet;
 
-	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetStorageBuffer;
-	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetStorageImage;
-	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetSampler;
-	TSharedPtr<FVkDescriptorSet> BindlessDescriptorSetSamplerImage;
+	TSharedPtr<FVkBuffer> GlobalStorageBuffer;
+	TSharedPtr<FVkBuffer> CameraStorageBuffer;
+
+	TSharedPtr<FVkBuffer> ObjectStorageBuffer;
+	TSharedPtr<FVkBuffer> MaterialStorageBuffer;
 
 	void CreateFrame();
 	void DestroyFrame();
@@ -73,8 +83,8 @@ public:
     std::vector<PVulkanFrame*>::const_iterator end() const { return Pool.end(); }
 
 private:
-	PVulkanPipelineLayoutData* PipelineLayoutData;
-	PVulkanPipelineStateData* PipelineStateData;
+	TSharedPtr<FVkPipelineLayout> GraphicsPipelineLayout;
+	TSharedPtr<FVkPipeline> GraphicsPipeline;
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

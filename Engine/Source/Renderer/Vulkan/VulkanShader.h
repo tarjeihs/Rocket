@@ -4,7 +4,7 @@
 
 struct FVulkanShaderInfo
 {
-	VkShaderModule ShaderModule;
+	VkShaderModule Module;
 	VkShaderStageFlagBits Stage;
 };
 

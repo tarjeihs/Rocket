@@ -40,9 +40,16 @@ void PVulkanSceneRenderer::Init()
 	DepthImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
 	
 	ParallelFramePool->CreateFramePool();
-	ImmediateFramePool->CreateFramePool();
+	ImmediateFramePool->CreateFramePool(); // TODO: Should not do full initialization on ImmediateFramePool.
 
 	GOverlay->Init();
+
+
+
+	// TODO: Temporary testing
+	RenderGraph->AddCommand([](PVulkanFrame* Frame)
+	{
+	});
 }
 
 void PVulkanSceneRenderer::Shutdown()

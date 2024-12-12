@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EnginePCH.h"
+#include "EngineTypes.h"
 #include "Renderer/Common/Buffer.h"
 
 struct VkBuffer_T;
@@ -30,4 +32,36 @@ public:
 
     VkBufferUsageFlags UsageFlags;
     VmaMemoryUsage MemoryUsageFlags;
+};
+
+enum class EVkBufferType
+{
+    None = 0,
+    StorageBuffer,
+    StorageImage,
+    Sampler,
+    SamplerImage
+};
+
+struct FVkBufferCreateInfo
+{
+    EVkBufferType BufferType;
+    VkBufferUsageFlags UsageFlags;
+    VmaMemoryUsage MemoryUsageFlags;
+    SizeType Size;
+};
+
+struct FVkBufferInfo
+{
+    VkBuffer Handle;
+    VmaAllocation Allocation;
+    VmaAllocationInfo AllocationInfo;
+};
+
+class FVkBuffer
+{
+public:
+    FVkBufferInfo Info;
+
+    void Initialize(FVkBufferCreateInfo& CreateInfo);
 };

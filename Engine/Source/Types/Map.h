@@ -138,7 +138,7 @@ protected:
         return THash<TKey>::Hash(Key) % Size;
     }
 
-private:    
+private:
     TArray<TBucket> Buckets;
 
     SizeType ElementCount;

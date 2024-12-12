@@ -28,7 +28,7 @@ void PVulkanShader::CreateShader(FShaderCreateInfo& CreateInfo)
 	ShaderModuleCreateInfo.codeSize = HLSL.Size;
 	ShaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(HLSL.Data);
 
-	VkResult Result = vkCreateShaderModule(GetRHI()->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &Info.ShaderModule);
+	VkResult Result = vkCreateShaderModule(GetRHI()->GetDevice()->GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &Info.Module);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create Shader Module.");
 
 	Info.Stage = Utils::GetVkShaderStage(CreateInfo.Stage);
@@ -114,5 +114,5 @@ void PVulkanShader::CreateShader(FShaderCreateInfo& CreateInfo)
 
 void PVulkanShader::DestroyShader()
 {
-	vkDestroyShaderModule(GetRHI()->GetDevice()->GetVkDevice(), Info.ShaderModule, nullptr);
+	vkDestroyShaderModule(GetRHI()->GetDevice()->GetVkDevice(), Info.Module, nullptr);
 }

@@ -1,54 +1,46 @@
 #pragma once
 
+#include "Renderer/Common/Shader.h"
 #include "Types/SharedPtr.h"
 
 class FVkDescriptorSet;
 class FVkDescriptorSetLayout;
 class PVulkanShader;
 
-struct FVulkanPipelineLayoutCreateInfo
+struct FVkPipelineLayoutCreateInfo
 {
 	TArray<VkDescriptorSetLayout> DescriptorSetLayouts;
 };
 
-struct FVulkanPipelineLayout
+struct FVkPipelineLayoutInfo
 {
 	VkPipelineLayout Handle;
 };
 
-class PVulkanPipelineLayoutData
+class FVkPipelineLayout
 {
 public:
-	void AddPipelineLayout(const FString& Name, const FVulkanPipelineLayoutCreateInfo& CreateInfo);
+	FVkPipelineLayoutInfo Info;
 
-	TSharedPtr<FVulkanPipelineLayout> GetPipelineLayout(const FString& Name);
-
-private:
-	TMap<FString, FVulkanPipelineLayout> PipelineStateCache; 
+	void Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo);
 };
 
-
-
-
-struct FVulkanPipelineStateCreateInfo
+struct FVkPipelineCreateInfo
 {
-	TArray<TSharedPtr<PVulkanShader>> Stages;
+	TSharedPtr<FVkPipelineLayout> PipelineLayout;
 
-	TSharedPtr<FVulkanPipelineLayout> PipelineLayout;
+	TArray<TSharedPtr<PVulkanShader>> Shaders;
 };
 
-struct FVulkanPipelineState
+struct FVkPipelineInfo
 {
 	VkPipeline Handle;
 };
 
-class PVulkanPipelineStateData
+class FVkPipeline
 {
 public:
-	void AddPipelineState(const FString& Name, const FVulkanPipelineStateCreateInfo& CreateInfo);
+	FVkPipelineInfo Info;
 
-	TSharedPtr<FVulkanPipelineState> GetPipelineState(const FString& Name);
-
-private:
-	TMap<FString, FVulkanPipelineState> PipelineStateCache; 
+	void Initialize(FVkPipelineCreateInfo& CreateInfo);
 };

@@ -1,9 +1,12 @@
 #include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
+#include "Renderer/RHI.h"
+#include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
+#include "Renderer/Vulkan/VulkanCommand.h"
 #include <vulkan/vulkan_core.h>
 
 void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
@@ -163,4 +166,30 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 
 void FVkDescriptorSet::Destroy()
 {
+}
+
+void FVkDescriptorSet::AttachBuffer(uint32 Index, const TSharedPtr<FVkBuffer>& Buffer)
+{
+	VkDescriptorBufferInfo DescriptorBufferInfo = {};
+	DescriptorBufferInfo.buffer = Buffer->Info.Handle;
+	DescriptorBufferInfo.range = VK_WHOLE_SIZE;
+	DescriptorBufferInfo.offset = 0;
+
+	VkWriteDescriptorSet WriteDescriptorSet = {};
+	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	WriteDescriptorSet.dstSet = Info.Handle;
+	WriteDescriptorSet.dstBinding = Index;
+	WriteDescriptorSet.dstArrayElement = 0;
+	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	WriteDescriptorSet.descriptorCount = 1;
+	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+
+	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+
+	Info.Buffers.Add(Buffer);
+}
+
+void FVkDescriptorSet::Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout)
+{
+	vkCmdBindDescriptorSets(GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
 }
