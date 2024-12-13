@@ -118,17 +118,17 @@ void PVulkanMesh::DrawIndirectInstanced(uint32_t ID)
 
     PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 
-    SUInt64PointerPushConstant PushConstant;
-    PushConstant.DeviceAddress = DeviceAddress64;
-    PushConstant.ObjectId = ID;
+    //SUInt64PointerPushConstant PushConstant;
+    //PushConstant.DeviceAddress = DeviceAddress64;
+    //PushConstant.ObjectId = ID;
 
-    Material->Bind();
+    //Material->Bind();
 
     //vkCmdPushConstants(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Material->GraphicsPipeline->GetPipelineLayout()->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
     vkCmdBindIndexBuffer(Frame->GetCommandBuffer()->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(Frame->GetCommandBuffer()->GetVkCommandBuffer(), static_cast<size_t>(IndexBuffer->AllocationInfo.size) / sizeof(uint32_t), 1, 0, 0, 0);
-
-    Material->Unbind();
+    
+    //Material->Unbind();
 }
 
 

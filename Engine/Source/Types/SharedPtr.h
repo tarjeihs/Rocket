@@ -113,8 +113,20 @@ private:
     uint32_t* RefCount;
 };
 
+// TODO: Move to a suitable place
+struct FMemoryInfo
+{
+    uint64 AliveObjectSize;
+    uint64 TotalObjectSize;
+};
+
+static FMemoryInfo GMemoryInfo;
+
 template<typename TPointer>
 TSharedPtr<TPointer> MakeShared()
 {
+#if RK_DEBUG
+    GMemoryInfo.TotalObjectSize += 1;
+#endif
     return TSharedPtr<TPointer>(new TPointer());
 }

@@ -53,3 +53,11 @@ void FVkBuffer::Initialize(FVkBufferCreateInfo& CreateInfo)
     VkResult Result = vmaCreateBuffer(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), &BufferCreateInfo, &AllocationCreateInfo, &Info.Handle, &Info.Allocation, &Info.AllocationInfo);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate buffer.");
 }
+
+void FVkBuffer::Submit(const void* Data, size_t Size, size_t Offset)
+{
+    void* MappedData;
+    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation, &MappedData);
+    memcpy(static_cast<uint8_t*>(MappedData) + Offset, Data, Size);
+    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation);
+}

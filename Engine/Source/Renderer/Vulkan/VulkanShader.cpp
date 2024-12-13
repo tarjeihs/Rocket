@@ -21,7 +21,10 @@ namespace Utils
 
 void PVulkanShader::CreateShader(FShaderCreateInfo& CreateInfo)
 {
-    FHLSL HLSL = Format::ImportHLSL(CreateInfo.Path, "main", "vs_6_0");
+	std::string VS = "vs_6_0";
+	std::string PS = "ps_6_0";
+
+    FHLSL HLSL = Format::ImportHLSL(CreateInfo.Path, "main", CreateInfo.Stage == EShaderStage::Vertex ? VS : PS);
 
 	VkShaderModuleCreateInfo ShaderModuleCreateInfo{};
 	ShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

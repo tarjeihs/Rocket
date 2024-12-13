@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "VulkanPipeline.h"
 
+#include "Renderer/Common/Mesh.h"
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
@@ -10,6 +11,7 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Types/SharedPtr.h"
+#include <cstddef>
 #include <vulkan/vulkan_core.h>
 
 void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo)
@@ -184,6 +186,24 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
     VkFormat ColorAttachmentFormat = GetRHI()->GetSceneRenderer()->GetDrawImage()->GetVkFormat();
     TArray<VkDynamicState> DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
+    VkVertexInputBindingDescription VertexInputBindingDescription = {};
+    VertexInputBindingDescription.binding = 0;
+    VertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VertexInputBindingDescription.stride = sizeof(SVertex);
+
+    std::array<VkVertexInputAttributeDescription, 1> AttributeDescriptions = {};
+    AttributeDescriptions.at(0).binding = 0;
+    AttributeDescriptions.at(0).location = 0;
+    AttributeDescriptions.at(0).format = VK_FORMAT_R32G32B32_SFLOAT;
+    AttributeDescriptions.at(0).offset = offsetof(SVertex, Position);
+
+    VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo = {};
+    VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    VertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+    VertexInputStateCreateInfo.pVertexBindingDescriptions = &VertexInputBindingDescription;
+    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32>(AttributeDescriptions.size());
+    VertexInputStateCreateInfo.pVertexAttributeDescriptions = AttributeDescriptions.data();
+
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyStateCreateInfo{};
     InputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     InputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -246,9 +266,6 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
     ColorBlendingCreateInfo.logicOp = VK_LOGIC_OP_COPY;
     ColorBlendingCreateInfo.attachmentCount = 1;
     ColorBlendingCreateInfo.pAttachments = &ColorBlendAttachmentState;
-
-    VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo{};
-    VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
     VkPipelineDynamicStateCreateInfo DynamicStateCreateInfo{};
     DynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;

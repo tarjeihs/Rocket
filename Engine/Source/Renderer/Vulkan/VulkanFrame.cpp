@@ -202,16 +202,25 @@ void PVulkanFramePool::CreateFramePool()
 
     FShaderCreateInfo ShaderCreateInfo;
     ShaderCreateInfo.Entrypoint = "main";
-    ShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Opaque.hlsl";
+    ShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Vertex.hlsl";
     ShaderCreateInfo.Name = "Vertex";
     ShaderCreateInfo.Stage = EShaderStage::Vertex;
+
+	FShaderCreateInfo PixelShaderCreateInfo;
+    PixelShaderCreateInfo.Entrypoint = "main";
+    PixelShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Pixel.hlsl";
+    PixelShaderCreateInfo.Name = "Pixel";
+    PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
     
-	TSharedPtr<PVulkanShader> DefaultLitShader = MakeShared<PVulkanShader>();
-	DefaultLitShader->CreateShader(ShaderCreateInfo);
+	TSharedPtr<PVulkanShader> DefaultLitVertexShader = MakeShared<PVulkanShader>();
+	DefaultLitVertexShader->CreateShader(ShaderCreateInfo);
+
+	TSharedPtr<PVulkanShader> DefaultLitPixelShader = MakeShared<PVulkanShader>();
+	DefaultLitPixelShader->CreateShader(PixelShaderCreateInfo);
 
 	FVkPipelineCreateInfo GraphicsPipelineCreateInfo;
 	GraphicsPipelineCreateInfo.PipelineLayout = GraphicsPipelineLayout;
-	GraphicsPipelineCreateInfo.Shaders = {DefaultLitShader};
+	GraphicsPipelineCreateInfo.Shaders = {DefaultLitVertexShader, DefaultLitPixelShader};
 
 	GraphicsPipeline = MakeShared<FVkPipeline>();
 	GraphicsPipeline->Initialize(GraphicsPipelineCreateInfo);

@@ -64,4 +64,5 @@ public:
     FVkBufferInfo Info;
 
     void Initialize(FVkBufferCreateInfo& CreateInfo);
+    void Submit(const void* Data, size_t Size, size_t Offset = 0);
 };

@@ -84,19 +84,19 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
                 if (TexCoords) 
                 {
                     const float* TexCoord = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(TexCoords) + Index * TexCoordStride);
-                    Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
+                    //Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
                 } 
 
                 if (Normals) 
                 {
                     const float* Normal = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Normals) + Index * NormalStride);
-                    Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
+                    //Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
                 } 
 
                 if (Colors) 
                 {
                     const float* Color = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Colors) + Index * ColorStride);
-                    Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
+                    //Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
                 } 
 
                 MeshBinaryObject.Vertices.push_back(Vertex);
@@ -146,8 +146,8 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
 
     for (size_t i = 0; i < MeshBinaryObject.Vertices.size(); ++i)
     {
-        MeshBinaryObject.Vertices[i].Tangent = glm::vec3(0.0f);
-        MeshBinaryObject.Vertices[i].Bitangent = glm::vec3(0.0f);
+        //MeshBinaryObject.Vertices[i].Tangent = glm::vec3(0.0f);
+        //MeshBinaryObject.Vertices[i].Bitangent = glm::vec3(0.0f);
     }
 
         // Compute tangents and bitangents for each triangle
@@ -165,48 +165,48 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
         glm::vec3& p1 = v1.Position;
         glm::vec3& p2 = v2.Position;
 
-        glm::vec2& uv0 = v0.TexCoord;
-        glm::vec2& uv1 = v1.TexCoord;
-        glm::vec2& uv2 = v2.TexCoord;
+        //glm::vec2& uv0 = v0.TexCoord;
+        //glm::vec2& uv1 = v1.TexCoord;
+        //glm::vec2& uv2 = v2.TexCoord;
 
         glm::vec3 edge1 = p1 - p0;
         glm::vec3 edge2 = p2 - p0;
 
-        glm::vec2 deltaUV1 = uv1 - uv0;
-        glm::vec2 deltaUV2 = uv2 - uv0;
+        //glm::vec2 deltaUV1 = uv1 - uv0;
+        //glm::vec2 deltaUV2 = uv2 - uv0;
 
-        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y + 1e-7f);
+        //float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y + 1e-7f);
+//
+        //glm::vec3 tangent = f * (edge1 * deltaUV2.y - edge2 * deltaUV1.y);
+        //glm::vec3 bitangent = f * (-edge1 * deltaUV2.x + edge2 * deltaUV1.x);
 
-        glm::vec3 tangent = f * (edge1 * deltaUV2.y - edge2 * deltaUV1.y);
-        glm::vec3 bitangent = f * (-edge1 * deltaUV2.x + edge2 * deltaUV1.x);
-
-        v0.Tangent += tangent;
-        v1.Tangent += tangent;
-        v2.Tangent += tangent;
-
-        v0.Bitangent += bitangent;
-        v1.Bitangent += bitangent;
-        v2.Bitangent += bitangent;
+        //v0.Tangent += tangent;
+        //v1.Tangent += tangent;
+        //v2.Tangent += tangent;
+//
+        //v0.Bitangent += bitangent;
+        //v1.Bitangent += bitangent;
+        //v2.Bitangent += bitangent;
     }
 
     // Normalize and orthogonalize tangents and bitangents
     for (size_t i = 0; i < MeshBinaryObject.Vertices.size(); ++i)
     {
         SVertex& vertex = MeshBinaryObject.Vertices[i];
-        glm::vec3& n = vertex.Normal;
-        glm::vec3& t = vertex.Tangent;
-        glm::vec3& b = vertex.Bitangent;
+        //glm::vec3& n = vertex.Normal;
+        //glm::vec3& t = vertex.Tangent;
+        //glm::vec3& b = vertex.Bitangent;
 
         // Orthogonalize tangent
-        t = glm::normalize(t - n * glm::dot(n, t));
-
-        // Recompute bitangent
-        b = glm::normalize(glm::cross(n, t));
-
-        // Optional: Ensure correct handedness
-        if (glm::dot(glm::cross(n, t), b) < 0.0f)
-        {
-            b = b * -1.0f;
-        }
+        //t = glm::normalize(t - n * glm::dot(n, t));
+//
+        //// Recompute bitangent
+        //b = glm::normalize(glm::cross(n, t));
+//
+        //// Optional: Ensure correct handedness
+        //if (glm::dot(glm::cross(n, t), b) < 0.0f)
+        //{
+        //    b = b * -1.0f;
+        //}
     }
 }

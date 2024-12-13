@@ -82,9 +82,9 @@ public:
     std::vector<PVulkanFrame*>::iterator end() { return Pool.end(); }
     std::vector<PVulkanFrame*>::const_iterator end() const { return Pool.end(); }
 
-private:
 	TSharedPtr<FVkPipelineLayout> GraphicsPipelineLayout;
 	TSharedPtr<FVkPipeline> GraphicsPipeline;
+private:
 
 	std::vector<PVulkanFrame*> Pool;
 	size_t FrameIndex;

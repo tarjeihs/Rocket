@@ -6,24 +6,18 @@
 
 struct STransform;
 
+
+
 struct SVertex
 {
     SVertex()
     {
+        static_assert(sizeof(SVertex) == 16, "SVertex size should be 16 bytes.");
+
         Position = glm::vec3(0.0f);
-        TexCoord = glm::vec2(0.0f);
-        Normal = glm::vec3(0.0f);
-        Color = glm::vec4(1.0f);
-        Tangent = glm::vec3(0.0f);
-        Bitangent = glm::vec3(0.0f);
     }
 
     alignas(16) glm::vec3 Position;
-    alignas(16) glm::vec2 TexCoord;
-    alignas(16) glm::vec3 Normal;
-    alignas(16) glm::vec4 Color;
-    alignas(16) glm::vec3 Tangent;
-    alignas(16) glm::vec3 Bitangent;
 };
 
 struct SMeshBinaryData
