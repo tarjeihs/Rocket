@@ -8,8 +8,8 @@ void PCamera::OnImGuiRender()
     ImGui::Begin("Camera Settings");
     ImGui::Combo("Projection Mode", reinterpret_cast<int*>(&Settings.ProjectionMode), ProjectionModeEnumerateNames, IM_ARRAYSIZE(ProjectionModeEnumerateNames));
     ImGui::DragFloat("Field of View", &Settings.FoVY, 1.0f, 30.0f, 145.0f);
-    ImGui::DragFloat("Z Near", &Settings.ZNear, 1.0f, 0.1f, 1000.0f);
-    ImGui::DragFloat("Z Far", &Settings.ZFar, 1.0f, 0.1f, 1000.0f);
+    ImGui::DragFloat("Z Near", &Settings.ZNear, 1.0f, 0.1f, 10000.0f);
+    ImGui::DragFloat("Z Far", &Settings.ZFar, 1.0f, 0.1f, 10000.0f);
     ImGui::End();
 
     ApplySettings();

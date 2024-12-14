@@ -2,6 +2,8 @@
 #include "VulkanSceneRenderer.h"
 
 #include "Format/GLTF.h"
+#include "Renderer/RHI.h"
+#include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -12,8 +14,8 @@
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanOverlay.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
+#include "Scene/Scene.h"
 #include "Types/SharedPtr.h"
-#include <vulkan/vulkan_core.h>
 
 // 3 swapchain images, 2 frames.
 // 1 frame is currently being processed by CPU, 1 is being drawn by GPU, hence no need for a third frame.
@@ -57,29 +59,36 @@ void PVulkanSceneRenderer::Init()
 
 	SMeshBinaryData MeshData;
     PGLTF::ImportGLTF("/home/user/Workspace/Game/Game/Content/Cube.glb", MeshData);
-	MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
-	MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
-	MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
-	MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
+	for (int i = 0; i < 100000; ++i)
+	{
+		MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
+	}
 
 	SMeshBinaryData MeshData2;
     PGLTF::ImportGLTF("/home/user/Workspace/Game/Game/Content/Monkey.glb", MeshData2);
-	MeshBuffer->AddData(MeshData2.Vertices, MeshData2.Indices);
 
-	struct FSomeStruct
+	RenderGraph->AddCommand([&](PVulkanFrame* Frame) mutable
 	{
-		alignas(16) glm::vec3 Value = glm::vec3(50.0f);
-	} SomeStruct;
+		struct FCameraData
+		{
+			glm::mat4 View;
+			glm::mat4 Projection;
+		} CameraData;
+
+		CameraData.Projection = GetScene()->GetCamera()->GetProjectionMatrix();
+		CameraData.View = GetScene()->GetCamera()->GetViewMatrix();
+		
+		Frame->GlobalStorageBuffer->Submit(&CameraData, sizeof(FCameraData), 0);
+	});
 
 	RenderGraph->AddCommand([&](PVulkanFrame* Frame)
 	{
 		VkDeviceSize offsets[] = { 0 };
 
 		vkCmdBindPipeline(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, ParallelFramePool->GraphicsPipeline->Info.Handle);
+		Frame->StorageBufferDescriptorSet->Bind(ParallelFramePool->GraphicsPipelineLayout);
 		vkCmdBindVertexBuffers(Frame->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &MeshBuffer->VertexBuffer->Info.Handle, offsets);
 		vkCmdBindIndexBuffer(Frame->GetCommandBuffer()->GetVkCommandBuffer(), MeshBuffer->IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
-		Frame->GlobalStorageBuffer->Submit(&SomeStruct, sizeof(FSomeStruct), 0);
-		Frame->StorageBufferDescriptorSet->Bind(ParallelFramePool->GraphicsPipelineLayout);
 		MeshBuffer->DrawIndirect(Frame->GetCommandBuffer());
 	});
 }

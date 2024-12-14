@@ -81,7 +81,21 @@ void PVulkanDevice::Init()
 				VkPhysicalDeviceProperties PhysicalDeviceProperties;
     			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 
-				//RK_LOG_INFO("Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
+				VkPhysicalDeviceMemoryProperties memProperties;
+				vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
+				for (uint32_t i = 0; i < memProperties.memoryHeapCount; ++i) {
+				    std::cout << "Memory Heap " << i << ": Size = " 
+				              << memProperties.memoryHeaps[i].size / (1024 * 1024) << " MiB, "
+				              << ((memProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) ? "Device-local" : "Host-visible") 
+				              << std::endl;
+				}
+
+				for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
+				    std::cout << "Memory Type " << i << ": Heap = " 
+				              << memProperties.memoryTypes[i].heapIndex << ", "
+				              << "Flags = " << memProperties.memoryTypes[i].propertyFlags << std::endl;
+				}
+
 				PLogger::Log(ELogCategory ::LOG_INFO, "Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
 
 				GPU = PhysicalDevice;

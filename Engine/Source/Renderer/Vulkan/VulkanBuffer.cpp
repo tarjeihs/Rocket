@@ -3,7 +3,6 @@
 
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
-#include <vulkan/vulkan_core.h>
 
 void PVulkanBuffer::Allocate(size_t Size)
 {
@@ -56,8 +55,10 @@ void FVkBuffer::Initialize(FVkBufferCreateInfo& CreateInfo)
 
 void FVkBuffer::Submit(const void* Data, size_t Size, size_t Offset)
 {
+    RK_ASSERT((Offset % 16) == 0 && "Offset is not 16-byte aligned!");
     void* MappedData;
     vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation, &MappedData);
     memcpy(static_cast<uint8_t*>(MappedData) + Offset, Data, Size);
+    //vmaFlushAllocation(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation, Offset, Size); // Ensure visibility
     vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation);
 }

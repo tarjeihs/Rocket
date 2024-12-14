@@ -19,6 +19,9 @@ struct FVkIndirectMeshBufferMetadata
     SizeType IndexCount;
 };
 
+static constexpr uint64 MiB = 1024 * 1024;
+static constexpr uint64 GiB = 1024 * 1024 * 1024;
+
 struct FVkIndirectMeshBuffer
 {
     TSharedPtr<FVkBuffer> VertexBuffer;
@@ -42,21 +45,21 @@ struct FVkIndirectMeshBuffer
     void Initialize()
     {
         FVkBufferCreateInfo VertexBufferCreateInfo;
-        VertexBufferCreateInfo.Size = 1024 * 1024 * 64;
+        VertexBufferCreateInfo.Size = 1024 * MiB;
         VertexBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         VertexBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
         VertexBuffer = MakeShared<FVkBuffer>();
         VertexBuffer->Initialize(VertexBufferCreateInfo);
 
         FVkBufferCreateInfo IndexBufferCreateInfo;
-        IndexBufferCreateInfo.Size = 1024 * 1024 * 10 * 4;
+        IndexBufferCreateInfo.Size = 1024 * MiB;
         IndexBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         IndexBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
         IndexBuffer = MakeShared<FVkBuffer>();
         IndexBuffer->Initialize(IndexBufferCreateInfo);
 
         FVkBufferCreateInfo IndirectBufferCreateInfo;
-        IndirectBufferCreateInfo.Size = 1024 * 1024;
+        IndirectBufferCreateInfo.Size = 1024 * MiB;
         IndirectBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         IndirectBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
         IndirectBuffer = MakeShared<FVkBuffer>();
@@ -66,15 +69,15 @@ struct FVkIndirectMeshBuffer
         StagingBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         StagingBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_ONLY;
 
-        StagingBufferCreateInfo.Size = 1024 * 1024 * 128;
+        StagingBufferCreateInfo.Size = 1024 * MiB;
         StagingVertexBuffer = MakeShared<FVkBuffer>();
         StagingVertexBuffer->Initialize(StagingBufferCreateInfo);
 
-        StagingBufferCreateInfo.Size = 1024 * 1024 * 64;
+        StagingBufferCreateInfo.Size = 1024 * MiB;
         StagingIndexBuffer = MakeShared<FVkBuffer>();
         StagingIndexBuffer->Initialize(StagingBufferCreateInfo);
 
-        StagingBufferCreateInfo.Size = 1024 * 1024;
+        StagingBufferCreateInfo.Size = 1024 * MiB;
         StagingIndirectBuffer = MakeShared<FVkBuffer>();
         StagingIndirectBuffer->Initialize(StagingBufferCreateInfo);
     }
@@ -153,10 +156,6 @@ struct FVkIndirectMeshBuffer
     void DrawIndirect(PVulkanCommandBuffer* CommandBuffer)
     {
         vkCmdDrawIndexedIndirect(CommandBuffer->GetVkCommandBuffer(), IndirectBuffer->Info.Handle, 0, Metadatas.GetSize(), sizeof(VkDrawIndexedIndirectCommand));
-
-        VmaAllocationInfo Info;
-        vmaGetAllocationInfo(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation, &Info);
-        RK_LOG_INFO("{}", Info.size);
     }
 };
 

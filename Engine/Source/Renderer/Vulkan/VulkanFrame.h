@@ -52,7 +52,6 @@ public:
 
 	FTransientFrameData& GetTransientFrameData();
 
-private:
 	PVulkanCommandPool* CommandPool;
 	PVulkanCommandBuffer* CommandBuffer;
 	VkSemaphore SwapchainSemaphore;

@@ -77,8 +77,6 @@ struct FVkDescriptorSetCreateInfo
 struct FVkDescriptorSetInfo
 {
     VkDescriptorSet Handle;
-
-    TArray<TSharedPtr<FVkBuffer>> Buffers;
 };
 
 class FVkDescriptorSet

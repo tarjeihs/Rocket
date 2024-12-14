@@ -41,7 +41,7 @@ void PVulkanFrame::CreateFrame()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
 
 	TArray<FVkDescriptorPoolRatio> PoolRatio = {
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 65536 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },
 	};
 
 	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
@@ -55,20 +55,18 @@ void PVulkanFrame::CreateFrame()
 	/* Descriptor Set Layout - Storage Buffer */
 
 	FVkBufferCreateInfo StorageBufferCreateInfo;
-	StorageBufferCreateInfo.Size = 1024 * 1024 * 10;
+	StorageBufferCreateInfo.Size = 64 * 1024 * 1024;
 	StorageBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	StorageBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 	GlobalStorageBuffer = MakeShared<FVkBuffer>();
-	GlobalStorageBuffer->Initialize(StorageBufferCreateInfo);
-
 	CameraStorageBuffer = MakeShared<FVkBuffer>();
-	CameraStorageBuffer->Initialize(StorageBufferCreateInfo);
-
 	MaterialStorageBuffer = MakeShared<FVkBuffer>();
-	MaterialStorageBuffer->Initialize(StorageBufferCreateInfo);
-
 	ObjectStorageBuffer = MakeShared<FVkBuffer>();
+
+	GlobalStorageBuffer->Initialize(StorageBufferCreateInfo);
+	CameraStorageBuffer->Initialize(StorageBufferCreateInfo);
+	MaterialStorageBuffer->Initialize(StorageBufferCreateInfo);
 	ObjectStorageBuffer->Initialize(StorageBufferCreateInfo);
 
 	FVkDescriptorSetCreateInfo StorageBufferDescriptorSetCreateInfo;
@@ -87,7 +85,6 @@ void PVulkanFrame::DestroyFrame()
 {
 	vkDestroySemaphore(GetRHI()->GetDevice()->GetVkDevice(), RenderSemaphore, nullptr);
 	vkDestroySemaphore(GetRHI()->GetDevice()->GetVkDevice(), SwapchainSemaphore, nullptr);
-
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), RenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), nullptr);
 }
@@ -181,7 +178,7 @@ FTransientFrameData& PVulkanFrame::GetTransientFrameData()
 
 void PVulkanFramePool::CreateFramePool()
 {
-	TArray<FVkDescriptor> StorageBufferDescriptors = { 
+	TArray<FVkDescriptor> StorageBufferDescriptors = {
 		{ EVkDescriptorType::Storage, 1 },
 		{ EVkDescriptorType::Storage, 1 },
 		{ EVkDescriptorType::Storage, 1 },
