@@ -13,6 +13,10 @@
 
 TSharedPtr<FVkDescriptorSetLayout> StorageBufferDescriptorSetLayout = MakeShared<FVkDescriptorSetLayout>();
 
+TArray<FVkDescriptorPoolRatio> PoolRatio = {
+	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },
+};
+
 void PVulkanFrame::CreateFrame()
 {
 	CommandPool = new PVulkanCommandPool();
@@ -40,10 +44,6 @@ void PVulkanFrame::CreateFrame()
 	Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
 
-	TArray<FVkDescriptorPoolRatio> PoolRatio = {
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },
-	};
-
 	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
 	DescriptorPoolCreateInfo.PoolRatios = PoolRatio;
 	DescriptorPoolCreateInfo.MaxSetCount = 1;
@@ -51,8 +51,6 @@ void PVulkanFrame::CreateFrame()
 	
 	TSharedPtr<FVkDescriptorPool> DescriptorPool = MakeShared<FVkDescriptorPool>();
 	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
-
-	/* Descriptor Set Layout - Storage Buffer */
 
 	FVkBufferCreateInfo StorageBufferCreateInfo;
 	StorageBufferCreateInfo.Size = 64 * 1024 * 1024;
@@ -73,12 +71,12 @@ void PVulkanFrame::CreateFrame()
 	StorageBufferDescriptorSetCreateInfo.DescriptorPool = DescriptorPool;
 	StorageBufferDescriptorSetCreateInfo.DescriptorSetLayout = StorageBufferDescriptorSetLayout;
 
-	StorageBufferDescriptorSet = MakeShared<FVkDescriptorSet>();	
+	StorageBufferDescriptorSet = MakeUnique<FVkDescriptorSet>();	
 	StorageBufferDescriptorSet->Initialize(StorageBufferDescriptorSetCreateInfo);
-	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL, GlobalStorageBuffer);
-	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA, CameraStorageBuffer);
-	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL, MaterialStorageBuffer);
-	StorageBufferDescriptorSet->AttachBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT, ObjectStorageBuffer);
+	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL, GlobalStorageBuffer);
+	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA, CameraStorageBuffer);
+	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL, MaterialStorageBuffer);
+	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT, ObjectStorageBuffer);
 }
 
 void PVulkanFrame::DestroyFrame()
@@ -178,11 +176,11 @@ FTransientFrameData& PVulkanFrame::GetTransientFrameData()
 
 void PVulkanFramePool::CreateFramePool()
 {
-	TArray<FVkDescriptor> StorageBufferDescriptors = {
-		{ EVkDescriptorType::Storage, 1 },
-		{ EVkDescriptorType::Storage, 1 },
-		{ EVkDescriptorType::Storage, 1 },
-		{ EVkDescriptorType::Storage, 1 }
+	TArray<FVkDescriptorLayout> StorageBufferDescriptors = {
+		{ EVkDescriptorType::SSBO, 1 },
+		{ EVkDescriptorType::SSBO, 1 },
+		{ EVkDescriptorType::SSBO, 1 },
+		{ EVkDescriptorType::SSBO, 1 }
 	};
 
 	FVkDescriptorSetLayoutCreateInfo StorageBufferDescriptorSetLayoutCreateInfo = { .Descriptors = StorageBufferDescriptors };

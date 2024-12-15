@@ -1,12 +1,12 @@
 #pragma once
 
+#include "EngineTypes.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
-#include "Types/SharedPtr.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
+#include "Types/SharedPtr.h"
 
 class PVulkanRHI;
 class PVulkanFrame;
-struct PVulkanBuffer;
 
 struct FVkDescriptorPoolRatio
 {
@@ -35,15 +35,16 @@ public:
     void Destroy();
 };
 
+
 enum class EVkDescriptorType
 {
-    Storage,
-    StorageImage,
+    SSBO,
+    SSIO,
     Sampler,
     SamplerImage,
 };
 
-struct FVkDescriptor
+struct FVkDescriptorLayout
 {
     EVkDescriptorType DescriptorType;
     uint32 DescriptorCount;
@@ -51,7 +52,7 @@ struct FVkDescriptor
 
 struct FVkDescriptorSetLayoutCreateInfo
 {
-    TArray<FVkDescriptor> Descriptors;
+    TArray<FVkDescriptorLayout> Descriptors;
 };
 
 struct FVkDescriptorSetLayoutInfo
@@ -77,6 +78,8 @@ struct FVkDescriptorSetCreateInfo
 struct FVkDescriptorSetInfo
 {
     VkDescriptorSet Handle;
+
+    TArray<TSharedPtr<FVkBuffer>> Bindings;
 };
 
 class FVkDescriptorSet
@@ -87,9 +90,8 @@ public:
     void Initialize(FVkDescriptorSetCreateInfo& CreateInfo);
     void Destroy();
 
-    void AttachBuffer(uint32 Index, const TSharedPtr<FVkBuffer>& Buffer);
-    void AddSampler();
-    void AddImage();
+    void WriteBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer);
+    void ReadBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer);
 
     void Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout);
 };

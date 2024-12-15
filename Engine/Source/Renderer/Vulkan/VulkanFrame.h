@@ -28,15 +28,6 @@ static const uint32 STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT 			= 3;
 class PVulkanFrame
 {
 public:
-	TSharedPtr<FVkDescriptorSet> UniformBufferDescriptorSet;
-	TSharedPtr<FVkDescriptorSet> StorageBufferDescriptorSet;
-
-	TSharedPtr<FVkBuffer> GlobalStorageBuffer;
-	TSharedPtr<FVkBuffer> CameraStorageBuffer;
-
-	TSharedPtr<FVkBuffer> ObjectStorageBuffer;
-	TSharedPtr<FVkBuffer> MaterialStorageBuffer;
-
 	void CreateFrame();
 	void DestroyFrame();
 	
@@ -58,6 +49,17 @@ public:
 	VkSemaphore RenderSemaphore;
 	VkFence RenderFence;
 	FTransientFrameData TransientFrameData;
+
+	TUniquePtr<FVkDescriptorSet> UniformBufferDescriptorSet;
+	TUniquePtr<FVkDescriptorSet> StorageBufferDescriptorSet;
+	
+	TSharedPtr<FVkBuffer> GlobalStorageBuffer;
+	TSharedPtr<FVkBuffer> CameraStorageBuffer;
+	TSharedPtr<FVkBuffer> MaterialStorageBuffer;
+	TSharedPtr<FVkBuffer> ObjectStorageBuffer;
+
+	TMap<FString, FVkDescriptorSet> DescriptorSets;
+	//TMap<FString, FVkBuffer> Buffers; Buffer should be stored locally within owning descriptor set?
 };
 
 class PVulkanFramePool
@@ -81,11 +83,12 @@ public:
     std::vector<PVulkanFrame*>::iterator end() { return Pool.end(); }
     std::vector<PVulkanFrame*>::const_iterator end() const { return Pool.end(); }
 
-	TSharedPtr<FVkPipelineLayout> GraphicsPipelineLayout;
 	TSharedPtr<FVkPipeline> GraphicsPipeline;
-private:
+	TSharedPtr<FVkPipelineLayout> GraphicsPipelineLayout;
 
+private:
 	std::vector<PVulkanFrame*> Pool;
+
 	size_t FrameIndex;
 	size_t PoolSize;
 

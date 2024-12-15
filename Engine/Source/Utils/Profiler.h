@@ -25,8 +25,8 @@ struct SProfilerScope
     const char* Name;
 };
 
-#ifdef RK_PROFILE
-#define PROFILE_FUNC_SCOPE(Name) SProfilerScope _PROFILE_FUNC_SCOPE_(Name);
+#if RK_PROFILE
+    #define PROFILE_FUNC_SCOPE(Name) SProfilerScope _PROFILE_FUNC_SCOPE_(Name);
 #else
-#define PROFILE_FUNC_SCOPE(...)
+    #define PROFILE_FUNC_SCOPE(...)
 #endif

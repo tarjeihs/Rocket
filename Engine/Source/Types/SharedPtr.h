@@ -79,6 +79,11 @@ public:
         return Pointer;
     }
 
+    bool IsValid() const
+    {
+        return Pointer != nullptr && RefCount != nullptr;
+    }
+
     uint32_t* GetRefCount() const
     {
         return RefCount;

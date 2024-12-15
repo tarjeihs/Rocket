@@ -4,7 +4,6 @@
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
-#include "Renderer/Vulkan/VulkanMemory.h"
 
 void PVulkanRHI::Init()
 {

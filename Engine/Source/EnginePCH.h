@@ -56,5 +56,6 @@
 #include "Types/UniquePtr.h"
 #include "EngineTypes.h"
 #include "EngineMacros.h"
+#include "EngineSettings.h"
 
 #include "Renderer/Vulkan/VulkanDescriptor.h"

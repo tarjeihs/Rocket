@@ -23,9 +23,9 @@ public:
         Other.Pointer = nullptr;
     }
 
-    TUniquePtr& operator=(TUniquePtr&& Other) noexcept
+    TUniquePtr<TPointer>& operator=(TUniquePtr<TPointer>&& Other) noexcept
     {
-        if (this != Other)
+        if (this != &Other)
         {
             delete Pointer;
             Pointer = Other.Pointer;

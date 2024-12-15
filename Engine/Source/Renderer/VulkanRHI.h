@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #include "Renderer/RHI.h"
 

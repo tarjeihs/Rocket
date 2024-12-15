@@ -7,7 +7,7 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include <vulkan/vulkan_core.h>
+#include "Types/SharedPtr.h"
 
 namespace Utils
 {
@@ -15,10 +15,32 @@ namespace Utils
 	{
 		switch (DescriptorType)
 		{
-			case EVkDescriptorType::Storage: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			case EVkDescriptorType::StorageImage: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case EVkDescriptorType::SSBO: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			case EVkDescriptorType::SSIO: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			case EVkDescriptorType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
 			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		}
+	}
+
+    VkBufferUsageFlags GetBufferUsageFlags(EVkDescriptorType DescriptorType)
+    {
+		switch (DescriptorType)
+		{
+			case EVkDescriptorType::SSBO: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::SSIO: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::Sampler: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::SamplerImage: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		}
+    }
+
+	VmaMemoryUsage GetMemoryUsageFlags(EVkDescriptorType DescriptorType)
+	{
+		switch (DescriptorType)
+		{
+			case EVkDescriptorType::SSBO: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::SSIO: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::Sampler: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::SamplerImage: return VMA_MEMORY_USAGE_CPU_TO_GPU;
 		}
 	}
 }
@@ -107,7 +129,7 @@ void FVkDescriptorSet::Destroy()
 {
 }
 
-void FVkDescriptorSet::AttachBuffer(uint32 Index, const TSharedPtr<FVkBuffer>& Buffer)
+void FVkDescriptorSet::WriteBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo = {};
 	DescriptorBufferInfo.buffer = Buffer->Info.Handle;
@@ -124,9 +146,26 @@ void FVkDescriptorSet::AttachBuffer(uint32 Index, const TSharedPtr<FVkBuffer>& B
 	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
 
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+
+	Info.Bindings.Add(Buffer);
+}
+
+void FVkDescriptorSet::ReadBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer)
+{
+	TSharedPtr<FVkBuffer> Result = Info.Bindings[Index];
+	if (Result.IsValid())
+	{
+		Buffer = MoveTemp(Result);
+	}
 }
 
 void FVkDescriptorSet::Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout)
 {
 	vkCmdBindDescriptorSets(GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
 }
+
+//void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBufferCreateInfo& CreateInfo)
+//{
+//	TSharedPtr<FVkBuffer> Buffer = MakeShared<FVkBuffer>();
+//	Buffer->Initialize(CreateInfo);
+//}

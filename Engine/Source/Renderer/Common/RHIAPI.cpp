@@ -1,15 +1,15 @@
 #include "EnginePCH.h"
-#include "Resource.h"
+#include "RHIAPI.h"
 
 #include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanMesh.h"
 #include "Renderer/Vulkan/VulkanShader.h"
 
-template<typename TExplicit>
-TExplicit* NewObject()
+template<typename TObject>
+TObject* NewObject()
 {
-    using Type = typename TResource<TExplicit>::Type;
-    static_assert(std::is_base_of<TExplicit, Type>::value, "Type must derive from TExplicit.");
+    using Type = typename TRHIAPI<TObject>::Type;
+    static_assert(std::is_base_of<TObject, Type>::value, "Type must derive from TObject.");
     return new Type();
 }
 

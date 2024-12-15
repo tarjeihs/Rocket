@@ -8,10 +8,7 @@
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Types/SharedPtr.h"
 
-class PVulkanMaterial;
-class PVulkanBuffer;
-
-struct FVkIndirectMeshBufferMetadata
+struct FVkMesh : public IMesh
 {
     SizeType VertexOffset;
     SizeType VertexCount;
@@ -19,10 +16,7 @@ struct FVkIndirectMeshBufferMetadata
     SizeType IndexCount;
 };
 
-static constexpr uint64 MiB = 1024 * 1024;
-static constexpr uint64 GiB = 1024 * 1024 * 1024;
-
-struct FVkIndirectMeshBuffer
+struct FVkMeshBuffer
 {
     TSharedPtr<FVkBuffer> VertexBuffer;
     TSharedPtr<FVkBuffer> IndexBuffer;
@@ -40,7 +34,7 @@ struct FVkIndirectMeshBuffer
     SizeType StagingIndexOffset = 0;
     SizeType StagingIndirectOffset = 0;
 
-    TArray<FVkIndirectMeshBufferMetadata> Metadatas;
+    TArray<FVkMesh> Metadatas;
 
     void Initialize()
     {
@@ -87,7 +81,7 @@ struct FVkIndirectMeshBuffer
         const SizeType VertexBufferSize = Vertices.size() * sizeof(SVertex);
         const SizeType IndexBufferSize = Indices.size() * sizeof(uint32_t);
 
-        FVkIndirectMeshBufferMetadata Metadata;
+        FVkMesh Metadata;
         Metadata.VertexOffset = CurrentVertexOffset;
         Metadata.VertexCount = (uint32_t)Vertices.size();
         Metadata.IndexOffset = CurrentIndexOffset;
@@ -157,32 +151,4 @@ struct FVkIndirectMeshBuffer
     {
         vkCmdDrawIndexedIndirect(CommandBuffer->GetVkCommandBuffer(), IndirectBuffer->Info.Handle, 0, Metadatas.GetSize(), sizeof(VkDrawIndexedIndirectCommand));
     }
-};
-
-class PVulkanMesh : public IMesh
-{
-public:
-    virtual void CreateMesh(const SMeshBinaryData& MeshBinaryObject) override;
-    virtual void CreateDynamicMesh(const SMeshBinaryData& MeshBinaryObject) override;
-    virtual void DrawIndirectInstanced(uint32_t ID) override;
-    virtual void Destroy() override;
-
-    virtual void UpdateDynamicMesh(const SMeshBinaryData& MeshData) override;
-
-    virtual IMaterial* GetMaterial() const override;
-    virtual void SetMaterial(IMaterial* NewMaterial) override;
-
-    virtual void SetVisibility(EVisibilityMode Mode) override;
-    virtual EVisibilityMode GetVisibility() const override;
-
-private:
-    PVulkanMaterial* Material;
-    PVulkanBuffer* VertexBuffer;
-    PVulkanBuffer* IndexBuffer;
-    PVulkanBuffer* StagingBuffer;
-
-    // TODO: Create a small struct wrapper for device addr in VulkanMemory.h
-    VkDeviceAddress DeviceAddress64;
-
-    EVisibilityMode VisibilityMode;
 };

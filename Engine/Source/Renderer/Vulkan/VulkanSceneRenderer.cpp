@@ -22,7 +22,7 @@
 static constexpr size_t DeferredFrameCount = 2;
 static constexpr size_t ImmediateFrameCount = 1;
 
-TSharedPtr<FVkIndirectMeshBuffer> MeshBuffer;
+TSharedPtr<FVkMeshBuffer> MeshBuffer;
 
 void PVulkanSceneRenderer::Init()
 {
@@ -52,20 +52,44 @@ void PVulkanSceneRenderer::Init()
 
 	GOverlay->Init();
 
+	static const FString a = "DS_RESOURCE_SSBO";
+	static const FString b = "DS_RESOURCE_SSIO";
+	static const FString c = "DS_RESOURCE_TEX2DS";
+
+	for (PVulkanFrame* Frame : *ParallelFramePool)
+	{
+		FVkDescriptorSet DescriptorSetSSBO;
+
+		Frame->DescriptorSets.Insert("DSSSBO", DescriptorSetSSBO);
+		Frame->DescriptorSets.Insert("DSSSIO", DescriptorSetSSBO);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// TODO: Temporary testing
 
-	MeshBuffer = MakeShared<FVkIndirectMeshBuffer>();
+	MeshBuffer = MakeShared<FVkMeshBuffer>();
 	MeshBuffer->Initialize();
 
 	SMeshBinaryData MeshData;
     PGLTF::ImportGLTF("/home/user/Workspace/Game/Game/Content/Cube.glb", MeshData);
-	for (int i = 0; i < 100000; ++i)
+	for (int i = 0; i < 1000; ++i)
 	{
 		MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
 	}
-
-	SMeshBinaryData MeshData2;
-    PGLTF::ImportGLTF("/home/user/Workspace/Game/Game/Content/Monkey.glb", MeshData2);
 
 	RenderGraph->AddCommand([&](PVulkanFrame* Frame) mutable
 	{

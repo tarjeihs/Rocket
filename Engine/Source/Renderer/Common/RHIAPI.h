@@ -1,24 +1,22 @@
 #pragma once
 
-// TODO: Rename file to RHIAPI
-
 class IMesh;
 class IMaterial;
 class IShader;
 
 template<typename TExplicit>
-struct TResource;
+struct TRHIAPI;
 
 template<>
-struct TResource<IMesh>
+struct TRHIAPI<IMesh>
 {
 #if RK_RHI == VULKAN
-    using Type = class PVulkanMesh;
+    using Type = class FVkMesh;
 #endif
 };
 
 template<>
-struct TResource<IShader>
+struct TRHIAPI<IShader>
 {
 #if RK_RHI == VULKAN
     using Type = class PVulkanShader;
@@ -26,12 +24,12 @@ struct TResource<IShader>
 };
 
 template<>
-struct TResource<IMaterial>
+struct TRHIAPI<IMaterial>
 {
 #if RK_RHI == VULKAN
     using Type = class PVulkanMaterial;
 #endif
 };
 
-template<typename TExplicit>
-TExplicit* NewObject();
+template<typename TObject>
+TObject* NewObject();
