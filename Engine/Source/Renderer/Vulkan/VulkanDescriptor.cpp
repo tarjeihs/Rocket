@@ -20,6 +20,7 @@ namespace Utils
 			case EVkDescriptorType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
 			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		}
+		return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 	}
 
     VkBufferUsageFlags GetBufferUsageFlags(EVkDescriptorType DescriptorType)
@@ -31,6 +32,7 @@ namespace Utils
 			case EVkDescriptorType::Sampler: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			case EVkDescriptorType::SamplerImage: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
+		return UINT32_MAX;
     }
 
 	VmaMemoryUsage GetMemoryUsageFlags(EVkDescriptorType DescriptorType)
@@ -42,6 +44,7 @@ namespace Utils
 			case EVkDescriptorType::Sampler: return VMA_MEMORY_USAGE_CPU_TO_GPU;
 			case EVkDescriptorType::SamplerImage: return VMA_MEMORY_USAGE_CPU_TO_GPU;
 		}
+		return VMA_MEMORY_USAGE_UNKNOWN;
 	}
 }
 

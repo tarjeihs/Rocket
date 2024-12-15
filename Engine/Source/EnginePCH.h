@@ -1,6 +1,11 @@
+#pragma once
+
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#pragma once
+#if defined(_WIN32)
+#include <windows.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 
 #include <cstring>
 #include <assert.h>
@@ -57,5 +62,3 @@
 #include "EngineTypes.h"
 #include "EngineMacros.h"
 #include "EngineSettings.h"
-
-#include "Renderer/Vulkan/VulkanDescriptor.h"

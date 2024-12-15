@@ -16,6 +16,7 @@ namespace Utils
 			case EShaderStage::Fragment: 	return VK_SHADER_STAGE_FRAGMENT_BIT;
 			case EShaderStage::Compute: 	return VK_SHADER_STAGE_COMPUTE_BIT;
 		}
+		return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 	}
 }
 

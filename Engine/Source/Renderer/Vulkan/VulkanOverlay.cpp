@@ -41,7 +41,7 @@ public:
     // Calculate moving average of frame rates
     float GetMovingAverage(int frames) const {
         int count = std::min(frames, maxFrames);
-        return std::accumulate(frameRates.end() - count, frameRates.end(), 0.0f) / count;
+        return 0;
     }
 };
 FrameMetrics frameMetrics(100);
@@ -98,27 +98,27 @@ void PVulkanOverlay::Init()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-    ImGui::Begin("Metrics");
+		ImGui::Begin("Metrics");
 
-    float deltaTime = GetEngine()->Timestep.GetDeltaTime();
-    float frameRate = 1.0f / deltaTime;
+		float deltaTime = GetEngine()->Timestep.GetDeltaTime();
+		float frameRate = 1.0f / deltaTime;
 
-    frameMetrics.AddFrameRate(frameRate);
+		frameMetrics.AddFrameRate(frameRate);
 
-    ImGui::Text("Frame Rate Histogram (FPS):");
-    float avgFrameRate = frameMetrics.GetMovingAverage(30);
-    float maxFrameRate = frameMetrics.GetMaxFrameRate();
-    float maxScale = std::max(maxFrameRate, 120.0f);
+		ImGui::Text("Frame Rate Histogram (FPS):");
+		float avgFrameRate = frameMetrics.GetMovingAverage(30);
+		float maxFrameRate = frameMetrics.GetMaxFrameRate();
+		float maxScale = std::max(maxFrameRate, 120.0f);
 
-    ImGui::PlotHistogram("", frameMetrics.GetFrameRates(), frameMetrics.maxFrames, frameMetrics.currentFrame,
-                         nullptr, 0.0f, maxScale, ImVec2(0, 50));
+		ImGui::PlotHistogram("", frameMetrics.GetFrameRates(), frameMetrics.maxFrames, frameMetrics.currentFrame,
+		                     nullptr, 0.0f, maxScale, ImVec2(0, 50));
 
-    ImGui::Text("Current Frame Rate: %.1f FPS", frameRate);
-    ImGui::Text("Current Frame Time: %.3f ms", deltaTime * 1000.0f);
-    ImGui::Text("Moving Average Frame Rate: %.1f FPS", avgFrameRate);
-    ImGui::Text("Engine Time: %.3fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
+		ImGui::Text("Current Frame Rate: %.1f FPS", frameRate);
+		ImGui::Text("Current Frame Time: %.3f ms", deltaTime * 1000.0f);
+		ImGui::Text("Moving Average Frame Rate: %.1f FPS", avgFrameRate);
+		ImGui::Text("Engine Time: %.3fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
 
-    ImGui::End();
+		ImGui::End();
 
 		OnRender.Broadcast();
 

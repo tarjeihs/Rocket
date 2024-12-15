@@ -197,13 +197,13 @@ void PVulkanFramePool::CreateFramePool()
 
     FShaderCreateInfo ShaderCreateInfo;
     ShaderCreateInfo.Entrypoint = "main";
-    ShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Vertex.hlsl";
+    ShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Vertex.hlsl";
     ShaderCreateInfo.Name = "Vertex";
     ShaderCreateInfo.Stage = EShaderStage::Vertex;
 
 	FShaderCreateInfo PixelShaderCreateInfo;
     PixelShaderCreateInfo.Entrypoint = "main";
-    PixelShaderCreateInfo.Path = "/home/user/Workspace/Rocket/Engine/Shaders/HLSL/Pixel.hlsl";
+    PixelShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Pixel.hlsl";
     PixelShaderCreateInfo.Name = "Pixel";
     PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
     

@@ -6,7 +6,7 @@ class PVulkanRHI;
 class PVulkanCommandBuffer;
 class FVkDescriptorPool;
 
-class PVulkanOverlay : public POverlay
+class PVulkanOverlay : public POverlay // TODO: Can this be seperated into it's own renderer? It probably should be 
 {
 public:
 	virtual void Init() override;

@@ -65,7 +65,9 @@ void PProfiler::StartEventBlock(const char* Name)
     EventData.Name = Name;
     EventData.Phase = "B";
     EventData.ProcessID = getpid();
+#if RK_PLATFORM_LINUX
     EventData.ThreadID = gettid();
+#endif
 }
 
 void PProfiler::EndEventBlock(const char* Name)
@@ -77,5 +79,7 @@ void PProfiler::EndEventBlock(const char* Name)
     EventData.Phase = "E";
     EventData.Timestamp = static_cast<int64_t>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
     EventData.ProcessID = getpid();
+#if RK_PLATFORM_LINUX
     EventData.ThreadID = gettid();
+#endif
 }

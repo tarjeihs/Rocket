@@ -5,6 +5,30 @@
 #include "Renderer/Vulkan/VulkanMesh.h"
 #include "Renderer/Vulkan/VulkanShader.h"
 
+template<>
+struct TRHIAPI<IMesh>
+{
+#if RK_RHI == VULKAN
+    using Type = FVkMesh;
+#endif
+};
+
+template<>
+struct TRHIAPI<IShader>
+{
+#if RK_RHI == VULKAN
+    using Type = PVulkanShader;
+#endif
+};
+
+template<>
+struct TRHIAPI<IMaterial>
+{
+#if RK_RHI == VULKAN
+    using Type = PVulkanMaterial;
+#endif
+};
+
 template<typename TObject>
 TObject* NewObject()
 {

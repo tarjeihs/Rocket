@@ -85,7 +85,7 @@ void PVulkanSceneRenderer::Init()
 	MeshBuffer->Initialize();
 
 	SMeshBinaryData MeshData;
-    PGLTF::ImportGLTF("/home/user/Workspace/Game/Game/Content/Cube.glb", MeshData);
+    PGLTF::ImportGLTF("C:/Workspace/Game/Game/Content/Cube.glb", MeshData);
 	for (int i = 0; i < 1000; ++i)
 	{
 		MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
