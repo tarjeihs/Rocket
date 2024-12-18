@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Renderer/Common/Shader.h"
-#include "Types/SharedPtr.h"
+#include "Renderer/Settings.h"
 
 class FVkDescriptorSet;
 class FVkDescriptorSetLayout;
-class PVulkanShader;
+class FVkShader;
+class FVkImage;
+class FVkBuffer;
 
 struct FVkPipelineLayoutCreateInfo
 {
@@ -15,6 +16,8 @@ struct FVkPipelineLayoutCreateInfo
 struct FVkPipelineLayoutInfo
 {
 	VkPipelineLayout Handle;
+
+	TArray<FVkDescriptorSetLayout*> DescriptorSetLayout;
 };
 
 class FVkPipelineLayout
@@ -23,18 +26,21 @@ public:
 	FVkPipelineLayoutInfo Info;
 
 	void Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo);
+	void Shutdown();
 };
 
 struct FVkPipelineCreateInfo
 {
-	TSharedPtr<FVkPipelineLayout> PipelineLayout;
-
-	TArray<TSharedPtr<PVulkanShader>> Shaders;
+	FVkPipelineLayout* PipelineLayout;
+	
+	TArray<FVkShader*> Shaders;
 };
 
 struct FVkPipelineInfo
 {
-	VkPipeline Handle;
+	VkPipeline 									Handle;
+	
+	TArray<FVkDescriptorSet*> 					DescriptorSet					[CONCURRENT_FRAME_COUNT];
 };
 
 class FVkPipeline
@@ -43,4 +49,5 @@ public:
 	FVkPipelineInfo Info;
 
 	void Initialize(FVkPipelineCreateInfo& CreateInfo);
+	void Shutdown();
 };

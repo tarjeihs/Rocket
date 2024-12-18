@@ -48,7 +48,7 @@ void PVulkanDevice::Init()
 		std::vector<VkExtensionProperties> AvailableExtensions(ExtensionCount);
 		vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
 
-		bool bExtensionSupport = std::all_of(GetRHI()->Extensions.PhysicalDeviceExtensions.begin(), GetRHI()->Extensions.PhysicalDeviceExtensions.end(), [&AvailableExtensions](const std::string& RequiredExtension)
+		bool bExtensionSupport = std::all_of(GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.begin(), GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.end(), [&AvailableExtensions](const std::string& RequiredExtension)
 		{
 			return std::any_of(AvailableExtensions.begin(), AvailableExtensions.end(), [&RequiredExtension](const VkExtensionProperties& Extension)
 			{
@@ -150,10 +150,10 @@ void PVulkanDevice::Init()
 	DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
 	DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
 	DeviceCreateInfo.pNext = &Features_1_3;
-	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->Extensions.PhysicalDeviceExtensions.size());
-	DeviceCreateInfo.ppEnabledExtensionNames = GetRHI()->Extensions.PhysicalDeviceExtensions.data();
-	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetRHI()->Extensions.ValidationLayerExtensions.size());
-	DeviceCreateInfo.ppEnabledLayerNames = GetRHI()->Extensions.ValidationLayerExtensions.data();
+	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.size());
+	DeviceCreateInfo.ppEnabledExtensionNames = GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.data();
+	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetRHI()->ExtensionFamily.ValidationLayerExtensions.size());
+	DeviceCreateInfo.ppEnabledLayerNames = GetRHI()->ExtensionFamily.ValidationLayerExtensions.data();
 
 	VkResult Result = vkCreateDevice(GPU, &DeviceCreateInfo, nullptr, &Device);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create logical device.");

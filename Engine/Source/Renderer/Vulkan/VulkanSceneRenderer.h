@@ -3,19 +3,20 @@
 #include <functional>
 
 #include "Renderer/Common/Renderer.h"
+#include "VulkanRenderer.h"
 
 class PVulkanRenderGraph;
 class PVulkanRHI;
 class PVulkanFramePool;
-class PVulkanImage;
+class FVkImage;
 class PVulkanSwapchain;
 class PVulkanCommandBuffer;
 class PVulkanAllocator;
 
-class PVulkanSceneRenderer : public IRenderer
+class PVulkanForwardRenderer : public IRenderer
 {
 public:
-	PVulkanSceneRenderer()
+	PVulkanForwardRenderer()
 	{
 		Swapchain = nullptr;
 		DrawImage = nullptr;
@@ -30,8 +31,8 @@ public:
 
 	PVulkanAllocator* GetAllocator() const;
 	PVulkanSwapchain* GetSwapchain() const;
-	PVulkanImage* GetDrawImage() const;
-	PVulkanImage* GetDepthImage() const;
+	FVkImage* GetDrawImage() const;
+	FVkImage* GetDepthImage() const;
 	PVulkanRenderGraph* GetRenderGraph() const;
 	PVulkanRenderGraph* GetOverlayRenderGraph() const;
 	PVulkanFramePool* GetParallelFramePool() const;
@@ -41,8 +42,8 @@ public:
 private:
 	PVulkanAllocator* Allocator;
 	PVulkanSwapchain* Swapchain;
-	PVulkanImage* DrawImage;
-	PVulkanImage* DepthImage;
+	FVkImage* DrawImage; // TODO: Move into Swapchain. This is the final rendering output (color attachment image)
+	FVkImage* DepthImage;
 	PVulkanRenderGraph* RenderGraph;
 	PVulkanRenderGraph* OverlayRenderGraph;
 	PVulkanFramePool* ParallelFramePool;

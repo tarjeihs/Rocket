@@ -113,7 +113,7 @@ void PVulkanSwapchain::Init()
 	
 	for (size_t Index = 0; Index < ImageCount; ++Index)
 	{
-		PVulkanImage* Image = new PVulkanImage();
+		FVkImage* Image = new FVkImage();
 		Image->Init(SwapchainImageExtent, SwapchainSurfaceFormat.format);
 		Image->ApplyImage(QuerySwapchainImages[Index]);
 		Image->CreateImageView(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -125,7 +125,7 @@ void PVulkanSwapchain::Shutdown()
 {
 	while (SwapchainImages.size())
 	{
-		PVulkanImage* Image = SwapchainImages[0];
+		FVkImage* Image = SwapchainImages[0];
 		Image->DestroyImageView();
 
 		delete Image;
@@ -151,7 +151,7 @@ VkExtent2D PVulkanSwapchain::GetVkExtent() const
 	return SwapchainImageExtent;
 }
 
-const std::vector<PVulkanImage*>& PVulkanSwapchain::GetSwapchainImages() const
+const std::vector<FVkImage*>& PVulkanSwapchain::GetSwapchainImages() const
 {
 	return SwapchainImages;
 }

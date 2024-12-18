@@ -1,21 +1,9 @@
 #pragma once
 
-struct VkImage_T;
-struct VkImageView_T;
-struct VmaAllocation_T;
-typedef struct VkImage_T* VkImage;
-typedef struct VkImageView_T* VkImageView;
-typedef struct VmaAllocation_T* VmaAllocation;
-
-struct VkExtent2D;
-struct VkExtent3D;
-enum VkImageLayout;
-enum VkFormat;
-
 class PVulkanRHI;
 class PVulkanCommandBuffer;
 
-class PVulkanImage
+class FVkImage
 {
 public:
 	void Init(VkExtent2D Extent, VkFormat Format);

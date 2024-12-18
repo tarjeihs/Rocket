@@ -106,13 +106,13 @@ void FVkDescriptorSetLayout::Initialize(FVkDescriptorSetLayoutCreateInfo& Create
 	DescriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 	DescriptorSetLayoutCreateInfo.pNext = &DescriptorSetLayoutBindingExtraCreateInfo;
 
-	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &Info.DescriptorSetLayout);
+	VkResult Result = vkCreateDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetLayoutCreateInfo, nullptr, &Info.Handle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");	
 }
 
 void FVkDescriptorSetLayout::Destroy()
 {
-	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorSetLayout, nullptr);
+	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, nullptr);
 }
 
 void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
@@ -122,7 +122,7 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 	DescriptorSetAllocateInfo.pNext = nullptr;
 	DescriptorSetAllocateInfo.descriptorPool = CreateInfo.DescriptorPool->Info.DescriptorPool;
 	DescriptorSetAllocateInfo.descriptorSetCount = 1;
-	DescriptorSetAllocateInfo.pSetLayouts = &CreateInfo.DescriptorSetLayout->Info.DescriptorSetLayout;
+	DescriptorSetAllocateInfo.pSetLayouts = &CreateInfo.DescriptorSetLayout->Info.Handle;
 
 	VkResult Result = vkAllocateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorSetAllocateInfo, &Info.Handle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
@@ -130,9 +130,14 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 
 void FVkDescriptorSet::Destroy()
 {
+	for (SizeType Index = 0; Index < Info.Buffer.GetSize(); ++Index)
+	{
+		Info.Buffer[Index]->Free();
+	}
+	Info.DescriptorPool->Destroy();
 }
 
-void FVkDescriptorSet::WriteBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer)
+void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
 {
 	VkDescriptorBufferInfo DescriptorBufferInfo = {};
 	DescriptorBufferInfo.buffer = Buffer->Info.Handle;
@@ -150,21 +155,21 @@ void FVkDescriptorSet::WriteBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer)
 
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 
-	Info.Bindings.Add(Buffer);
+	Info.Buffer.Add(Buffer);
 }
 
-void FVkDescriptorSet::ReadBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer)
+void FVkDescriptorSet::ReadBuffer(uint32 Index, FVkBuffer*& Buffer)
 {
-	TSharedPtr<FVkBuffer> Result = Info.Bindings[Index];
-	if (Result.IsValid())
+	FVkBuffer* Result = Info.Buffer[Index];
+	if (Result)
 	{
 		Buffer = MoveTemp(Result);
 	}
 }
 
-void FVkDescriptorSet::Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout)
+void FVkDescriptorSet::Bind(FVkPipelineLayout* PipelineLayout)
 {
-	vkCmdBindDescriptorSets(GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
+	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
 }
 
 //void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBufferCreateInfo& CreateInfo)

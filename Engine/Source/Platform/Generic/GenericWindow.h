@@ -18,5 +18,6 @@ public:
 	virtual bool IsFocused() const override;
 	virtual void SetIsMinimized(bool bMinimized) override;
 	virtual void SetIsFocused(bool bFocused) override;
+	virtual void SetFocus(bool bFocus);
 	virtual void WaitEventOrTimeout(float TimeoutSeconds) override;
 };

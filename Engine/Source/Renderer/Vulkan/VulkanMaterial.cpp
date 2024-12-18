@@ -22,8 +22,6 @@ void PVulkanMaterial::Destroy()
 {
     //GraphicsPipeline->DestroyPipeline();
 
-    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-    for (const auto& FrameData : *FramePool)
     {
         //for (const auto& DescriptorSet : FrameData->GetMemory()->DescriptorSets)
         //{
@@ -34,9 +32,6 @@ void PVulkanMaterial::Destroy()
 
 void PVulkanMaterial::Bind() const
 {
-    PVulkanFramePool* FramePool = GetRHI()->GetSceneRenderer()->GetParallelFramePool();
-
-    std::vector<VkDescriptorSet> DescriptorSetData;
     //for (const auto& DescriptorSet : FramePool->GetCurrentFrame()->GetMemory()->DescriptorSets)
     //{
     //    //DescriptorSetData.push_back(DescriptorSet->GetVkDescriptorSet());
@@ -52,7 +47,7 @@ void PVulkanMaterial::Unbind() const
 void PVulkanMaterial::SetShader(IShader* Shader)
 {
     //GraphicsPipeline = new FVulkanPipeline();
-    //GraphicsPipeline->CreatePipeline(Cast<PVulkanShader>(Shader));
+    //GraphicsPipeline->CreatePipeline(Cast<FVkShader>(Shader));
 }
 
 void PVulkanMaterial::SetUniformValue(const uint32_t Set, const std::string& UniformName, const std::string& MemberName, glm::mat4 Value)

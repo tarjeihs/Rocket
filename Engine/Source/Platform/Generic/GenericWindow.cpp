@@ -4,6 +4,7 @@
 #include "Core/Assert.h"
 #include "Core/Input.h"
 #include "Core/Camera.h"
+#include "GLFW/glfw3.h"
 #include "Scene/Scene.h"
 #include "Renderer/VulkanRHI.h"
 
@@ -16,7 +17,7 @@ void PGenericWindow::CreateNativeWindow()
     RK_ASSERT(NativeWindow, "Failed to create GLFW window");
 
     glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
-
+	
 	glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
 	{
 		if (KeyCode == RK_KEY_ESCAPE)
@@ -57,13 +58,11 @@ void PGenericWindow::CreateNativeWindow()
 		if (Focused)
 		{
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
-
 			GetWindow()->SetIsFocused(true);
 		}
 		else 
 		{
 			GetWindow()->OnWindowFocusDelegate.Broadcast(Focused);
-
 			GetWindow()->SetIsFocused(false);
 		}
 	});
@@ -73,6 +72,9 @@ void PGenericWindow::CreateNativeWindow()
 		GetWindow()->GetWindowSpecification().PositionX = PositionX;
 		GetWindow()->GetWindowSpecification().PositionY = PositionY;
 	});
+
+	GetWindow()->OnWindowFocusDelegate.Broadcast(1);
+	GetWindow()->SetIsFocused(true);
 }
 
 void PGenericWindow::DestroyNativeWindow()
@@ -114,4 +116,9 @@ void PGenericWindow::WaitEventOrTimeout(float TimeoutSeconds)
 bool PGenericWindow::IsFocused() const
 {
     return bIsFocused;
+}
+
+void PGenericWindow::SetFocus(bool bFocus)
+{
+	glfwFocusWindow((GLFWwindow*)NativeWindow);
 }

@@ -3,33 +3,38 @@
 
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanAllocator.h"
+#include "Renderer/Vulkan/VulkanRenderer.h"
 
 void PVulkanRHI::Init()
 {
 #if VALIDATION_LAYER
-	Extensions.ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
-	Extensions.InstanceExtensions.push_back("VK_EXT_debug_utils");
+	ExtensionFamily.ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
+	ExtensionFamily.InstanceExtensions.push_back("VK_EXT_debug_utils");
 #endif
 
 	Instance = new PVulkanInstance();
 	Device = new PVulkanDevice();
-	SceneRenderer = new PVulkanSceneRenderer();
-	
+	Allocator = new PVulkanAllocator();
+	Renderer = new FVulkanForwardRenderer();
+
 	Instance->Init();
 	Device->Init();
-	SceneRenderer->Init();
+	Allocator->Init();
+	Renderer->Init();
 }
 
 void PVulkanRHI::Shutdown()
 {
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
-	SceneRenderer->Shutdown();
+	Renderer->Shutdown();
+	Allocator->Shutdown();
   	Device->Shutdown();
   	Instance->Shutdown();
 
-  	delete SceneRenderer;
+	delete Renderer;
+	delete Allocator;
 	delete Device;
 	delete Instance;
 }
@@ -38,25 +43,10 @@ void PVulkanRHI::Resize()
 {
 	vkDeviceWaitIdle(Device->GetVkDevice());
 
-	SceneRenderer->Resize();
+	Renderer->Resize();
 }
 
 void PVulkanRHI::Render()
 {
-	SceneRenderer->Render();
-}
-
-PVulkanInstance* PVulkanRHI::GetInstance() const
-{
-	return Instance;
-}
-
-PVulkanDevice* PVulkanRHI::GetDevice() const
-{
-	return Device;
-}
-
-PVulkanSceneRenderer* PVulkanRHI::GetSceneRenderer() const
-{
-	return SceneRenderer;
+	Renderer->Render();
 }

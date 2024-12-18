@@ -8,14 +8,13 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Renderer/Vulkan/VulkanSampler.h"
 
 void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
 {
-    VkExtent2D Extent = { Width, Height };
+    VkExtent2D Extent = { (uint32)Width, (uint32)Height };
     VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
     
-    Image = new PVulkanImage();
+    Image = new FVkImage();
     Image->Init(Extent, ImageFormat);  // Initialize the image with the extent and format
     Image->CreateImage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
@@ -23,11 +22,11 @@ void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
     StagingBuffer.Allocate(Width * Height * Channels);
 
     void* MappedData = nullptr;
-    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation, &MappedData);
+    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation, &MappedData);
     memcpy(MappedData, Data, Width * Height * Channels);
-    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation);
+    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation);
 
-    GetRHI()->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
+    GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
     {
         Image->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 

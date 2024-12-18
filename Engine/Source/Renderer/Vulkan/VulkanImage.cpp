@@ -6,14 +6,14 @@
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 
-void PVulkanImage::Init(VkExtent2D Extent, VkFormat Format)
+void FVkImage::Init(VkExtent2D Extent, VkFormat Format)
 {
 	ImageFormat = Format;
 	ImageExtent = Extent;
 	ImageExtent3D = { Extent.width, Extent.height, 1 };
 }
 
-void PVulkanImage::Reset() 
+void FVkImage::Reset() 
 {
 	ImageHandle = VK_NULL_HANDLE;
 	ImageViewHandle = VK_NULL_HANDLE;
@@ -23,7 +23,7 @@ void PVulkanImage::Reset()
 	ImageExtent3D = {};
 }
 
-void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
+void FVkImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
 {
 	VkImageCreateInfo ImageCreateInfo{};
 	ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -40,10 +40,10 @@ void PVulkanImage::CreateImage(VkImageUsageFlags ImageUsageFlags)
 	VmaAllocationCreateInfo ImageAllocationCreateInfo{};
 	ImageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	ImageAllocationCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vmaCreateImage(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
+	vmaCreateImage(GetRHI()->GetAllocator()->GetMemoryAllocator(), &ImageCreateInfo, &ImageAllocationCreateInfo, &ImageHandle, &MemoryAllocation, nullptr);
 }
 
-void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
+void FVkImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
 {
 	VkImageViewCreateInfo ImageViewCreateInfo{};
 	ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -64,29 +64,29 @@ void PVulkanImage::CreateImageView(VkImageAspectFlags ImageViewAspectFlags)
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 }
 
-void PVulkanImage::ApplyImage(VkImage Image)
+void FVkImage::ApplyImage(VkImage Image)
 {
 	RK_ASSERT(Image, "Passing an invalid or uninitialized pointer.");
 	ImageHandle = Image;
 }
 
-void PVulkanImage::ApplyImageView(VkImageView ImageView)
+void FVkImage::ApplyImageView(VkImageView ImageView)
 {
 	RK_ASSERT(ImageView, "Passing an invalid or uninitialized pointer.");
 	ImageViewHandle = ImageView;
 }
 
-void PVulkanImage::DestroyImage()
+void FVkImage::DestroyImage()
 {
-	vmaDestroyImage(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
+	vmaDestroyImage(GetRHI()->GetAllocator()->GetMemoryAllocator(), ImageHandle, MemoryAllocation);
 }
 
-void PVulkanImage::DestroyImageView()
+void FVkImage::DestroyImageView()
 {
 	vkDestroyImageView(GetRHI()->GetDevice()->GetVkDevice(), ImageViewHandle, nullptr);
 }
 
-void PVulkanImage::TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
+void FVkImage::TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout)
 {
 	VkImageSubresourceRange SubresourceRange{};
 	SubresourceRange.aspectMask = (NewLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -116,7 +116,7 @@ void PVulkanImage::TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, Vk
 	vkCmdPipelineBarrier2(CommandBuffer->GetVkCommandBuffer(), &DependencyInfo);
 }
 
-void PVulkanImage::CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
+void FVkImage::CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize)
 {
 	VkImageBlit2 ImageBlit{};
 	ImageBlit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
@@ -150,22 +150,22 @@ void PVulkanImage::CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage 
 	vkCmdBlitImage2(CommandBuffer->GetVkCommandBuffer(), &ImageBlitInfo);
 }
 
-VkImage PVulkanImage::GetVkImage() const
+VkImage FVkImage::GetVkImage() const
 {
 	return ImageHandle;
 }
 
-VkImageView PVulkanImage::GetVkImageView() const
+VkImageView FVkImage::GetVkImageView() const
 {
 	return ImageViewHandle;
 }
 
-VkExtent2D PVulkanImage::GetImageExtent2D() const
+VkExtent2D FVkImage::GetImageExtent2D() const
 {
 	return ImageExtent;
 }
 
-VkFormat PVulkanImage::GetVkFormat() const
+VkFormat FVkImage::GetVkFormat() const
 {
 	return ImageFormat;
 }

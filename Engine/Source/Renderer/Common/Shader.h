@@ -22,5 +22,5 @@ public:
 	virtual ~IShader() = default;
 
 	virtual void CreateShader(FShaderCreateInfo& CreateInfo) = 0;
-	virtual void DestroyShader() = 0;
+	virtual void Shutdown() = 0;
 };

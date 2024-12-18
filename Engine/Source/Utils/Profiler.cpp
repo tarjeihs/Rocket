@@ -7,7 +7,7 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
-struct SEvent
+struct FProfilerEvent
 {
     const char* Name;
     const char* Phase;
@@ -21,7 +21,7 @@ struct SEvent
     }
 };
 
-std::vector<SEvent> Timeline;
+std::vector<FProfilerEvent> Timeline;
 
 void PProfiler::Flush()
 {
@@ -30,7 +30,7 @@ void PProfiler::Flush()
     rapidjson::Document::AllocatorType& Allocator = Document.GetAllocator();
 
     rapidjson::Value TraceEvents(rapidjson::kArrayType);
-    for (const auto& Event : Timeline) 
+    for (const auto& Event : Timeline)
     {
         rapidjson::Value EventObject(rapidjson::kObjectType);
 
@@ -56,29 +56,29 @@ void PProfiler::Flush()
     Timeline.clear();
 }
 
-void PProfiler::StartEventBlock(const char* Name)
+void PProfiler::StartEventScope(const char* Name)
 {
     Timeline.emplace_back();
 
-    SEvent& EventData = Timeline.back();
+    FProfilerEvent& EventData = Timeline.back();
     EventData.Timestamp = static_cast<int64_t>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
     EventData.Name = Name;
     EventData.Phase = "B";
-    EventData.ProcessID = getpid();
+    EventData.ProcessID = _getpid();
 #if RK_PLATFORM_LINUX
     EventData.ThreadID = gettid();
 #endif
 }
 
-void PProfiler::EndEventBlock(const char* Name)
+void PProfiler::EndEventScope(const char* Name)
 {
     Timeline.emplace_back();
 
-    SEvent& EventData = Timeline.back();
+    FProfilerEvent& EventData = Timeline.back();
     EventData.Name = Name;
     EventData.Phase = "E";
     EventData.Timestamp = static_cast<int64_t>(GetEngine()->Time.GetElapsedTimeAsMicroseconds());
-    EventData.ProcessID = getpid();
+    EventData.ProcessID = _getpid();
 #if RK_PLATFORM_LINUX
     EventData.ThreadID = gettid();
 #endif

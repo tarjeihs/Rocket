@@ -70,7 +70,7 @@ void PVulkanOverlay::Init()
 	DescriptorPool = new FVkDescriptorPool();
 	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
 
-	VkFormat ColorAttachmentFormatPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSurfaceFormat().format;
+	VkFormat ColorAttachmentFormatPointer = GetRHI()->GetRenderer()->GetSwapchain()->GetSurfaceFormat().format;
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindow()->GetNativeWindow(), true);
@@ -92,66 +92,66 @@ void PVulkanOverlay::Init()
 	ImGui_ImplVulkan_Init(&ImGuiInitInfo);
 	ImGui_ImplVulkan_CreateFontsTexture();
 
-	GetRHI()->GetSceneRenderer()->GetOverlayRenderGraph()->AddCommand([&](PVulkanFrame* Frame) 
-	{
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::Begin("Metrics");
-
-		float deltaTime = GetEngine()->Timestep.GetDeltaTime();
-		float frameRate = 1.0f / deltaTime;
-
-		frameMetrics.AddFrameRate(frameRate);
-
-		ImGui::Text("Frame Rate Histogram (FPS):");
-		float avgFrameRate = frameMetrics.GetMovingAverage(30);
-		float maxFrameRate = frameMetrics.GetMaxFrameRate();
-		float maxScale = std::max(maxFrameRate, 120.0f);
-
-		ImGui::PlotHistogram("", frameMetrics.GetFrameRates(), frameMetrics.maxFrames, frameMetrics.currentFrame,
-		                     nullptr, 0.0f, maxScale, ImVec2(0, 50));
-
-		ImGui::Text("Current Frame Rate: %.1f FPS", frameRate);
-		ImGui::Text("Current Frame Time: %.3f ms", deltaTime * 1000.0f);
-		ImGui::Text("Moving Average Frame Rate: %.1f FPS", avgFrameRate);
-		ImGui::Text("Engine Time: %.3fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
-
-		ImGui::End();
-
-		OnRender.Broadcast();
-
-		ImGui::Render();
-
-		PVulkanImage* Image = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex];
-
-		VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
-		ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		ColorRenderingAttachmentAttachment.pNext = nullptr;
-		ColorRenderingAttachmentAttachment.imageView = Image->GetVkImageView();
-		ColorRenderingAttachmentAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		ColorRenderingAttachmentAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		ColorRenderingAttachmentAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-		VkRenderingInfo RenderingInfo = {};
-		RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		RenderingInfo.pNext = nullptr;
-		RenderingInfo.flags = 0;
-		RenderingInfo.renderArea.offset = { 0, 0 };
-		RenderingInfo.renderArea.extent = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkExtent();
-		RenderingInfo.layerCount = 1;
-		RenderingInfo.viewMask = 0;
-		RenderingInfo.colorAttachmentCount = 1;
-		RenderingInfo.pColorAttachments = &ColorRenderingAttachmentAttachment;
-		RenderingInfo.pDepthAttachment = nullptr;
-		RenderingInfo.pStencilAttachment = nullptr;
-		RenderingInfo.pNext = nullptr;
-
-		vkCmdBeginRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer(), &RenderingInfo);
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Frame->GetCommandBuffer()->GetVkCommandBuffer());
-		vkCmdEndRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer());	
-	});
+	//GetRHI()->GetSceneRenderer()->GetOverlayRenderGraph()->AddCommand([&](PVulkanFrame* Frame) 
+	//{
+	//	ImGui_ImplVulkan_NewFrame();
+	//	ImGui_ImplGlfw_NewFrame();
+	//	ImGui::NewFrame();
+//
+	//	ImGui::Begin("Metrics");
+//
+	//	float deltaTime = GetEngine()->Timestep.GetDeltaTime();
+	//	float frameRate = 1.0f / deltaTime;
+//
+	//	frameMetrics.AddFrameRate(frameRate);
+//
+	//	ImGui::Text("Frame Rate Histogram (FPS):");
+	//	float avgFrameRate = frameMetrics.GetMovingAverage(30);
+	//	float maxFrameRate = frameMetrics.GetMaxFrameRate();
+	//	float maxScale = std::max(maxFrameRate, 120.0f);
+//
+	//	ImGui::PlotHistogram("", frameMetrics.GetFrameRates(), frameMetrics.maxFrames, frameMetrics.currentFrame,
+	//	                     nullptr, 0.0f, maxScale, ImVec2(0, 50));
+//
+	//	ImGui::Text("Current Frame Rate: %.1f FPS", frameRate);
+	//	ImGui::Text("Current Frame Time: %.3f ms", deltaTime * 1000.0f);
+	//	ImGui::Text("Moving Average Frame Rate: %.1f FPS", avgFrameRate);
+	//	ImGui::Text("Engine Time: %.3fs", GetEngine()->Time.GetElapsedTimeAsSeconds());
+//
+	//	ImGui::End();
+//
+	//	OnRender.Broadcast();
+//
+	//	ImGui::Render();
+//
+	//	FVkImage* Image = GetRHI()->GetRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex];
+//
+	//	VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
+	//	ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	//	ColorRenderingAttachmentAttachment.pNext = nullptr;
+	//	ColorRenderingAttachmentAttachment.imageView = Image->GetVkImageView();
+	//	ColorRenderingAttachmentAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//	ColorRenderingAttachmentAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	//	ColorRenderingAttachmentAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+//
+	//	VkRenderingInfo RenderingInfo = {};
+	//	RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	//	RenderingInfo.pNext = nullptr;
+	//	RenderingInfo.flags = 0;
+	//	RenderingInfo.renderArea.offset = { 0, 0 };
+	//	RenderingInfo.renderArea.extent = GetRHI()->GetRenderer()->GetSwapchain()->GetVkExtent();
+	//	RenderingInfo.layerCount = 1;
+	//	RenderingInfo.viewMask = 0;
+	//	RenderingInfo.colorAttachmentCount = 1;
+	//	RenderingInfo.pColorAttachments = &ColorRenderingAttachmentAttachment;
+	//	RenderingInfo.pDepthAttachment = nullptr;
+	//	RenderingInfo.pStencilAttachment = nullptr;
+	//	RenderingInfo.pNext = nullptr;
+//
+	//	vkCmdBeginRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer(), &RenderingInfo);
+	//	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Frame->GetCommandBuffer()->GetVkCommandBuffer());
+	//	vkCmdEndRendering(Frame->GetCommandBuffer()->GetVkCommandBuffer());	
+	//});
 }
 
 void PVulkanOverlay::Shutdown()

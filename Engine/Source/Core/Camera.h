@@ -24,7 +24,7 @@ public:
     	Settings.ZFar = 100.0f;
 
 #if RK_DEBUG
-		GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
+		//GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
 #endif
 	}
 

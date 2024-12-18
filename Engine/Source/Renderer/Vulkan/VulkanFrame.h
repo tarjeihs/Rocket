@@ -92,5 +92,5 @@ private:
 	size_t FrameIndex;
 	size_t PoolSize;
 
-	friend class PVulkanSceneRenderer;
+	friend class PVulkanForwardRenderer;
 };

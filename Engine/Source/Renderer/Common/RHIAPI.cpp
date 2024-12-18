@@ -17,7 +17,7 @@ template<>
 struct TRHIAPI<IShader>
 {
 #if RK_RHI == VULKAN
-    using Type = PVulkanShader;
+    using Type = FVkShader;
 #endif
 };
 

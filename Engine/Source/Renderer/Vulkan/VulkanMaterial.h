@@ -4,7 +4,7 @@
 
 class FVulkanPipeline;
 class FVkDescriptorSet;
-class PVulkanShader;
+class FVkShader;
 
 class PVulkanMaterial : public IMaterial
 {

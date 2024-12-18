@@ -2,6 +2,7 @@
 #include "VulkanInstance.h"
 
 #include "Core/Window.h"
+#include "Renderer/VulkanRHI.h"
 
 namespace Utils
 {
@@ -43,7 +44,7 @@ void PVulkanInstance::Init()
 	// GLFW required Vulkan extensions
 	uint32_t GlfwExtensionCount = 0;
 	const char** GlfwExtensions = glfwGetRequiredInstanceExtensions(&GlfwExtensionCount);
-	GetRHI()->Extensions.InstanceExtensions.insert(GetRHI()->Extensions.InstanceExtensions.end(), GlfwExtensions, GlfwExtensions + GlfwExtensionCount);
+	GetRHI()->ExtensionFamily.InstanceExtensions.insert(GetRHI()->ExtensionFamily.InstanceExtensions.end(), GlfwExtensions, GlfwExtensions + GlfwExtensionCount);
 
 	VkApplicationInfo AppInfo{};
 	AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -62,10 +63,10 @@ void PVulkanInstance::Init()
 	VkInstanceCreateInfo InstanceCreateInfo{};
 	InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	InstanceCreateInfo.pApplicationInfo = &AppInfo;
-	InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->Extensions.InstanceExtensions.size());
-	InstanceCreateInfo.ppEnabledExtensionNames = GetRHI()->Extensions.InstanceExtensions.data();
-	InstanceCreateInfo.enabledLayerCount = GetRHI()->Extensions.ValidationLayerExtensions.size();
-	InstanceCreateInfo.ppEnabledLayerNames = GetRHI()->Extensions.ValidationLayerExtensions.data();
+	InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->ExtensionFamily.InstanceExtensions.size());
+	InstanceCreateInfo.ppEnabledExtensionNames = GetRHI()->ExtensionFamily.InstanceExtensions.data();
+	InstanceCreateInfo.enabledLayerCount = GetRHI()->ExtensionFamily.ValidationLayerExtensions.size();
+	InstanceCreateInfo.ppEnabledLayerNames = GetRHI()->ExtensionFamily.ValidationLayerExtensions.data();
 	InstanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugMessengerCreateInfo;
 
 	VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);

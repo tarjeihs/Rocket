@@ -1,21 +1,13 @@
 #pragma once
 
-struct VkInstance_T;
-struct VkSurfaceKHR_T;
-struct VkDebugUtilsMessengerEXT_T;
-
-typedef struct VkInstance_T* VkInstance;
-typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
-typedef struct VkDebugUtilsMessengerEXT_T* VkDebugUtilsMessengerEXT;
-
 class PVulkanInstance
 {
 public:
 	PVulkanInstance()
 	{		
-		Instance = nullptr;
-		Surface = nullptr;
-		DebugMessenger = nullptr;
+		Instance = VK_NULL_HANDLE;
+		Surface = VK_NULL_HANDLE;
+		DebugMessenger = VK_NULL_HANDLE;
 	}
 
 	void Init();

@@ -36,6 +36,7 @@
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_cross_containers.hpp>
 
+#include "EngineSettings.h"
 #include "Core/Assert.h"
 #include "Core/Engine.h"
 #include "Core/Window.h"
@@ -61,4 +62,3 @@
 #include "Types/UniquePtr.h"
 #include "EngineTypes.h"
 #include "EngineMacros.h"
-#include "EngineSettings.h"

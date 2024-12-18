@@ -1,12 +1,5 @@
 #pragma once
 
-struct VkCommandBuffer_T;
-struct VkCommandPool_T;
-
-typedef struct VkCommandBuffer_T* VkCommandBuffer;
-typedef struct VkCommandPool_T* VkCommandPool;
-typedef uint32_t VkCommandPoolCreateFlags;
-
 class PVulkanCommandPool
 {
 public:

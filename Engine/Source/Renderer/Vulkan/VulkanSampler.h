@@ -1,9 +1,5 @@
 #pragma once
 
-struct VkSampler_T;
-
-typedef VkSampler_T* VkSampler;
-
 class PVulkanSampler
 {
 public:

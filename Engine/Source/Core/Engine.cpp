@@ -5,8 +5,6 @@
 #include "Platform/Generic/GenericWindow.h"
 #include "Renderer/VulkanRHI.h"
 #include "Utils/Profiler.h"
-#include <chrono>
-#include <thread>
 
 PEngine* PEngine::GEngine = nullptr;
 
@@ -48,8 +46,6 @@ void PEngine::Run()
 		}
 
 		RHI->Render();
-
-		//std::this_thread::sleep_for(std::chrono::milliseconds(16));
 	}
 }
 

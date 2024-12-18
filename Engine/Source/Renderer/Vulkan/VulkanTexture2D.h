@@ -2,7 +2,7 @@
 
 #include "Renderer/Common/Texture2D.h"
 
-class PVulkanImage;
+class FVkImage;
 class PVulkanSampler;
 
 class PVulkanTexture2D : public ITexture2D
@@ -16,6 +16,6 @@ protected:
     int Height;
     int Channels;
 
-    PVulkanImage* Image;
+    FVkImage* Image;
     PVulkanSampler* Sampler;
 };

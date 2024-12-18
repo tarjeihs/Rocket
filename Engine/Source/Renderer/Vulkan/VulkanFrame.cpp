@@ -68,15 +68,15 @@ void PVulkanFrame::CreateFrame()
 	ObjectStorageBuffer->Initialize(StorageBufferCreateInfo);
 
 	FVkDescriptorSetCreateInfo StorageBufferDescriptorSetCreateInfo;
-	StorageBufferDescriptorSetCreateInfo.DescriptorPool = DescriptorPool;
-	StorageBufferDescriptorSetCreateInfo.DescriptorSetLayout = StorageBufferDescriptorSetLayout;
+	//StorageBufferDescriptorSetCreateInfo.DescriptorPool = DescriptorPool;
+	//StorageBufferDescriptorSetCreateInfo.DescriptorSetLayout = StorageBufferDescriptorSetLayout;
 
 	StorageBufferDescriptorSet = MakeUnique<FVkDescriptorSet>();	
 	StorageBufferDescriptorSet->Initialize(StorageBufferDescriptorSetCreateInfo);
-	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL, GlobalStorageBuffer);
-	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA, CameraStorageBuffer);
-	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL, MaterialStorageBuffer);
-	StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT, ObjectStorageBuffer);
+	//StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_GLOBAL, GlobalStorageBuffer);
+	//StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_CAMERA, CameraStorageBuffer);
+	//StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_MATERIAL, MaterialStorageBuffer);
+	//StorageBufferDescriptorSet->WriteBuffer(STORAGE_BUFFER_DESCRIPTOR_INDEX_OBJECT, ObjectStorageBuffer);
 }
 
 void PVulkanFrame::DestroyFrame()
@@ -92,7 +92,7 @@ void PVulkanFrame::BeginFrame()
 	PROFILE_FUNC_SCOPE("PVulkanFrame::BeginFrame")
 
 	vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence, VK_TRUE, UINT64_MAX);
-	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore, nullptr, &TransientFrameData.NextImageIndex);
+	//vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore, VK_NULL_HANDLE, &TransientFrameData.NextImageIndex);
 	vkResetFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence);
 	
 	CommandBuffer->ResetCommandBuffer();
@@ -131,11 +131,11 @@ void PVulkanFrame::EndFrame()
 	VkResult Result = vkQueueSubmit2(GetRHI()->GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, RenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
-	VkSwapchainKHR SwapchainPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain();
+	//VkSwapchainKHR SwapchainPointer = GetRHI()->GetSceneRenderer()->GetSwapchain()->GetVkSwapchain();
 	VkPresentInfoKHR PresentInfo = {};
 	PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	PresentInfo.pNext = nullptr;
-	PresentInfo.pSwapchains = &SwapchainPointer;
+	//PresentInfo.pSwapchains = &SwapchainPointer;
 	PresentInfo.swapchainCount = 1;
 	PresentInfo.pWaitSemaphores = &RenderSemaphore;
 	PresentInfo.waitSemaphoreCount = 1;
@@ -189,7 +189,7 @@ void PVulkanFramePool::CreateFramePool()
 
 	FVkPipelineLayoutCreateInfo GraphicsPipelineLayoutCreateInfo;
 	GraphicsPipelineLayoutCreateInfo.DescriptorSetLayouts = {
-		StorageBufferDescriptorSetLayout->Info.DescriptorSetLayout
+		StorageBufferDescriptorSetLayout->Info.Handle
 	};
 
 	GraphicsPipelineLayout = MakeShared<FVkPipelineLayout>();
@@ -207,15 +207,15 @@ void PVulkanFramePool::CreateFramePool()
     PixelShaderCreateInfo.Name = "Pixel";
     PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
     
-	TSharedPtr<PVulkanShader> DefaultLitVertexShader = MakeShared<PVulkanShader>();
+	TSharedPtr<FVkShader> DefaultLitVertexShader = MakeShared<FVkShader>();
 	DefaultLitVertexShader->CreateShader(ShaderCreateInfo);
 
-	TSharedPtr<PVulkanShader> DefaultLitPixelShader = MakeShared<PVulkanShader>();
+	TSharedPtr<FVkShader> DefaultLitPixelShader = MakeShared<FVkShader>();
 	DefaultLitPixelShader->CreateShader(PixelShaderCreateInfo);
 
 	FVkPipelineCreateInfo GraphicsPipelineCreateInfo;
-	GraphicsPipelineCreateInfo.PipelineLayout = GraphicsPipelineLayout;
-	GraphicsPipelineCreateInfo.Shaders = {DefaultLitVertexShader, DefaultLitPixelShader};
+	GraphicsPipelineCreateInfo.PipelineLayout = GraphicsPipelineLayout.Get();
+//	GraphicsPipelineCreateInfo.Shaders = {DefaultLitVertexShader, DefaultLitPixelShader};
 
 	GraphicsPipeline = MakeShared<FVkPipeline>();
 	GraphicsPipeline->Initialize(GraphicsPipelineCreateInfo);

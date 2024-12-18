@@ -1,8 +1,7 @@
 #pragma once
 
-class POverlay;
-
 class IRenderer 
 {
-    
+public:
+    virtual ~IRenderer() = default;
 };

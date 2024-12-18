@@ -57,7 +57,7 @@ struct FVkDescriptorSetLayoutCreateInfo
 
 struct FVkDescriptorSetLayoutInfo
 {
-    VkDescriptorSetLayout DescriptorSetLayout;
+    VkDescriptorSetLayout Handle;
 };
 
 class FVkDescriptorSetLayout
@@ -71,15 +71,16 @@ public:
 
 struct FVkDescriptorSetCreateInfo
 {
-    TSharedPtr<FVkDescriptorPool> DescriptorPool;
-    TSharedPtr<FVkDescriptorSetLayout> DescriptorSetLayout;
+    FVkDescriptorPool* DescriptorPool;
+    FVkDescriptorSetLayout* DescriptorSetLayout;
 };
 
 struct FVkDescriptorSetInfo
 {
     VkDescriptorSet Handle;
-
-    TArray<TSharedPtr<FVkBuffer>> Bindings;
+    FVkDescriptorPool* DescriptorPool;
+    TArray<FVkBuffer*> Buffer;
+    TArray<FVkImage*> Image;
 };
 
 class FVkDescriptorSet
@@ -90,8 +91,11 @@ public:
     void Initialize(FVkDescriptorSetCreateInfo& CreateInfo);
     void Destroy();
 
-    void WriteBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer);
-    void ReadBuffer(uint32 Index, TSharedPtr<FVkBuffer>& Buffer);
+    void WriteBuffer(uint32 Index, FVkBuffer* Buffer);
+    void ReadBuffer(uint32 Index, FVkBuffer*& Buffer);
 
-    void Bind(const TSharedPtr<FVkPipelineLayout>& PipelineLayout);
+    void WriteImage();
+    void ReadImage();
+
+    void Bind(FVkPipelineLayout* PipelineLayout);
 };

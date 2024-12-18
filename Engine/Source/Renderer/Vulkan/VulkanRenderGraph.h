@@ -2,17 +2,17 @@
 
 #include <functional>
 
-class PVulkanFrame;
+class PVulkanCommandBuffer;
 
 class PVulkanRenderGraph
 {
 public:
-    void AddCommand(std::function<void(PVulkanFrame*)>&& Func);
+    void AddCommand(std::function<void(PVulkanCommandBuffer*)>&& Func);
 
     void BeginRendering();
-    void Execute(PVulkanFrame* Frame);
+    void Execute(class PVulkanCommandBuffer* CommandBuffer);
     void EndRendering();
 
 private:
-    std::vector<std::function<void(PVulkanFrame*)>> Commands;
+    std::vector<std::function<void(PVulkanCommandBuffer*)>> Commands;
 };

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(Rocket)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -83,7 +83,7 @@ target_include_directories(Engine PRIVATE
 
 target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
 
-if(UNIX AND NOT APPLE)
+if(UNIX)
     target_link_libraries(Engine PUBLIC
         glfw
         Vulkan::Vulkan
@@ -92,10 +92,16 @@ if(UNIX AND NOT APPLE)
         spirv-cross-c 
         spirv-cross-core
     )
-else()
+    target_compile_definitions(Engine PRIVATE
+        RK_PLATFORM_LINUX
+    )
+elseif(WIN32)
     target_link_libraries(Engine PRIVATE
         glfw
         Vulkan::Vulkan
+    )
+    target_compile_definitions(Engine PRIVATE
+        RK_PLATFORM_WINDOWS
     )
 endif()
 
@@ -118,7 +124,6 @@ if(MSVC)
     set(CMAKE_EXE_LINKER_FLAGS_DIST "")
 
     target_compile_definitions(Engine PRIVATE
-        RK_PLATFORM_WINDOWS
         RK_BUILD_DLL
         RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )
@@ -126,7 +131,9 @@ else()
     # Non-MSVC compilers (GCC, Clang)
     target_compile_options(Engine PRIVATE -std=c++20)
 
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+    # -gdwarf required by Windows GDB debug information (symbols, breakpoints)
+    # -gcodeview required by Windows MSVS debug information (symbols, breakpoints)
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -gdwarf -gcodeview")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DIST "-O2 -DNDEBUG")
 
@@ -135,7 +142,6 @@ else()
     set(CMAKE_EXE_LINKER_FLAGS_DIST "")
 
     target_compile_definitions(Engine PRIVATE
-        RK_PLATFORM_LINUX
         RK_BUILD_DLL
         RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
     )

@@ -3,7 +3,6 @@
 
 #include "Format/GLTF.h"
 #include "Renderer/RHI.h"
-#include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -24,12 +23,12 @@ static constexpr size_t ImmediateFrameCount = 1;
 
 TSharedPtr<FVkMeshBuffer> MeshBuffer;
 
-void PVulkanSceneRenderer::Init()
+void PVulkanForwardRenderer::Init()
 {
 	Allocator = new PVulkanAllocator();
 	Swapchain = new PVulkanSwapchain();
-	DrawImage = new PVulkanImage();
-	DepthImage = new PVulkanImage();
+	DrawImage = new FVkImage();
+	DepthImage = new FVkImage();
 	RenderGraph = new PVulkanRenderGraph();
 	OverlayRenderGraph = new PVulkanRenderGraph();
 	ParallelFramePool = new PVulkanFramePool(DeferredFrameCount);
@@ -64,21 +63,6 @@ void PVulkanSceneRenderer::Init()
 		Frame->DescriptorSets.Insert("DSSSIO", DescriptorSetSSBO);
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	// TODO: Temporary testing
 
 	MeshBuffer = MakeShared<FVkMeshBuffer>();
@@ -91,33 +75,33 @@ void PVulkanSceneRenderer::Init()
 		MeshBuffer->AddData(MeshData.Vertices, MeshData.Indices);
 	}
 
-	RenderGraph->AddCommand([&](PVulkanFrame* Frame) mutable
-	{
-		struct FCameraData
-		{
-			glm::mat4 View;
-			glm::mat4 Projection;
-		} CameraData;
-
-		CameraData.Projection = GetScene()->GetCamera()->GetProjectionMatrix();
-		CameraData.View = GetScene()->GetCamera()->GetViewMatrix();
-		
-		Frame->GlobalStorageBuffer->Submit(&CameraData, sizeof(FCameraData), 0);
-	});
-
-	RenderGraph->AddCommand([&](PVulkanFrame* Frame)
-	{
-		VkDeviceSize offsets[] = { 0 };
-
-		vkCmdBindPipeline(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, ParallelFramePool->GraphicsPipeline->Info.Handle);
-		Frame->StorageBufferDescriptorSet->Bind(ParallelFramePool->GraphicsPipelineLayout);
-		vkCmdBindVertexBuffers(Frame->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &MeshBuffer->VertexBuffer->Info.Handle, offsets);
-		vkCmdBindIndexBuffer(Frame->GetCommandBuffer()->GetVkCommandBuffer(), MeshBuffer->IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
-		MeshBuffer->DrawIndirect(Frame->GetCommandBuffer());
-	});
+	//RenderGraph->AddCommand([&](PVulkanFrame* Frame) mutable
+	//{
+	//	struct FCameraData
+	//	{
+	//		glm::mat4 View;
+	//		glm::mat4 Projection;
+	//	} CameraData;
+//
+	//	CameraData.Projection = GetScene()->GetCamera()->GetProjectionMatrix();
+	//	CameraData.View = GetScene()->GetCamera()->GetViewMatrix();
+	//	
+	//	Frame->GlobalStorageBuffer->Submit(&CameraData, sizeof(FCameraData), 0);
+	//});
+//
+	//RenderGraph->AddCommand([&](PVulkanFrame* Frame)
+	//{
+	//	VkDeviceSize offsets[] = { 0 };
+	//
+	//	vkCmdBindPipeline(Frame->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, ParallelFramePool->GraphicsPipeline->Info.Handle);
+	//	Frame->StorageBufferDescriptorSet->Bind(ParallelFramePool->GraphicsPipelineLayout);
+	//	vkCmdBindVertexBuffers(Frame->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &MeshBuffer->VertexBuffer->Info.Handle, offsets);
+	//	vkCmdBindIndexBuffer(Frame->GetCommandBuffer()->GetVkCommandBuffer(), MeshBuffer->IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
+	//	MeshBuffer->DrawIndirect(Frame->GetCommandBuffer());
+	//});
 }
 
-void PVulkanSceneRenderer::Shutdown()
+void PVulkanForwardRenderer::Shutdown()
 {
 	GOverlay->Shutdown();
 	ParallelFramePool->FreeFramePool();
@@ -140,7 +124,7 @@ void PVulkanSceneRenderer::Shutdown()
 	GOverlay = nullptr;
 }
 
-void PVulkanSceneRenderer::Resize()
+void PVulkanForwardRenderer::Resize()
 {
 	Swapchain->Shutdown();
 	Swapchain->Init();
@@ -160,7 +144,7 @@ void PVulkanSceneRenderer::Resize()
 	DepthImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);	
 }
 
-void PVulkanSceneRenderer::Render()
+void PVulkanForwardRenderer::Render()
 {
 	PROFILE_FUNC_SCOPE("PVulkanSceneRenderer::Render")
 	
@@ -170,56 +154,56 @@ void PVulkanSceneRenderer::Render()
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	DepthImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 	RenderGraph->BeginRendering();
-	RenderGraph->Execute(Frame);
+	//RenderGraph->Execute(Frame);
 	RenderGraph->EndRendering();
 	DrawImage->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 	Swapchain->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	DrawImage->CopyImageRegion(Frame->GetCommandBuffer(), Swapchain->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex]->GetVkImage(), DrawImage->GetImageExtent2D(), Swapchain->GetVkExtent());
-	OverlayRenderGraph->Execute(Frame);
+	//OverlayRenderGraph->Execute(Frame);
 	Swapchain->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex]->TransitionImageLayout(Frame->GetCommandBuffer(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 	Frame->EndFrame();
 	ParallelFramePool->FrameIndex++;
 }
 
-PVulkanAllocator* PVulkanSceneRenderer::GetAllocator() const
+PVulkanAllocator* PVulkanForwardRenderer::GetAllocator() const
 {
 	return Allocator;
 }
 
-PVulkanSwapchain* PVulkanSceneRenderer::GetSwapchain() const
+PVulkanSwapchain* PVulkanForwardRenderer::GetSwapchain() const
 {
 	return Swapchain;
 }
 
-PVulkanImage* PVulkanSceneRenderer::GetDrawImage() const
+FVkImage* PVulkanForwardRenderer::GetDrawImage() const
 {
 	return DrawImage;
 }
 
-PVulkanImage* PVulkanSceneRenderer::GetDepthImage() const
+FVkImage* PVulkanForwardRenderer::GetDepthImage() const
 {
     return DepthImage;
 }
 
-PVulkanRenderGraph* PVulkanSceneRenderer::GetRenderGraph() const
+PVulkanRenderGraph* PVulkanForwardRenderer::GetRenderGraph() const
 {
 	return RenderGraph;
 }
 
-PVulkanRenderGraph* PVulkanSceneRenderer::GetOverlayRenderGraph() const
+PVulkanRenderGraph* PVulkanForwardRenderer::GetOverlayRenderGraph() const
 {
 	return OverlayRenderGraph;
 }
 
-PVulkanFramePool* PVulkanSceneRenderer::GetParallelFramePool() const
+PVulkanFramePool* PVulkanForwardRenderer::GetParallelFramePool() const
 {
 	return ParallelFramePool;
 }
 
 // TODO: Move to Command
-void PVulkanSceneRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer* CommandBuffer)>&& Func)
+void PVulkanForwardRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer* CommandBuffer)>&& Func)
 {
 	VkCommandBuffer CommandBufferPointer = ImmediateFramePool->Pool[0]->GetCommandBuffer()->GetVkCommandBuffer();
 

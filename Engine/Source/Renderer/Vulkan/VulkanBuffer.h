@@ -4,14 +4,6 @@
 #include "EngineTypes.h"
 #include "Renderer/Common/Buffer.h"
 
-struct VkBuffer_T;
-struct VmaAllocation_T;
-struct VmaAllocationInfo;
-
-typedef VkBuffer_T* VkBuffer;
-typedef VmaAllocation_T* VmaAllocation;
-typedef uint32_t VkBufferUsageFlags;
-
 enum VmaMemoryUsage;
 
 class PVulkanBuffer : public IBuffer
@@ -65,4 +57,5 @@ public:
 
     void Initialize(FVkBufferCreateInfo& CreateInfo);
     void Submit(const void* Data, size_t Size, size_t Offset = 0);
+    void Free();
 };

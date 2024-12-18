@@ -58,7 +58,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	Result = Compiler->Compile(
 		SourceBlob.Get(),
 		std::wstring(Path.begin(), Path.end()).c_str(),
-		std::wstring(Entrypoint.begin(), Entrypoint.end()).c_str(),
+		L"main",
 		TargetProfileW.c_str(),
 		Arguments.data(),
 		Arguments.size(),

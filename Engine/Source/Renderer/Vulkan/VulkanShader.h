@@ -8,11 +8,11 @@ struct FVulkanShaderInfo
 	VkShaderStageFlagBits Stage;
 };
 
-class PVulkanShader : public IShader
+class FVkShader : public IShader
 {
 public:
 	FVulkanShaderInfo Info;
 
 	virtual void CreateShader(FShaderCreateInfo& CreateInfo) override;
-	virtual void DestroyShader() override;
+	virtual void Shutdown() override;
 };

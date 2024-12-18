@@ -20,7 +20,7 @@ namespace Utils
 	}
 }
 
-void PVulkanShader::CreateShader(FShaderCreateInfo& CreateInfo)
+void FVkShader::CreateShader(FShaderCreateInfo& CreateInfo)
 {
 	std::string VS = "vs_6_0";
 	std::string PS = "ps_6_0";
@@ -116,7 +116,7 @@ void PVulkanShader::CreateShader(FShaderCreateInfo& CreateInfo)
 	//DescriptorSet->CreateDescriptorSet(StorageImageDescriptorSetCreateInfo);
 }
 
-void PVulkanShader::DestroyShader()
+void FVkShader::Shutdown()
 {
 	vkDestroyShaderModule(GetRHI()->GetDevice()->GetVkDevice(), Info.Module, nullptr);
 }

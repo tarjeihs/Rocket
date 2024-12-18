@@ -96,23 +96,23 @@ struct FVkMeshBuffer
 
         // Write Vertex Data to Staging Buffer
         void* VertexData = nullptr;
-        vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation, &VertexData);
+        vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation, &VertexData);
         memcpy((char*)VertexData + StagingVertexOffset, Vertices.data(), VertexBufferSize);
-        vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation);
+        vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation);
 
         // Write Index Data to Staging Buffer
         void* IndexData = nullptr;
-        vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation, &IndexData);
+        vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation, &IndexData);
         memcpy((char*)IndexData + StagingIndexOffset, Indices.data(), IndexBufferSize);
-        vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation);
+        vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation);
 
         // Write Indirect Command to Staging Buffer
         void* IndirectData = nullptr;
-        vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation, &IndirectData);
+        vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation, &IndirectData);
         memcpy((char*)IndirectData + StagingIndirectOffset, &IndirectCommand, sizeof(IndirectCommand));
-        vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation);
+        vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation);
 
-        GetRHI()->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
+        GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
         {
             VkBufferCopy VertexBufferCopy = {};
             VertexBufferCopy.srcOffset = StagingVertexOffset;
@@ -150,5 +150,15 @@ struct FVkMeshBuffer
     void DrawIndirect(PVulkanCommandBuffer* CommandBuffer)
     {
         vkCmdDrawIndexedIndirect(CommandBuffer->GetVkCommandBuffer(), IndirectBuffer->Info.Handle, 0, Metadatas.GetSize(), sizeof(VkDrawIndexedIndirectCommand));
+    }
+
+    void Shutdown() 
+    {
+        StagingIndexBuffer->Free();
+        StagingVertexBuffer->Free();
+        StagingIndirectBuffer->Free();
+        VertexBuffer->Free();
+        IndirectBuffer->Free();
+        IndexBuffer->Free();
     }
 };

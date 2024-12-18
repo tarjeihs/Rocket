@@ -5,28 +5,28 @@ class PProfiler
 public:
     static void Flush();
 
-    static void StartEventBlock(const char* Name);
-    static void EndEventBlock(const char* Name);
+    static void StartEventScope(const char* Name);
+    static void EndEventScope(const char* Name);
 };
 
-struct SProfilerScope
+struct FProfilerEventScope
 {
-    SProfilerScope(const char* InName)
+    FProfilerEventScope(const char* InName)
         : Name(InName)
     {
-        PProfiler::StartEventBlock(Name);
+        PProfiler::StartEventScope(Name);
     }
 
-    ~SProfilerScope()
+    ~FProfilerEventScope()
     {
-        PProfiler::EndEventBlock(Name);
+        PProfiler::EndEventScope(Name);
     }
 
     const char* Name;
 };
 
 #if RK_PROFILE
-    #define PROFILE_FUNC_SCOPE(Name) SProfilerScope _PROFILE_FUNC_SCOPE_(Name);
+    #define PROFILE_FUNC_SCOPE(Name)    FProfilerEventScope      _PROFILE_FUNC_SCOPE_(Name);
 #else
     #define PROFILE_FUNC_SCOPE(...)
 #endif
