@@ -210,6 +210,11 @@ public:
         return Capacity;
     }
 
+    bool IsEmpty() const
+    {
+        return Size == 0;
+    }
+
     TElement& operator[](size_t Index)
     {
         RK_ASSERT(Index < Size, "Index is out of bounds");

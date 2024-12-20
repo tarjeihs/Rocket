@@ -13,7 +13,6 @@
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanOverlay.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
-#include "Scene/Scene.h"
 #include "Types/SharedPtr.h"
 
 // 3 swapchain images, 2 frames.
@@ -21,7 +20,7 @@
 static constexpr size_t DeferredFrameCount = 2;
 static constexpr size_t ImmediateFrameCount = 1;
 
-TSharedPtr<FVkMeshBuffer> MeshBuffer;
+TSharedPtr<FVkSceneBuffer> MeshBuffer;
 
 void PVulkanForwardRenderer::Init()
 {
@@ -59,13 +58,13 @@ void PVulkanForwardRenderer::Init()
 	{
 		FVkDescriptorSet DescriptorSetSSBO;
 
-		Frame->DescriptorSets.Insert("DSSSBO", DescriptorSetSSBO);
-		Frame->DescriptorSets.Insert("DSSSIO", DescriptorSetSSBO);
+		//Frame->DescriptorSets.Insert("DSSSBO", DescriptorSetSSBO);
+		//Frame->DescriptorSets.Insert("DSSSIO", DescriptorSetSSBO);
 	}
 
 	// TODO: Temporary testing
 
-	MeshBuffer = MakeShared<FVkMeshBuffer>();
+	MeshBuffer = MakeShared<FVkSceneBuffer>();
 	MeshBuffer->Initialize();
 
 	SMeshBinaryData MeshData;

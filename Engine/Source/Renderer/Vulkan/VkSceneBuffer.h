@@ -2,9 +2,10 @@
 
 #include "EnginePCH.h"
 #include "Renderer/Common/Mesh.h"
+#include "Renderer/Vulkan/VkRenderer.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
+#include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Types/SharedPtr.h"
 
@@ -16,7 +17,7 @@ struct FVkMesh : public IMesh
     SizeType IndexCount;
 };
 
-struct FVkMeshBuffer
+struct FVkSceneBuffer
 {
     TSharedPtr<FVkBuffer> VertexBuffer;
     TSharedPtr<FVkBuffer> IndexBuffer;

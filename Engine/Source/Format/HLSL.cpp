@@ -12,8 +12,6 @@
 	#include <dxc/dxcapi.h>
 #endif
 
-#include "Renderer/Common/Shader.h"
-
 #ifdef RK_PLATFORM_WINDOWS
 FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint, const std::string& TargetProfile)
 {
@@ -58,7 +56,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	Result = Compiler->Compile(
 		SourceBlob.Get(),
 		std::wstring(Path.begin(), Path.end()).c_str(),
-		L"main",
+		std::wstring(Entrypoint.begin(), Entrypoint.end()).c_str(),
 		TargetProfileW.c_str(),
 		Arguments.data(),
 		Arguments.size(),

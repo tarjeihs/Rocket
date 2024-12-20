@@ -159,7 +159,7 @@ public:
     class FIterator
     {
     public:
-        explicit FIterator(TDoubleLinkedListNode<TElement>* InPointer)
+        explicit FIterator(TDoubleLinkedListNode<TElement>* InPointer = nullptr)
             : Pointer(InPointer)
         {
         }
@@ -210,7 +210,6 @@ public:
             return Pointer != Other.Pointer;
         }
 
-    private:
         TDoubleLinkedListNode<TElement>* Pointer;
     };
 
@@ -232,6 +231,84 @@ public:
     FIterator rend()
     {
         return FIterator(nullptr);
+    }
+
+    class FConstIterator
+    {
+    public:
+        explicit FConstIterator(const TDoubleLinkedListNode<TElement>* InPointer = nullptr)
+            : Pointer(InPointer)
+        {
+        }
+
+        const TElement& operator*() const
+        {
+            return Pointer->Element;
+        }
+
+        const TElement* operator->() const
+        {
+            return &Pointer->Element;
+        }
+
+        FConstIterator& operator++() // Prefix increment
+        {
+            Pointer = Pointer->Next;
+            return *this;
+        }
+
+        FConstIterator operator++(int32_t) // Postfix increment
+        {
+            FConstIterator Temp = *this;
+            ++(*this);
+            return Temp;
+        }
+
+        FConstIterator& operator--() // Prefix decrement
+        {
+            Pointer = Pointer->Previous;
+            return *this;
+        }
+
+        FConstIterator operator--(int32_t) // Postfix decrement
+        {
+            FConstIterator Temp = *this;
+            --(*this);
+            return Temp;
+        }
+
+        bool operator==(const FConstIterator& Other) const
+        {
+            return Pointer == Other.Pointer;
+        }
+
+        bool operator!=(const FConstIterator& Other) const
+        {
+            return Pointer != Other.Pointer;
+        }
+
+    private:
+        const TDoubleLinkedListNode<TElement>* Pointer;
+    };
+
+    FConstIterator begin() const
+    {
+        return FConstIterator(Head);
+    }
+
+    FConstIterator end() const
+    {
+        return FConstIterator(nullptr);
+    }
+
+    FConstIterator rbegin() const
+    {
+        return FConstIterator(Tail);
+    }
+
+    FConstIterator rend() const
+    {
+        return FConstIterator(nullptr);
     }
 
 private:

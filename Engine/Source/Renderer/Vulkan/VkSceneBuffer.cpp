@@ -1,7 +1,7 @@
 #include "EnginePCH.h"
-#include "VulkanMesh.h"
+#include "VkSceneBuffer.h"
 
-//void PVulkanMesh::CreateMesh(const SMeshBinaryData& MeshBinaryObject)
+//void PVkSceneBuffer::CreateMesh(const SMeshBinaryData& MeshBinaryObject)
 //{
 //    const size_t VertexBufferSize = MeshBinaryObject.Vertices.size() * sizeof(SVertex);
 //    const size_t IndexBufferSize = MeshBinaryObject.Indices.size() * sizeof(uint32_t);
@@ -44,7 +44,7 @@
 //    });
 //}
 //
-//void PVulkanMesh::CreateDynamicMesh(const SMeshBinaryData& MeshBinaryObject) 
+//void PVkSceneBuffer::CreateDynamicMesh(const SMeshBinaryData& MeshBinaryObject) 
 //{
 //    const size_t VertexBufferSize = MeshBinaryObject.Vertices.size() * sizeof(SVertex);
 //    const size_t IndexBufferSize = MeshBinaryObject.Indices.size() * sizeof(uint32_t);
@@ -72,7 +72,7 @@
 //    DeviceAddress64 = vkGetBufferDeviceAddress(GetRHI()->GetDevice()->GetVkDevice(), &BufferDeviceAddressInfo);
 //}
 //
-//void PVulkanMesh::UpdateDynamicMesh(const SMeshBinaryData& MeshData)
+//void PVkSceneBuffer::UpdateDynamicMesh(const SMeshBinaryData& MeshData)
 //{
 //    const size_t VertexBufferSize = MeshData.Vertices.size() * sizeof(SVertex);
 //    const size_t IndexBufferSize = MeshData.Indices.size() * sizeof(uint32_t);
@@ -100,9 +100,9 @@
 //    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), IndexBuffer->Allocation);
 //}
 //
-//void PVulkanMesh::DrawIndirectInstanced(uint32_t ID)
+//void PVkSceneBuffer::DrawIndirectInstanced(uint32_t ID)
 //{
-//    PROFILE_FUNC_SCOPE("PVulkanMesh::DrawIndirectInstanced")
+//    PROFILE_FUNC_SCOPE("PVkSceneBuffer::DrawIndirectInstanced")
 //
 //    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
 //
@@ -120,7 +120,7 @@
 //}
 //
 //
-//void PVulkanMesh::Destroy()
+//void PVkSceneBuffer::Destroy()
 //{
 //    VertexBuffer->Free();
 //    IndexBuffer->Free();
@@ -128,23 +128,23 @@
 //    Material->Destroy();
 //}
 //
-//IMaterial* PVulkanMesh::GetMaterial() const
+//IMaterial* PVkSceneBuffer::GetMaterial() const
 //{
 //    return Material;
 //}
 //
 //
-//void PVulkanMesh::SetMaterial(IMaterial* NewMaterial)
+//void PVkSceneBuffer::SetMaterial(IMaterial* NewMaterial)
 //{
 //    Material = static_cast<PVulkanMaterial*>(NewMaterial);
 //}
 //
-//void PVulkanMesh::SetVisibility(EVisibilityMode Mode)
+//void PVkSceneBuffer::SetVisibility(EVisibilityMode Mode)
 //{
 //    VisibilityMode = Mode;
 //}
 //
-//EVisibilityMode PVulkanMesh::GetVisibility() const
+//EVisibilityMode PVkSceneBuffer::GetVisibility() const
 //{
 //    return VisibilityMode;
 //}

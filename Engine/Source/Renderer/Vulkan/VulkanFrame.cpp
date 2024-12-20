@@ -188,30 +188,30 @@ void PVulkanFramePool::CreateFramePool()
 	StorageBufferDescriptorSetLayout->Initialize(StorageBufferDescriptorSetLayoutCreateInfo);
 
 	FVkPipelineLayoutCreateInfo GraphicsPipelineLayoutCreateInfo;
-	GraphicsPipelineLayoutCreateInfo.DescriptorSetLayouts = {
-		StorageBufferDescriptorSetLayout->Info.Handle
-	};
+	//GraphicsPipelineLayoutCreateInfo.DescriptorSetLayouts = {
+	//	StorageBufferDescriptorSetLayout->Info.Handle
+	//};
 
 	GraphicsPipelineLayout = MakeShared<FVkPipelineLayout>();
 	GraphicsPipelineLayout->Initialize(GraphicsPipelineLayoutCreateInfo);
 
     FShaderCreateInfo ShaderCreateInfo;
-    ShaderCreateInfo.Entrypoint = "main";
-    ShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Vertex.hlsl";
-    ShaderCreateInfo.Name = "Vertex";
-    ShaderCreateInfo.Stage = EShaderStage::Vertex;
-
-	FShaderCreateInfo PixelShaderCreateInfo;
-    PixelShaderCreateInfo.Entrypoint = "main";
-    PixelShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Pixel.hlsl";
-    PixelShaderCreateInfo.Name = "Pixel";
-    PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
+    //ShaderCreateInfo.Entrypoint = "main";
+    //ShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Vertex.hlsl";
+    //ShaderCreateInfo.Name = "Vertex";
+    //ShaderCreateInfo.Stage = EShaderStage::Vertex;
+//
+	//FShaderCreateInfo PixelShaderCreateInfo;
+    //PixelShaderCreateInfo.Entrypoint = "main";
+    //PixelShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/Pixel.hlsl";
+    //PixelShaderCreateInfo.Name = "Pixel";
+    //PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
     
-	TSharedPtr<FVkShader> DefaultLitVertexShader = MakeShared<FVkShader>();
-	DefaultLitVertexShader->CreateShader(ShaderCreateInfo);
-
-	TSharedPtr<FVkShader> DefaultLitPixelShader = MakeShared<FVkShader>();
-	DefaultLitPixelShader->CreateShader(PixelShaderCreateInfo);
+	//TSharedPtr<FVkShader> DefaultLitVertexShader = MakeShared<FVkShader>();
+	//DefaultLitVertexShader->CreateShader(ShaderCreateInfo);
+//
+	//TSharedPtr<FVkShader> DefaultLitPixelShader = MakeShared<FVkShader>();
+	//DefaultLitPixelShader->CreateShader(PixelShaderCreateInfo);
 
 	FVkPipelineCreateInfo GraphicsPipelineCreateInfo;
 	GraphicsPipelineCreateInfo.PipelineLayout = GraphicsPipelineLayout.Get();

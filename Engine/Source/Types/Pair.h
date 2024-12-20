@@ -6,6 +6,11 @@ struct TPair
     TKey Key;
     TValue Value;
 
+    TPair()
+        : Key(), Value()
+    {
+    }
+
     TPair(const TKey& InKey, const TValue& InValue)
         : Key(InKey), Value(InValue)
     {

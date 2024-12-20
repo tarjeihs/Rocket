@@ -2,7 +2,7 @@
 #include "RHIAPI.h"
 
 #include "Renderer/Vulkan/VulkanMaterial.h"
-#include "Renderer/Vulkan/VulkanMesh.h"
+#include "Renderer/Vulkan/VkSceneBuffer.h"
 #include "Renderer/Vulkan/VulkanShader.h"
 
 template<>

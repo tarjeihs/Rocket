@@ -6,7 +6,7 @@
 #include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
-#include "Renderer/Vulkan/VulkanMesh.h"
+#include "Renderer/Vulkan/VkSceneBuffer.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanShader.h"

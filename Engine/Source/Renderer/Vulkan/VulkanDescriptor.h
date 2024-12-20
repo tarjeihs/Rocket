@@ -1,9 +1,9 @@
 #pragma once
 
 #include "EngineTypes.h"
+#include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
-#include "Types/SharedPtr.h"
 
 class PVulkanRHI;
 class PVulkanFrame;
@@ -71,16 +71,15 @@ public:
 
 struct FVkDescriptorSetCreateInfo
 {
-    FVkDescriptorPool* DescriptorPool;
-    FVkDescriptorSetLayout* DescriptorSetLayout;
+    FVkDescriptorPool*                  DescriptorPool;
+    FVkDescriptorSetLayout*             DescriptorSetLayout;
 };
 
 struct FVkDescriptorSetInfo
 {
-    VkDescriptorSet Handle;
-    FVkDescriptorPool* DescriptorPool;
-    TArray<FVkBuffer*> Buffer;
-    TArray<FVkImage*> Image;
+    VkDescriptorSet                     Handle;
+    TArray<FVkBuffer**>                 Buffers;
+    TArray<FVkImage*>                   Images;
 };
 
 class FVkDescriptorSet

@@ -4,7 +4,7 @@
 
 #include "EngineTypes.h"
 #include "Types/Array.h"
-#include "Types/DoubleLinkedList.h"
+#include "Types/Optional.h"
 #include "Types/Pair.h"
 
 template<typename T>
@@ -43,51 +43,48 @@ template<typename TKey, typename TValue>
 class TMap
 {
 public:
-    using TBucket = TDoubleLinkedList<TPair<TKey, TValue>>;
+    using TPair = TPair<TKey, TValue>;
+    using TOptionalPair = TOptional<TPair>;
 
-    TMap(SizeType BucketSize = 16)
+    TMap(SizeType BucketSize = DefaultBucketSize)
     {
         Buckets.Resize(BucketSize);
 
         ElementCount = 0;
     }
 
+    ~TMap()
+    {
+        Clear();
+    }
+
     void Insert(const TKey& Key, const TValue& Value)
     {
         SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TBucket& Bucket = Buckets[BucketIndex];
-
-        for (auto& Pair : Bucket)
+        TOptionalPair& Pair = Buckets[BucketIndex];
+        
+        if (!Pair.IsValid())
         {
-            if (Pair.Key == Key)
+            Pair = TPair(Key, Value);
+            ++ElementCount;
+
+            if (static_cast<float>(ElementCount) / Buckets.GetSize() > 0.75f)
             {
-                Pair.Value = Value;
-                return;
+                Resize(Buckets.GetSize() * 2);
             }
-        }
-
-        Bucket.PushBack(TPair(Key, Value));
-        ++ElementCount;
-
-        if (static_cast<float>(ElementCount) / Buckets.GetSize() > 0.75f)
-        {
-            Resize(Buckets.GetSize() * 2);
         }
     }
 
     bool Remove(const TKey& Key)
     {
         SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TBucket& Bucket = Buckets[BucketIndex];
+        TOptionalPair& Pair = Buckets[BucketIndex];
 
-        for (auto It = Bucket.begin(); It != Bucket.end(); ++It)
+        if (Pair.IsValid() && Pair->Key == Key)
         {
-            if (It->Key == Key)
-            {
-                Bucket.Remove(*It);
-                --ElementCount;
-                return true;
-            }
+            Pair.Reset();
+            --ElementCount;
+            return true;
         }
         return false;
     }
@@ -95,39 +92,149 @@ public:
     TValue* Find(const TKey& Key)
     {
         SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TBucket& Bucket = Buckets[BucketIndex];
+        TOptionalPair& Pair = Buckets[BucketIndex];
 
-        for (auto& Pair : Bucket)
+        if (Pair.IsValid() && Pair->Key == Key)
         {
-            if (Pair.Key == Key)
-            {
-                return &Pair.Value;
-            }
+            return &Pair->Value;
         }
         return nullptr;
     }
 
     void Clear()
     {
-        for (auto& Bucket : Buckets)
+        Buckets.Clear();
+        Buckets.Resize(DefaultBucketSize);
+        ElementCount = 0;
+    }
+
+    class FIterator
+    {
+    public:
+        FIterator(typename TArray<TOptionalPair>::FIterator InCurrent, typename TArray<TOptionalPair>::FIterator InEnd) 
+            : Current(InCurrent), End(InEnd)
         {
-            Bucket.Clear();
         }
+
+        FIterator& operator++()
+        {
+            do 
+            {
+                ++Current;
+            } 
+            while (Current != End && !(*Current).IsValid());
+
+            return *this;
+        }
+
+        bool operator==(const FIterator& Other) const
+        {
+            return Current == Other.Current;
+        }
+
+        bool operator !=(const FIterator& Other) const
+        {
+            return Current != Other.Current;
+        }
+
+        TPair& operator*()
+        {
+            return **Current;
+        }
+
+        TPair* operator->()
+        {
+            return &(**Current);
+        }
+
+    private:
+        typename TArray<TOptionalPair>::FIterator Current;
+        typename TArray<TOptionalPair>::FIterator End;
+    };
+
+    class FConstIterator
+    {
+    public:
+        FConstIterator(typename TArray<TOptionalPair>::FConstIterator InCurrent, typename TArray<TOptionalPair>::FConstIterator InEnd)
+            : Current(InCurrent), End(InEnd)
+        {
+        }
+    
+        FConstIterator& operator++()
+        {
+            do
+            {
+                ++Current;
+            } while (Current != End && !(*Current).IsValid());
+    
+            return *this;
+        }
+    
+        bool operator==(const FConstIterator& Other) const
+        {
+            return Current == Other.Current;
+        }
+    
+        bool operator!=(const FConstIterator& Other) const
+        {
+            return Current != Other.Current;
+        }
+    
+        const TPair& operator*() const
+        {
+            return **Current;
+        }
+    
+        const TPair* operator->() const
+        {
+            return &(**Current);
+        }
+    
+    private:
+        typename TArray<TOptionalPair>::FConstIterator Current;
+        typename TArray<TOptionalPair>::FConstIterator End;
+    };
+
+    FIterator begin()
+    {
+        auto It = Buckets.begin();
+        while (It != Buckets.end() && !(*It).IsValid())
+        {
+            ++It;
+        }
+        return FIterator(It, Buckets.end());
+    }
+
+    FIterator end()
+    {
+        return FIterator(Buckets.end(), Buckets.end());
+    }
+
+    FConstIterator cbegin() const
+    {
+        auto It = Buckets.cbegin();
+        while (It != Buckets.cend() && !(*It).IsValid())
+        {
+            ++It;
+        }
+        return FConstIterator(It, Buckets.cend());
+    }
+    
+    FConstIterator cend() const
+    {
+        return FConstIterator(Buckets.cend(), Buckets.cend());
     }
 
 protected:
     void Resize(SizeType BucketSize)
     {
-        TArray<TBucket> NewBuckets;
+        TArray<TOptionalPair> NewBuckets;
         NewBuckets.Resize(BucketSize);
 
-        for (auto& Bucket : Buckets)
+        for (TOptionalPair Pair : Buckets)
         {
-            for (auto& Pair : Bucket)
-            {
-                SizeType NewBucketIndex = GetBucketIndex(Pair.Key, NewBuckets.GetSize());
-                NewBuckets[NewBucketIndex].PushBack(Pair);
-            }
+            SizeType NewBucketIndex = GetBucketIndex(Pair->Key, NewBuckets.GetSize());
+            NewBuckets[NewBucketIndex] = Pair;
         }
 
         Buckets = MoveTemp(NewBuckets);
@@ -139,7 +246,8 @@ protected:
     }
 
 private:
-    TArray<TBucket> Buckets;
-
+    TArray<TOptionalPair> Buckets;
     SizeType ElementCount;
+
+    static constexpr int32 DefaultBucketSize = 16; 
 };

@@ -37,7 +37,6 @@ enum class EVkBufferType
 
 struct FVkBufferCreateInfo
 {
-    EVkBufferType BufferType;
     VkBufferUsageFlags UsageFlags;
     VmaMemoryUsage MemoryUsageFlags;
     SizeType Size;

@@ -1,7 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanBuffer.h"
 
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 
 void PVulkanBuffer::Allocate(size_t Size)

@@ -1,19 +1,18 @@
 #pragma once
 
+#include "Types/String.h"
+
 enum class EShaderStage
 {
 	Vertex,
-	Fragment,
+	Pixel,
 	Compute
 };
 
 struct FShaderCreateInfo
 {
-	EShaderStage Stage;
-
-	std::string Name;
 	std::string Path;
-	std::string Entrypoint;
+	EShaderStage Stage;
 };
 
 class IShader
@@ -21,6 +20,6 @@ class IShader
 public:
 	virtual ~IShader() = default;
 
-	virtual void CreateShader(FShaderCreateInfo& CreateInfo) = 0;
-	virtual void Shutdown() = 0;
+	virtual void Init(FShaderCreateInfo& CreateInfo) = 0;
+	virtual void Free() = 0;
 };

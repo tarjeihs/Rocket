@@ -1,22 +1,20 @@
 #include "EnginePCH.h"
-#include "VulkanRenderer.h"
+#include "VkRenderer.h"
 
-#include "Renderer/Common/Shader.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Renderer/Vulkan/VulkanMesh.h"
-#include "Renderer/Vulkan/VulkanShader.h"
+#include "Renderer/Vulkan/VkSceneBuffer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
+#include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Types/UniquePtr.h"
 #include "Utils/Profiler.h"
-#include "VulkanDescriptor.h"
 
-void FVulkanRenderer::Init()
+void FVkRenderer::Init()
 {
 	Swapchain = MakeUnique<PVulkanSwapchain>();
     RenderGraph = MakeUnique<PVulkanRenderGraph>();
@@ -74,9 +72,12 @@ void FVulkanRenderer::Init()
 
 	VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &ImmediateFenceCreateInfo, nullptr, &ImmediateRenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create immediate render fence.");
+
+	SceneBuffer = MakeUnique<FVkSceneBuffer>();
+	SceneBuffer->Initialize();
 }
 
-void FVulkanRenderer::Shutdown()
+void FVkRenderer::Shutdown()
 {
     Swapchain->Shutdown();
 
@@ -96,11 +97,13 @@ void FVulkanRenderer::Shutdown()
 
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), ImmediateRenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), ImmediateCommandPool->GetVkCommandPool(), nullptr);
+
+	SceneBuffer->Shutdown();
 }
 
-void FVulkanRenderer::Render()
+void FVkRenderer::Render()
 {
-	PROFILE_FUNC_SCOPE("FVulkanRenderer::Render")
+	PROFILE_FUNC_SCOPE("FVkRenderer::Render")
 
 	BeginFrame();
 	ColorAttachmentImage->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -118,9 +121,9 @@ void FVulkanRenderer::Render()
 	EndFrame();
 }
 
-void FVulkanRenderer::Resize()
+void FVkRenderer::Resize()
 {
-	PROFILE_FUNC_SCOPE("FVulkanRenderer::Resize")
+	PROFILE_FUNC_SCOPE("FVkRenderer::Resize")
 
 	Swapchain->Shutdown();
 	Swapchain->Init();
@@ -140,9 +143,9 @@ void FVulkanRenderer::Resize()
 	DepthAttachmentImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);	
 }
 
-void FVulkanRenderer::BeginFrame()
+void FVkRenderer::BeginFrame()
 {
-    PROFILE_FUNC_SCOPE("FVulkanRenderer::BeginFrame")
+    PROFILE_FUNC_SCOPE("FVkRenderer::BeginFrame")
 
 	vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence[FrameIndex], VK_TRUE, UINT64_MAX);
 	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), Swapchain->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore[FrameIndex], VK_NULL_HANDLE, &NextImageIndex[FrameIndex]);
@@ -152,9 +155,9 @@ void FVulkanRenderer::BeginFrame()
 	CommandBuffer[FrameIndex]->BeginCommandBuffer();
 }
 
-void FVulkanRenderer::EndFrame()
+void FVkRenderer::EndFrame()
 {
-	PROFILE_FUNC_SCOPE("FVulkanRenderer::EndFrame")
+	PROFILE_FUNC_SCOPE("FVkRenderer::EndFrame")
 
 	CommandBuffer[FrameIndex]->EndCommandBuffer();
 
@@ -197,9 +200,9 @@ void FVulkanRenderer::EndFrame()
 	Result = vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &PresentInfo);
 }
 
-void FVulkanRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func)
+void FVkRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func)
 {
-	PROFILE_FUNC_SCOPE("FVulkanRenderer::ImmediateSubmit")
+	PROFILE_FUNC_SCOPE("FVkRenderer::ImmediateSubmit")
 
 	VkResult Result = vkResetFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &ImmediateRenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to reset fence.");
@@ -241,145 +244,6 @@ void FVulkanRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>
 	// The RenderFence will now block until all graphics commands have completed.
 	Result = vkQueueSubmit2(GetRHI()->GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, ImmediateRenderFence);
 	Result = vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &ImmediateRenderFence, true, UINT64_MAX);
-}
-
-void FVulkanForwardRenderer::Init()
-{
-    Super::Init();
-
-	FScriptableRenderPipeline* OpaqueRenderPipeline = new FOpaqueRenderPipeline();
-	OpaqueRenderPipeline->Initialize();
-	ScriptableRenderPipeline.Insert("Opaque", OpaqueRenderPipeline);
-}
-
-void FVulkanForwardRenderer::Shutdown() 
-{
-    Super::Shutdown();
-
-	FScriptableRenderPipeline** OpaqueRenderPipeline = ScriptableRenderPipeline.Find("Opaque");
-	if (OpaqueRenderPipeline)
-	{
-		FScriptableRenderPipeline* Found = *OpaqueRenderPipeline;
-		Found->Shutdown();
-	}
-}
-
-void FVulkanForwardRenderer::Bind()
-{
-	FScriptableRenderPipeline** OpaqueRenderPipeline = ScriptableRenderPipeline.Find("Opaque");
-	if (OpaqueRenderPipeline)
-	{
-		FScriptableRenderPipeline* Found = *OpaqueRenderPipeline;
-		Found->Bind();
-	}
-}
-
-FVkMeshBuffer* MeshBuffer = new FVkMeshBuffer();
-
-void FOpaqueRenderPipeline::Initialize()
-{
-	FShaderCreateInfo VertexShaderCreateInfo;
-	VertexShaderCreateInfo.Stage = EShaderStage::Vertex;
-	VertexShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/OpaqueVS.hlsl";
-
-	FShaderCreateInfo PixelShaderCreateInfo;
-	PixelShaderCreateInfo.Stage = EShaderStage::Fragment;
-	PixelShaderCreateInfo.Path = RK_ENGINE_DIR "/Shaders/HLSL/OpaquePS.hlsl";
-
-	VertexShader = MakeUnique<FVkShader>();
-	PixelShader = MakeUnique<FVkShader>();
-
-	VertexShader->CreateShader(VertexShaderCreateInfo);
-	PixelShader->CreateShader(PixelShaderCreateInfo);
-
-	Pipeline = MakeUnique<FVkPipeline>();
-	PipelineLayout = MakeUnique<FVkPipelineLayout>();
-
-	MeshBuffer->Initialize();
-
-	TArray<FVkDescriptorLayout> StorageBufferDescriptorLayout = {
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 }
-	};
-	FVkDescriptorSetLayoutCreateInfo StorageBufferDescriptorSetLayoutCreateInfo = { .Descriptors = StorageBufferDescriptorLayout };
-	FVkDescriptorSetLayout* StorageBufferDescriptorSetLayout = new FVkDescriptorSetLayout();
-	StorageBufferDescriptorSetLayout->Initialize(StorageBufferDescriptorSetLayoutCreateInfo);
-	
-	FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo;
-	PipelineLayoutCreateInfo.DescriptorSetLayouts = {
-		StorageBufferDescriptorSetLayout->Info.Handle
-	};
-	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
-	PipelineLayout->Info.DescriptorSetLayout.Add(StorageBufferDescriptorSetLayout);
-
-	FVkPipelineCreateInfo PipelineCreateInfo;
-	PipelineCreateInfo.PipelineLayout = PipelineLayout.Get();
-	PipelineCreateInfo.Shaders = { PixelShader.Get(), VertexShader.Get() };
-	Pipeline->Initialize(PipelineCreateInfo);
-	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
-	{
-		TArray<FVkDescriptorPoolRatio> PoolRatio = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 }, };
-		FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo;
-		DescriptorPoolCreateInfo.PoolRatios = PoolRatio;
-		DescriptorPoolCreateInfo.MaxSetCount = 1;
-		DescriptorPoolCreateInfo.Flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-
-		FVkDescriptorPool* DescriptorPool = new FVkDescriptorPool();
-		DescriptorPool->Initialize(DescriptorPoolCreateInfo);
-		
-		FVkBufferCreateInfo StorageBufferCreateInfo;
-		StorageBufferCreateInfo.Size = 64 * 1024 * 1024;
-		StorageBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-		StorageBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-		FVkBuffer* GlobalStorageBuffer = new FVkBuffer();
-		FVkBuffer* CameraStorageBuffer = new FVkBuffer();
-		FVkBuffer* MaterialStorageBuffer = new FVkBuffer();
-		FVkBuffer* ObjectStorageBuffer = new FVkBuffer();
-		
-		GlobalStorageBuffer->Initialize(StorageBufferCreateInfo);
-		CameraStorageBuffer->Initialize(StorageBufferCreateInfo);
-		MaterialStorageBuffer->Initialize(StorageBufferCreateInfo);
-		ObjectStorageBuffer->Initialize(StorageBufferCreateInfo);
-
-		FVkDescriptorSetCreateInfo StorageBufferDescriptorSetCreateInfo { .DescriptorPool = DescriptorPool, .DescriptorSetLayout = StorageBufferDescriptorSetLayout };
-		FVkDescriptorSet* StorageBufferDescriptorSet = new FVkDescriptorSet();
-		StorageBufferDescriptorSet->Initialize(StorageBufferDescriptorSetCreateInfo);
-		StorageBufferDescriptorSet->WriteBuffer(0, GlobalStorageBuffer);
-		StorageBufferDescriptorSet->WriteBuffer(1, CameraStorageBuffer);
-		StorageBufferDescriptorSet->WriteBuffer(2, MaterialStorageBuffer);
-		StorageBufferDescriptorSet->WriteBuffer(3, ObjectStorageBuffer);
-		StorageBufferDescriptorSet->Info.DescriptorPool = DescriptorPool;
-		Pipeline->Info.DescriptorSet[Index].Add(StorageBufferDescriptorSet);
-	}
-}
-
-void FOpaqueRenderPipeline::Shutdown()
-{
-	PixelShader->Shutdown();
-	VertexShader->Shutdown();
-	PipelineLayout->Shutdown();
-	Pipeline->Shutdown();
-	MeshBuffer->Shutdown();
-}
-
-void FOpaqueRenderPipeline::Bind()
-{
-	PROFILE_FUNC_SCOPE("FVulkanRenderer::Bind")
-
-	const PVulkanCommandBuffer* CommandBuffer = GetRHI()->GetRenderer()->GetCommandBuffer();
-	const SizeType FrameIndex = GetRHI()->GetRenderer()->GetFrameIndex();
-	VkDeviceSize offsets[] = { 0 };
-
-	vkCmdBindPipeline(CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline->Info.Handle);
-	for (SizeType Index = 0; Index < Pipeline->Info.DescriptorSet[FrameIndex].GetSize(); ++Index)
-	{
-		Pipeline->Info.DescriptorSet[FrameIndex][Index]->Bind(PipelineLayout.Get());
-	}
-	vkCmdBindVertexBuffers(CommandBuffer->GetVkCommandBuffer(), 0, 1, &MeshBuffer->VertexBuffer->Info.Handle, offsets);
-	vkCmdBindIndexBuffer(CommandBuffer->GetVkCommandBuffer(), MeshBuffer->IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
 }
 
 // Set 0 SSBO 

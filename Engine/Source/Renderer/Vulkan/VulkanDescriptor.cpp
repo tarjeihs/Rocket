@@ -1,13 +1,14 @@
+#include "Core/Logger.h"
 #include "EnginePCH.h"
 #include "VulkanDescriptor.h"
 
 #include "Renderer/RHI.h"
+#include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Types/SharedPtr.h"
 
 namespace Utils
 {
@@ -70,6 +71,8 @@ void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 
 	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Info.DescriptorPool);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor pool.");
+
+	RK_LOG_DEBUG("Vulkan: Created DescriptorPool");
 }
 
 void FVkDescriptorPool::Destroy()
@@ -130,11 +133,13 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 
 void FVkDescriptorSet::Destroy()
 {
-	for (SizeType Index = 0; Index < Info.Buffer.GetSize(); ++Index)
+	for (SizeType Index = 0; Index < Info.Buffers.GetSize(); ++Index)
 	{
-		Info.Buffer[Index]->Free();
+		for (SizeType Frame = 0; Frame < CONCURRENT_FRAME_COUNT; ++Frame)
+		{
+			Info.Buffers[Index][Frame]->Free();
+		}
 	}
-	Info.DescriptorPool->Destroy();
 }
 
 void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
@@ -154,26 +159,18 @@ void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
 	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
 
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-
-	Info.Buffer.Add(Buffer);
 }
 
 void FVkDescriptorSet::ReadBuffer(uint32 Index, FVkBuffer*& Buffer)
 {
-	FVkBuffer* Result = Info.Buffer[Index];
-	if (Result)
-	{
-		Buffer = MoveTemp(Result);
-	}
+	//FVkBuffer* Result = Info.Buffer[Index];
+	//if (Result)
+	//{
+	//	Buffer = MoveTemp(Result);
+	//}
 }
 
 void FVkDescriptorSet::Bind(FVkPipelineLayout* PipelineLayout)
 {
 	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
 }
-
-//void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBufferCreateInfo& CreateInfo)
-//{
-//	TSharedPtr<FVkBuffer> Buffer = MakeShared<FVkBuffer>();
-//	Buffer->Initialize(CreateInfo);
-//}

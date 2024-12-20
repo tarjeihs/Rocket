@@ -13,6 +13,6 @@ class FVkShader : public IShader
 public:
 	FVulkanShaderInfo Info;
 
-	virtual void CreateShader(FShaderCreateInfo& CreateInfo) override;
-	virtual void Shutdown() override;
+	virtual void Init(FShaderCreateInfo& CreateInfo) override;
+	virtual void Free() override;
 };

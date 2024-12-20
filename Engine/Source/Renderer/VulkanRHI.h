@@ -7,8 +7,7 @@
 class PVulkanInstance;
 class PVulkanDevice;
 class PVulkanMemory;
-class PVulkanForwardRenderer;
-class FVulkanRenderer;
+class FVkRenderer;
 class PVulkanAllocator;
 
 class PVulkanRHI : public IRHI
@@ -30,13 +29,13 @@ public:
     inline PVulkanInstance* GetInstance() const;
     inline PVulkanDevice* GetDevice() const;
     inline PVulkanAllocator* GetAllocator() const;
-    inline FVulkanRenderer* GetRenderer() const;
+    inline FVkRenderer* GetRenderer() const;
 
 private:
     PVulkanInstance* Instance;
     PVulkanDevice* Device;
     PVulkanAllocator* Allocator;
-    FVulkanRenderer* Renderer;
+    FVkRenderer* Renderer;
 };
 
 inline PVulkanInstance* PVulkanRHI::GetInstance() const
@@ -54,7 +53,7 @@ inline PVulkanAllocator* PVulkanRHI::GetAllocator() const
 	return Allocator;
 }
 
-inline FVulkanRenderer* PVulkanRHI::GetRenderer() const
+inline FVkRenderer* PVulkanRHI::GetRenderer() const
 {
 	return Renderer;
 }

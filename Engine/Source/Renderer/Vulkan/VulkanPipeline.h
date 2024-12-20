@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Renderer/Settings.h"
-
 class FVkDescriptorSet;
 class FVkDescriptorSetLayout;
 class FVkShader;
@@ -10,14 +8,12 @@ class FVkBuffer;
 
 struct FVkPipelineLayoutCreateInfo
 {
-	TArray<VkDescriptorSetLayout> DescriptorSetLayouts;
+	TArray<FVkDescriptorSetLayout*> DescriptorSetLayouts;
 };
 
 struct FVkPipelineLayoutInfo
 {
 	VkPipelineLayout Handle;
-
-	TArray<FVkDescriptorSetLayout*> DescriptorSetLayout;
 };
 
 class FVkPipelineLayout
@@ -31,16 +27,14 @@ public:
 
 struct FVkPipelineCreateInfo
 {
-	FVkPipelineLayout* PipelineLayout;
-	
 	TArray<FVkShader*> Shaders;
+
+	FVkPipelineLayout* PipelineLayout;
 };
 
 struct FVkPipelineInfo
 {
-	VkPipeline 									Handle;
-	
-	TArray<FVkDescriptorSet*> 					DescriptorSet					[CONCURRENT_FRAME_COUNT];
+	VkPipeline Handle;
 };
 
 class FVkPipeline

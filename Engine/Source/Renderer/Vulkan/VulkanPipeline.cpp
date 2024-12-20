@@ -14,10 +14,16 @@
 
 void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo)
 {
+    TArray<VkDescriptorSetLayout> DescriptorSetLayouts;
+    for (SizeType Index = 0; Index < CreateInfo.DescriptorSetLayouts.GetSize(); ++Index)
+    {
+        DescriptorSetLayouts.Add(CreateInfo.DescriptorSetLayouts[Index]->Info.Handle);
+    }
+
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
     PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    PipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32>(CreateInfo.DescriptorSetLayouts.GetSize());
-    PipelineLayoutCreateInfo.pSetLayouts = CreateInfo.DescriptorSetLayouts.GetData();
+    PipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32>(DescriptorSetLayouts.GetSize());
+    PipelineLayoutCreateInfo.pSetLayouts = DescriptorSetLayouts.GetData();
 
     VkResult Result = vkCreatePipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &Info.Handle);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create pipeline layout.");
@@ -26,10 +32,6 @@ void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo
 void FVkPipelineLayout::Shutdown()
 {
    vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, VK_NULL_HANDLE); 
-   for (SizeType Index = 0; Index < Info.DescriptorSetLayout.GetSize(); ++Index)
-   {
-        vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorSetLayout[Index]->Info.Handle, VK_NULL_HANDLE);
-   }
 }
 
 void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
@@ -158,11 +160,4 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
 void FVkPipeline::Shutdown()
 {
     vkDestroyPipeline(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, VK_NULL_HANDLE);
-    for (SizeType Frame = 0; Frame < CONCURRENT_FRAME_COUNT; ++Frame)
-    {
-        for (SizeType Index = 0; Index < Info.DescriptorSet[Frame].GetSize(); ++Index)
-        {
-            Info.DescriptorSet[Frame][Index]->Destroy();
-        }
-    }
 }
