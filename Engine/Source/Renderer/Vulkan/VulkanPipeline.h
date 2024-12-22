@@ -3,7 +3,7 @@
 class FVkDescriptorSet;
 class FVkDescriptorSetLayout;
 class FVkShader;
-class FVkImage;
+class PVulkanImage;
 class FVkBuffer;
 
 struct FVkPipelineLayoutCreateInfo

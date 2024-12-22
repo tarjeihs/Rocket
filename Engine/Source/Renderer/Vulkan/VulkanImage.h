@@ -3,7 +3,35 @@
 class PVulkanRHI;
 class PVulkanCommandBuffer;
 
-class FVkImage
+struct FVkImageCreateInfo
+{
+	VkImageLayout ImageLayout;
+	VkImageUsageFlags ImageUsageFlags;
+	VkImageAspectFlags ImageViewAspectFlags;
+	VkExtent2D Extent;
+	VkFormat Format;
+};
+
+struct FVkImageInfo
+{
+	VkImage ImageHandle;
+	VkImageView ImageViewHandle;
+	VmaAllocation MemoryAllocation;
+	VkSampler Sampler;
+};
+
+struct FVkImage
+{
+	FVkImageInfo Info;
+
+	void Initialize(FVkImageCreateInfo& CreateInfo);
+	void Shutdown();
+
+	void TransitionImageLayout(PVulkanCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout);
+	void CopyImageRegion(PVulkanCommandBuffer* CommandBuffer, VkImage Dest, VkExtent2D SrcSize, VkExtent2D DstSize);
+};
+
+class PVulkanImage
 {
 public:
 	void Init(VkExtent2D Extent, VkFormat Format);

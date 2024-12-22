@@ -5,12 +5,9 @@
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
-#include "Renderer/Vulkan/VulkanCommand.h"
-#include "Renderer/Vulkan/VulkanRenderGraph.h"
-#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanImage.h"
+#include "Renderer/Vulkan/VkRenderer.h"
 
 class FrameMetrics {
 public:
@@ -124,7 +121,7 @@ void PVulkanOverlay::Init()
 //
 	//	ImGui::Render();
 //
-	//	FVkImage* Image = GetRHI()->GetRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex];
+	//	PVulkanImage* Image = GetRHI()->GetRenderer()->GetSwapchain()->GetSwapchainImages()[Frame->GetTransientFrameData().NextImageIndex];
 //
 	//	VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment{};
 	//	ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -158,7 +155,7 @@ void PVulkanOverlay::Shutdown()
 {
 	ImGui_ImplVulkan_Shutdown();
 	
-	DescriptorPool->Destroy();
+	DescriptorPool->Shutdown();
 	delete DescriptorPool;
 
 	OnRender.Clear();

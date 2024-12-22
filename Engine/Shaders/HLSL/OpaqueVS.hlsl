@@ -5,55 +5,60 @@
 
 struct FVSInput
 {
-    float3 Position : POSITION;
+    float3 Position                 : POSITION;
+    float3 Normal                   : NORMAL;
+    float2 TexCoord                 : TEXCOORD;
 };
 
 struct FVSOutput
 {
-    float4 Position : SV_POSITION;
+    float4 ClipSpacePosition        : SV_POSITION;
+    float3 WorldSpacePosition       : WORLD_POS;
+    float3 Normal                   : NORMAL;
+    float2 TexCoord                 : TEXCOORD0;
 };
 
 struct FGlobalStorageBuffer
 {
-    float4x4 View;
-    float4x4 Projection;
+    float Time;
 };
 
 struct FCameraStorageBuffer
 {
-    float Value;
+    float4x4 View;
+    float4x4 Projection;
+    float4 Position;
+    float4 Direction;
 };
 
 struct FMaterialStorageBuffer
 {
-    float Value;
+    uint32 AlbedoTextureID;
+    uint32 NormalTextureID;
 };
 
 struct FObjectStorageBuffer
 {
+    float4x4 Transform;
+    float4x4 Normal;
 };
 
-StructuredBuffer<FGlobalStorageBuffer> GlobalStorageBuffer : register(t0, space0);
-StructuredBuffer<FCameraStorageBuffer> CameraStorageBuffer : register(t0, space1);
-StructuredBuffer<FMaterialStorageBuffer> MaterialStorageBuffer : register(t0, space2);
-StructuredBuffer<FObjectStorageBuffer> ObjectStorageBuffer : register(t0, space3);
+StructuredBuffer<FGlobalStorageBuffer> GlobalStorageBuffer      : register(t0, space0);
+StructuredBuffer<FCameraStorageBuffer> CameraStorageBuffer      : register(t1, space0);
+StructuredBuffer<FMaterialStorageBuffer> MaterialStorageBuffer  : register(t2, space0);
+StructuredBuffer<FObjectStorageBuffer> ObjectStorageBuffer      : register(t3, space0);
 
-FVSOutput main(FVSInput VSInput, uint32 InstanceID : SV_InstanceID)
+FVSOutput main(FVSInput Input, uint32 InstanceID : SV_InstanceID)
 {
     FVSOutput Output;
 
-    const float Columns = 1000.0f;      // Number of columns in the grid
-    const float Spacing = 10.0f;        // Spacing between grid points
+    float4 WorldSpacePosition   = mul(ObjectStorageBuffer[InstanceID].Transform, float4(Input.Position, 1.0f));
+    float4 ViewPosition         = mul(CameraStorageBuffer[0].View, WorldSpacePosition);
+    float4 ClipSpacePosition    = mul(CameraStorageBuffer[0].Projection, ViewPosition);
 
-    float4 ModelPosition = float4(
-        VSInput.Position.x + (InstanceID % Columns) * Spacing,   // Scale x position
-        VSInput.Position.y,                 // Keep z position
-        VSInput.Position.z + (InstanceID / Columns) * Spacing,   // Scale y position
-        1.0f                                // Homogeneous coordinate
-    );
-
-    // Transform the position using View and Projection matrices
-    float4 ViewPosition = mul(GlobalStorageBuffer[0].View, ModelPosition);       // Transform to view space
-    Output.Position = mul(GlobalStorageBuffer[0].Projection, ViewPosition);      // Transform to clip space
+    Output.ClipSpacePosition    = ClipSpacePosition;
+    Output.WorldSpacePosition   = WorldSpacePosition.xyz;
+    Output.Normal               = Input.Normal;
+    Output.TexCoord             = Input.TexCoord;
     return Output;
 }

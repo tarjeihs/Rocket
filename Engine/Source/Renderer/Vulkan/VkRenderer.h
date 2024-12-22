@@ -11,7 +11,7 @@ class PVulkanSwapchain;
 class PVulkanCommandPool;
 class PVulkanCommandBuffer;
 class PVulkanRenderGraph;
-class FVkImage;
+class PVulkanImage;
 class FVkBuffer;
 class FVkPipeline;
 class FVkPipelineLayout;
@@ -33,8 +33,8 @@ public:
 
     virtual void Bind() = 0;
 
-    inline FVkImage* GetColorAttachmentImage() const;
-    inline FVkImage* GetDepthAttachmentImage() const;
+    inline PVulkanImage* GetColorAttachmentImage() const;
+    inline PVulkanImage* GetDepthAttachmentImage() const;
     inline PVulkanCommandPool* GetCommandPool() const;
     inline PVulkanCommandBuffer* GetCommandBuffer() const;
     inline PVulkanRenderGraph* GetRenderGraph() const;
@@ -64,8 +64,8 @@ protected:
     TUniquePtr<PVulkanSwapchain>                        Swapchain;
     TUniquePtr<PVulkanRenderGraph>                      RenderGraph;
         
-    TUniquePtr<FVkImage>                                ColorAttachmentImage;
-    TUniquePtr<FVkImage>                                DepthAttachmentImage;
+    TUniquePtr<PVulkanImage>                                ColorAttachmentImage;
+    TUniquePtr<PVulkanImage>                                DepthAttachmentImage;
         
     SizeType                                            FrameIndex = 0;
 
@@ -75,20 +75,17 @@ protected:
     TArray<FVkDescriptorSet*>                           DescriptorSetData;
     TArray<FVkDescriptorSetLayout*>                     DescriptorSetLayoutData;
     
-    TArray<FVkBuffer**>                                 Buffers;
-    TArray<FVkImage**>                                  Images;
-
     TMap<FString, FVkScriptableRendererPipeline*>       ScriptableRendererPipelineData;
 
     TUniquePtr<FVkSceneBuffer>                           SceneBuffer;
 };
 
-inline FVkImage* FVkRenderer::GetColorAttachmentImage() const
+inline PVulkanImage* FVkRenderer::GetColorAttachmentImage() const
 {
     return ColorAttachmentImage.Get();
 }
 
-inline FVkImage* FVkRenderer::GetDepthAttachmentImage() const
+inline PVulkanImage* FVkRenderer::GetDepthAttachmentImage() const
 {
     return DepthAttachmentImage.Get();
 }

@@ -1,7 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanRenderGraph.h"
 
-#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VkRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanCommand.h"

@@ -1,7 +1,7 @@
 #include "EnginePCH.h"
 #include "GLTF.h"
 
-void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObject)
+void GLTF::Import(const std::string& Path, std::vector<FVertex>& Vertices, std::vector<uint32_t>& Indices)
 {
     const SBlob& Blob = PFileSystem::ReadFileBinary(Path);
 
@@ -38,7 +38,7 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
                 const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("POSITION")->second];
                 const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
                 const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
-                
+
                 Positions = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
                 PositionStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec3);
                 VertexCount = Accessor.count;
@@ -73,7 +73,7 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
 
             for (size_t Index = 0; Index < VertexCount; ++Index)
             {
-                SVertex Vertex;
+                FVertex Vertex;
 
                 if (Positions)
                 {
@@ -84,13 +84,13 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
                 if (TexCoords) 
                 {
                     const float* TexCoord = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(TexCoords) + Index * TexCoordStride);
-                    //Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
+                    Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
                 } 
 
                 if (Normals) 
                 {
                     const float* Normal = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Normals) + Index * NormalStride);
-                    //Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
+                    Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
                 } 
 
                 if (Colors) 
@@ -99,7 +99,7 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
                     //Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
                 } 
 
-                MeshBinaryObject.Vertices.push_back(Vertex);
+                Vertices.push_back(Vertex);
             }
 
             if (Primitive.indices >= 0)
@@ -116,7 +116,7 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
             for (size_t Index = 0; Index < IndexCount; ++Index)
             {
                 uint32_t IndexValue;
-                
+
                 switch (IndexStride)
                 {
                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
@@ -139,41 +139,41 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
                     }
                 }
 
-                MeshBinaryObject.Indices.push_back(IndexValue);
+                Indices.push_back(IndexValue);
             }
         }
     }
 
-    for (size_t i = 0; i < MeshBinaryObject.Vertices.size(); ++i)
+    for (size_t i = 0; i < Vertices.size(); ++i)
     {
         //MeshBinaryObject.Vertices[i].Tangent = glm::vec3(0.0f);
         //MeshBinaryObject.Vertices[i].Bitangent = glm::vec3(0.0f);
     }
 
-        // Compute tangents and bitangents for each triangle
-    for (size_t i = 0; i < MeshBinaryObject.Indices.size(); i += 3)
+    // Compute tangents and bitangents for each triangle
+    for (size_t i = 0; i < Indices.size(); i += 3)
     {
-        uint32_t idx0 = MeshBinaryObject.Indices[i];
-        uint32_t idx1 = MeshBinaryObject.Indices[i + 1];
-        uint32_t idx2 = MeshBinaryObject.Indices[i + 2];
-
-        SVertex& v0 = MeshBinaryObject.Vertices[idx0];
-        SVertex& v1 = MeshBinaryObject.Vertices[idx1];
-        SVertex& v2 = MeshBinaryObject.Vertices[idx2];
-
-        glm::vec3& p0 = v0.Position;
-        glm::vec3& p1 = v1.Position;
-        glm::vec3& p2 = v2.Position;
-
-        //glm::vec2& uv0 = v0.TexCoord;
-        //glm::vec2& uv1 = v1.TexCoord;
-        //glm::vec2& uv2 = v2.TexCoord;
-
-        glm::vec3 edge1 = p1 - p0;
-        glm::vec3 edge2 = p2 - p0;
-
-        //glm::vec2 deltaUV1 = uv1 - uv0;
-        //glm::vec2 deltaUV2 = uv2 - uv0;
+//        uint32_t idx0 = Indices[i];
+//        uint32_t idx1 = Indices[i + 1];
+//        uint32_t idx2 = Indices[i + 2];
+//
+//        FVertex& v0 = Vertices[idx0];
+//        FVertex& v1 = Vertices[idx1];
+//        FVertex& v2 = Vertices[idx2];
+//
+//        glm::vec3& p0 = v0.Position;
+//        glm::vec3& p1 = v1.Position;
+//        glm::vec3& p2 = v2.Position;
+//
+//        glm::vec2& uv0 = v0.TexCoord;
+//        glm::vec2& uv1 = v1.TexCoord;
+//        glm::vec2& uv2 = v2.TexCoord;
+//
+//        glm::vec3 edge1 = p1 - p0;
+//        glm::vec3 edge2 = p2 - p0;
+//
+//        glm::vec2 deltaUV1 = uv1 - uv0;
+//        glm::vec2 deltaUV2 = uv2 - uv0;
 
         //float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y + 1e-7f);
 //
@@ -190,9 +190,9 @@ void PGLTF::ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObjec
     }
 
     // Normalize and orthogonalize tangents and bitangents
-    for (size_t i = 0; i < MeshBinaryObject.Vertices.size(); ++i)
+    for (size_t i = 0; i < Vertices.size(); ++i)
     {
-        SVertex& vertex = MeshBinaryObject.Vertices[i];
+        //FVertex& vertex = Vertices[i];
         //glm::vec3& n = vertex.Normal;
         //glm::vec3& t = vertex.Tangent;
         //glm::vec3& b = vertex.Bitangent;

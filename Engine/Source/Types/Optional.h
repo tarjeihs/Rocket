@@ -2,7 +2,6 @@
 
 #include "Core/Assert.h"
 #include "EngineTypes.h"
-#include <type_traits>
 
 template<typename T>
 class TOptional

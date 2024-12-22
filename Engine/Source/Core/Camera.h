@@ -21,7 +21,7 @@ public:
 		Settings.ProjectionMode = ECameraProjectionMode::Perspective;
     	Settings.FoVY = 66.0f;
     	Settings.ZNear = 0.1f;
-    	Settings.ZFar = 100.0f;
+    	Settings.ZFar = 1000.0f;
 
 #if RK_DEBUG
 		//GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);

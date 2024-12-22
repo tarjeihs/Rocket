@@ -1,19 +1,19 @@
 #include "EnginePCH.h"
 #include "Registry.h"
 
-SEntity PRegistry::CreateEntity()
+FEntity PRegistry::CreateEntity()
 {
-    SEntity Entity{};
+    FEntity Entity{};
     Entity.EntityID = Registry.create();
     return Entity;
 }
 
-void PRegistry::DestroyEntity(SEntityID EntityID)
+void PRegistry::DestroyEntity(FEntityID EntityID)
 {
     Registry.destroy(EntityID);
 }
 
-bool PRegistry::IsValid(SEntityID EntityID) const
+bool PRegistry::IsValid(FEntityID EntityID) const
 {
     return Registry.valid(EntityID);
 }

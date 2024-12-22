@@ -1,12 +1,12 @@
 #pragma once
 
 #include "EngineTypes.h"
-#include "Renderer/Settings.h"
+#include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
+#include "VulkanTexture2D.h"
 
 class PVulkanRHI;
-class PVulkanFrame;
 
 struct FVkDescriptorPoolRatio
 {
@@ -32,7 +32,7 @@ public:
     FVkDescriptorPoolInfo Info;
 
     void Initialize(FVkDescriptorPoolCreateInfo& CreateInfo);
-    void Destroy();
+    void Shutdown();
 };
 
 
@@ -79,7 +79,7 @@ struct FVkDescriptorSetInfo
 {
     VkDescriptorSet                     Handle;
     TArray<FVkBuffer**>                 Buffers;
-    TArray<FVkImage*>                   Images;
+    TArray<FVkTexture2D*>               Textures;
 };
 
 class FVkDescriptorSet
@@ -88,13 +88,13 @@ public:
     FVkDescriptorSetInfo Info;
 
     void Initialize(FVkDescriptorSetCreateInfo& CreateInfo);
-    void Destroy();
+    void Shutdown();
 
     void WriteBuffer(uint32 Index, FVkBuffer* Buffer);
     void ReadBuffer(uint32 Index, FVkBuffer*& Buffer);
 
-    void WriteImage();
-    void ReadImage();
+    void WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D);
+    void ReadTexture2D(uint32 Index, FVkTexture2D*& Texture2D);
 
     void Bind(FVkPipelineLayout* PipelineLayout);
 };

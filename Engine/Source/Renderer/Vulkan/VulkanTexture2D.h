@@ -2,20 +2,38 @@
 
 #include "Renderer/Common/Texture2D.h"
 
-class FVkImage;
+class PVulkanImage;
 class PVulkanSampler;
+class FVkImage;
+class FVkSampler;
 
-class PVulkanTexture2D : public ITexture2D
+enum class EImageFormat
 {
-public:
-    virtual void CreateTexture2D(unsigned char* Data) override;
-    virtual void DestroyTexture2D() override;
+    
+};
 
-protected:
-    int Width;
-    int Height;
-    int Channels;
+struct FVkTexture2DCreateInfo
+{
+    FString Path;
+    VkFormat ImageFormat;
+};
 
+struct FVkTexture2DInfo
+{
     FVkImage* Image;
-    PVulkanSampler* Sampler;
+    FVkSampler* Sampler;
+
+    uint32 Width;
+    uint32 Height;
+    uint32 Channels;
+
+    unsigned char* Data;
+};
+
+struct FVkTexture2D
+{
+    FVkTexture2DInfo Info;
+
+    void Initialize(FVkTexture2DCreateInfo& CreateInfo);
+    void Shutdown();
 };

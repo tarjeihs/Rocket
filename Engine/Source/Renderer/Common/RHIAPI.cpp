@@ -1,15 +1,17 @@
 #include "EnginePCH.h"
 #include "RHIAPI.h"
 
-#include "Renderer/Vulkan/VulkanMaterial.h"
+#include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VkSceneBuffer.h"
+#include "Renderer/Vulkan/VulkanMaterial.h"
 #include "Renderer/Vulkan/VulkanShader.h"
+#include "SceneBuffer.h"
 
 template<>
-struct TRHIAPI<IMesh>
+struct TRHIAPI<ISceneBuffer>
 {
 #if RK_RHI == VULKAN
-    using Type = FVkMesh;
+    using Type = FVkSceneBuffer;
 #endif
 };
 
@@ -37,6 +39,15 @@ TObject* NewObject()
     return new Type();
 }
 
-template IMesh* NewObject<IMesh>();
+template ISceneBuffer* NewObject<ISceneBuffer>();
 template IShader* NewObject<IShader>();
 template IMaterial* NewObject<IMaterial>();
+
+uint32 AddInstance(std::vector<FVertex> Vertices, std::vector<uint32> Indices)
+{
+    uint32 InstanceID = 0;
+#if RK_RHI == VULKAN
+    GetRHI()->GetRenderer()->GetSceneBuffer()->AddInstance(Vertices, Indices);
+    return InstanceID;
+#endif
+}

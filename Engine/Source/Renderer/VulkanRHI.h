@@ -7,8 +7,8 @@
 class PVulkanInstance;
 class PVulkanDevice;
 class PVulkanMemory;
-class FVkRenderer;
 class PVulkanAllocator;
+class FVkRenderer;
 
 class PVulkanRHI : public IRHI
 {

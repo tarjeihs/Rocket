@@ -3,60 +3,73 @@
 
 #include "stb_image.h"
 
+#include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VulkanSampler.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
-#include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VkRenderer.h"
+#include "Types/UniquePtr.h"
 
-void PVulkanTexture2D::CreateTexture2D(unsigned char* Data)
+void FVkTexture2D::Initialize(FVkTexture2DCreateInfo& CreateInfo)
 {
-    VkExtent2D Extent = { (uint32)Width, (uint32)Height };
-    VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-    
-    Image = new FVkImage();
-    Image->Init(Extent, ImageFormat);  // Initialize the image with the extent and format
-    Image->CreateImage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    unsigned char* Data = stbi_load(CreateInfo.Path.GetData(), Cast<int32>(&Info.Width), Cast<int32>(&Info.Height), Cast<int32>(&Info.Channels), STBI_rgb_alpha);
 
-    PVulkanBuffer StagingBuffer = PVulkanBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    StagingBuffer.Allocate(Width * Height * Channels);
+    FVkImageCreateInfo ImageCreateInfo;
+    ImageCreateInfo.ImageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    ImageCreateInfo.ImageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ImageCreateInfo.ImageViewAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+    ImageCreateInfo.Extent = VkExtent2D(Info.Width, Info.Height);
+    ImageCreateInfo.Format = CreateInfo.ImageFormat;
+
+    FVkSamplerCreateInfo SamplerCreateInfo;
+
+    FVkImage* Image = new FVkImage();
+    Image->Initialize(ImageCreateInfo);
+
+    FVkSampler* Sampler = new FVkSampler();
+    Sampler->Initialize(SamplerCreateInfo);
+
+    FVkBufferCreateInfo BufferCreateInfo =
+    {
+        .UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        .MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_ONLY,
+        .Size = (SizeType)Info.Width * (SizeType)Info.Height * STBI_rgb_alpha
+    };
+
+    TUniquePtr<FVkBuffer> StagingBuffer = MakeUnique<FVkBuffer>();
+    StagingBuffer->Initialize(BufferCreateInfo);
 
     void* MappedData = nullptr;
-    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation, &MappedData);
-    memcpy(MappedData, Data, Width * Height * Channels);
-    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer.Allocation);
-
+    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Info.Allocation, &MappedData);
+    memcpy(MappedData, Data, Info.Width * Info.Height * Info.Channels);
+    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Info.Allocation);
+    
     GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
     {
         Image->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
+        
         VkBufferImageCopy BufferImageCopy = {};
         BufferImageCopy.bufferOffset = 0;
         BufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         BufferImageCopy.imageSubresource.mipLevel = 0;
         BufferImageCopy.imageSubresource.baseArrayLayer = 0;
         BufferImageCopy.imageSubresource.layerCount = 1;
-        BufferImageCopy.imageExtent = { Extent.width, Extent.height, 1 };
-
-        vkCmdCopyBufferToImage(CommandBuffer->GetVkCommandBuffer(), StagingBuffer.Buffer, Image->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &BufferImageCopy);
-
+        BufferImageCopy.imageExtent = { Info.Width, Info.Height, 1 };
+        vkCmdCopyBufferToImage(CommandBuffer->GetVkCommandBuffer(), StagingBuffer->Info.Handle, Image->Info.ImageHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &BufferImageCopy);
+        
         Image->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     });
 
-    StagingBuffer.Free();
+    StagingBuffer->Free();
+    stbi_image_free(Data);
+
+    Info.Image = Image;
+    Info.Sampler = Sampler;
 }
 
-void PVulkanTexture2D::DestroyTexture2D()
+void FVkTexture2D::Shutdown()
 {
-    Image->DestroyImage();
-    Image->DestroyImageView();
-    
-    delete Image;
+    Info.Image->Shutdown();
+    Info.Sampler->Shutdown();
 }
-
-//void PVulkanTexture2D::Deserialize(SBlob& Blob)
-//{
-//    unsigned char* Data = stbi_load_from_memory(Blob.Data.data(), static_cast<int>(Blob.Data.size()), &Width, &Height, &Channels, STBI_rgb_alpha);
-//    CreateTexture2D(Data);
-//    stbi_image_free(Data);
-//}

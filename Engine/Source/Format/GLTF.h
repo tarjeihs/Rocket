@@ -1,7 +1,6 @@
 #pragma once
 
-class PGLTF
+namespace GLTF
 {
-public:
-    static void ImportGLTF(const std::string& Path, SMeshBinaryData& MeshBinaryObject);
-};
+    void Import(const std::string& Path, std::vector<FVertex>& Vertices, std::vector<uint32_t>& Indices);
+}

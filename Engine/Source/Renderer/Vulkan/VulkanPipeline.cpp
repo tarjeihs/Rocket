@@ -3,14 +3,12 @@
 
 #include "Renderer/Common/Mesh.h"
 #include "Renderer/RHI.h"
-#include "Renderer/Settings.h"
 #include "Renderer/VulkanRHI.h"
-#include "Renderer/Vulkan/VulkanFrame.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanShader.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
 #include "Renderer/Vulkan/VulkanImage.h"
+#include "Renderer/Vulkan/VkRenderer.h"
 
 void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo)
 {
@@ -55,13 +53,23 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
     VkVertexInputBindingDescription VertexInputBindingDescription = {};
     VertexInputBindingDescription.binding = 0;
     VertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    VertexInputBindingDescription.stride = sizeof(SVertex);
+    VertexInputBindingDescription.stride = sizeof(FVertex);
 
-    std::array<VkVertexInputAttributeDescription, 1> AttributeDescriptions = {};
+    std::array<VkVertexInputAttributeDescription, 3> AttributeDescriptions = {};
     AttributeDescriptions.at(0).binding = 0;
     AttributeDescriptions.at(0).location = 0;
     AttributeDescriptions.at(0).format = VK_FORMAT_R32G32B32_SFLOAT;
-    AttributeDescriptions.at(0).offset = offsetof(SVertex, Position);
+    AttributeDescriptions.at(0).offset = offsetof(FVertex, Position);
+
+    AttributeDescriptions.at(1).binding = 0;
+    AttributeDescriptions.at(1).location = 1;
+    AttributeDescriptions.at(1).format = VK_FORMAT_R32G32B32_SFLOAT;
+    AttributeDescriptions.at(1).offset = offsetof(FVertex, Normal);
+
+    AttributeDescriptions.at(2).binding = 0;
+    AttributeDescriptions.at(2).location = 2;
+    AttributeDescriptions.at(2).format = VK_FORMAT_R32G32_SFLOAT;
+    AttributeDescriptions.at(2).offset = offsetof(FVertex, TexCoord);
 
     VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo = {};
     VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

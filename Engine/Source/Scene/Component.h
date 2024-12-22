@@ -6,36 +6,36 @@
 
 struct IComponent {};
 
-struct STagComponent : IComponent
+struct FTagComponent : IComponent
 {
     std::string Tag;
 };
 
-struct STransformComponent : IComponent
+struct FTransformComponent : IComponent
 {
-    STransformComponent() = default;
-    STransformComponent(const STransform& InTransform) : Transform(InTransform) {}
+    FTransformComponent() = default;
+    FTransformComponent(const STransform& InTransform) : Transform(InTransform) {}
 
     STransform Transform;
 };
 
-struct SUUIDComponent : IComponent
+struct FUUIDComponent : IComponent
 {
     SUUID64 UUID;
 };
 
-struct SMeshComponent : IComponent
+struct FMeshComponent : IComponent
 {
-    SMeshComponent() = default;
-    SMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
+    FMeshComponent() = default;
+    FMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
 
     IMesh* Mesh;
 };
 
-struct SInstancedMeshComponent : IComponent
+struct FInstancedMeshComponent : IComponent
 {
-    SInstancedMeshComponent() = default;
-    SInstancedMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
+    FInstancedMeshComponent() = default;
+    FInstancedMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
 
     IMesh* Mesh;
 };

@@ -48,7 +48,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	Arguments.push_back(TargetProfileW.c_str());
 	Arguments.push_back(L"-spirv");
 	Arguments.push_back(L"-fspv-target-env=vulkan1.3");
-	Arguments.push_back(L"-fspv-extension=SPV_KHR_physical_storage_buffer");
+	Arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
 	Arguments.push_back(L"-fvk-use-dx-layout");									// Use DirectX-compatible memory layout
 	Arguments.push_back(L"-O3");												// Optimization level 3
 

@@ -1,150 +1,134 @@
 #include "EnginePCH.h"
 #include "VkSceneBuffer.h"
 
-//void PVkSceneBuffer::CreateMesh(const SMeshBinaryData& MeshBinaryObject)
-//{
-//    const size_t VertexBufferSize = MeshBinaryObject.Vertices.size() * sizeof(SVertex);
-//    const size_t IndexBufferSize = MeshBinaryObject.Indices.size() * sizeof(uint32_t);
-//
-//    VertexBuffer = new PVulkanBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-//    IndexBuffer = new PVulkanBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-//    StagingBuffer = new PVulkanBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-//
-//    VertexBuffer->Allocate(VertexBufferSize);
-//    IndexBuffer->Allocate(IndexBufferSize);
-//    StagingBuffer->Allocate(VertexBufferSize + IndexBufferSize);
-//
-//    void* Data = nullptr;
-//    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Allocation, &Data);
-//    memcpy(Data, MeshBinaryObject.Vertices.data(), VertexBufferSize);
-//    memcpy((char*)Data + VertexBufferSize, MeshBinaryObject.Indices.data(), IndexBufferSize);
-//    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Allocation);
-//
-//    VkBufferDeviceAddressInfo BufferDeviceAddressInfo{};
-//    BufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-//    BufferDeviceAddressInfo.buffer = VertexBuffer->Buffer;
-//    DeviceAddress64 = vkGetBufferDeviceAddress(GetRHI()->GetDevice()->GetVkDevice(), &BufferDeviceAddressInfo);
-//
-//    // Copy vertex and index data from the staging buffer (in CPU memory) immediately but synchronously to the GPU-only buffers, ensuring the data is guaranteed to be in GPU memory and ready for use.
-//    GetRHI()->GetSceneRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
-//    {
-//        VkBufferCopy vertexCopy{ 0 };
-//        vertexCopy.dstOffset = 0;
-//        vertexCopy.srcOffset = 0;
-//        vertexCopy.size = VertexBufferSize;
-//
-//        vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingBuffer->Buffer, VertexBuffer->Buffer, 1, &vertexCopy);
-//
-//        VkBufferCopy indexCopy{ 0 };
-//        indexCopy.dstOffset = 0;
-//        indexCopy.srcOffset = VertexBufferSize;
-//        indexCopy.size = IndexBufferSize;
-//
-//        vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingBuffer->Buffer, IndexBuffer->Buffer, 1, &indexCopy);
-//    });
-//}
-//
-//void PVkSceneBuffer::CreateDynamicMesh(const SMeshBinaryData& MeshBinaryObject) 
-//{
-//    const size_t VertexBufferSize = MeshBinaryObject.Vertices.size() * sizeof(SVertex);
-//    const size_t IndexBufferSize = MeshBinaryObject.Indices.size() * sizeof(uint32_t);
-//
-//    VertexBuffer = new PVulkanBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-//    IndexBuffer = new PVulkanBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-//
-//    VertexBuffer->Allocate(VertexBufferSize);
-//    IndexBuffer->Allocate(IndexBufferSize);
-//
-//    // Since this is a dynamic buffer, you can directly map memory and update vertices without using a staging buffer.
-//    void* vertexData = nullptr;
-//    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), VertexBuffer->Allocation, &vertexData);
-//    memcpy(vertexData, MeshBinaryObject.Vertices.data(), VertexBufferSize);
-//    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), VertexBuffer->Allocation);
-//
-//    void* indexData = nullptr;
-//    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), IndexBuffer->Allocation, &indexData);
-//    memcpy(indexData, MeshBinaryObject.Indices.data(), IndexBufferSize);
-//    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), IndexBuffer->Allocation);
-//
-//    VkBufferDeviceAddressInfo BufferDeviceAddressInfo{};
-//    BufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-//    BufferDeviceAddressInfo.buffer = VertexBuffer->Buffer;
-//    DeviceAddress64 = vkGetBufferDeviceAddress(GetRHI()->GetDevice()->GetVkDevice(), &BufferDeviceAddressInfo);
-//}
-//
-//void PVkSceneBuffer::UpdateDynamicMesh(const SMeshBinaryData& MeshData)
-//{
-//    const size_t VertexBufferSize = MeshData.Vertices.size() * sizeof(SVertex);
-//    const size_t IndexBufferSize = MeshData.Indices.size() * sizeof(uint32_t);
-//
-//    // Ensure the buffer sizes are the same or larger. If the new data is larger, you might need to reallocate the buffers.
-//    if (VertexBuffer->AllocationInfo.size < VertexBufferSize || IndexBuffer->AllocationInfo.size < IndexBufferSize) {
-//        // Reallocate the buffers if needed
-//        VertexBuffer->Free();
-//        IndexBuffer->Free();
-// 
-//        VertexBuffer->Allocate(VertexBufferSize);
-//        IndexBuffer->Allocate(IndexBufferSize);
-//    }
-//
-//    // Update vertex buffer
-//    void* vertexData = nullptr;
-//    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), VertexBuffer->Allocation, &vertexData);
-//    memcpy(vertexData, MeshData.Vertices.data(), VertexBufferSize);
-//    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), VertexBuffer->Allocation);
-//
-//    // Update index buffer
-//    void* indexData = nullptr;
-//    vmaMapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), IndexBuffer->Allocation, &indexData);
-//    memcpy(indexData, MeshData.Indices.data(), IndexBufferSize);
-//    vmaUnmapMemory(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), IndexBuffer->Allocation);
-//}
-//
-//void PVkSceneBuffer::DrawIndirectInstanced(uint32_t ID)
-//{
-//    PROFILE_FUNC_SCOPE("PVkSceneBuffer::DrawIndirectInstanced")
-//
-//    PVulkanFrame* Frame = GetRHI()->GetSceneRenderer()->GetParallelFramePool()->GetCurrentFrame();
-//
-//    //SUInt64PointerPushConstant PushConstant;
-//    //PushConstant.DeviceAddress = DeviceAddress64;
-//    //PushConstant.ObjectId = ID;
-//
-//    //Material->Bind();
-//
-//    //vkCmdPushConstants(Frame->GetCommandBuffer()->GetVkCommandBuffer(), Material->GraphicsPipeline->GetPipelineLayout()->GetVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUInt64PointerPushConstant), &PushConstant);
-//    vkCmdBindIndexBuffer(Frame->GetCommandBuffer()->GetVkCommandBuffer(), IndexBuffer->Buffer, 0, VK_INDEX_TYPE_UINT32);
-//    vkCmdDrawIndexed(Frame->GetCommandBuffer()->GetVkCommandBuffer(), static_cast<size_t>(IndexBuffer->AllocationInfo.size) / sizeof(uint32_t), 1, 0, 0, 0);
-//    
-//    //Material->Unbind();
-//}
-//
-//
-//void PVkSceneBuffer::Destroy()
-//{
-//    VertexBuffer->Free();
-//    IndexBuffer->Free();
-//    StagingBuffer->Free();
-//    Material->Destroy();
-//}
-//
-//IMaterial* PVkSceneBuffer::GetMaterial() const
-//{
-//    return Material;
-//}
-//
-//
-//void PVkSceneBuffer::SetMaterial(IMaterial* NewMaterial)
-//{
-//    Material = static_cast<PVulkanMaterial*>(NewMaterial);
-//}
-//
-//void PVkSceneBuffer::SetVisibility(EVisibilityMode Mode)
-//{
-//    VisibilityMode = Mode;
-//}
-//
-//EVisibilityMode PVkSceneBuffer::GetVisibility() const
-//{
-//    return VisibilityMode;
-//}
+#include "Renderer/Common/Mesh.h"
+#include "Renderer/Vulkan/VulkanAllocator.h"
+#include "Renderer/Vulkan/VulkanCommand.h"
+
+void FVkSceneBuffer::Initialize()
+{
+    FVkBufferCreateInfo VertexBufferCreateInfo;
+    VertexBufferCreateInfo.Size = 1024 * MiB;
+    VertexBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VertexBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
+    VertexBuffer = MakeShared<FVkBuffer>();
+    VertexBuffer->Initialize(VertexBufferCreateInfo);
+
+    FVkBufferCreateInfo IndexBufferCreateInfo;
+    IndexBufferCreateInfo.Size = 1024 * MiB;
+    IndexBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    IndexBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
+    IndexBuffer = MakeShared<FVkBuffer>();
+    IndexBuffer->Initialize(IndexBufferCreateInfo);
+
+    FVkBufferCreateInfo IndirectBufferCreateInfo;
+    IndirectBufferCreateInfo.Size = 1024 * MiB;
+    IndirectBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    IndirectBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY;
+    IndirectBuffer = MakeShared<FVkBuffer>();
+    IndirectBuffer->Initialize(IndirectBufferCreateInfo);
+
+    FVkBufferCreateInfo StagingBufferCreateInfo;
+    StagingBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    StagingBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_ONLY;
+
+    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingVertexBuffer = MakeShared<FVkBuffer>();
+    StagingVertexBuffer->Initialize(StagingBufferCreateInfo);
+
+    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingIndexBuffer = MakeShared<FVkBuffer>();
+    StagingIndexBuffer->Initialize(StagingBufferCreateInfo);
+
+    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingIndirectBuffer = MakeShared<FVkBuffer>();
+    StagingIndirectBuffer->Initialize(StagingBufferCreateInfo);
+}
+
+void FVkSceneBuffer::Shutdown()
+{
+    StagingIndexBuffer->Free();
+    StagingVertexBuffer->Free();
+    StagingIndirectBuffer->Free();
+    VertexBuffer->Free();
+    IndirectBuffer->Free();
+    IndexBuffer->Free();
+}
+
+uint32 FVkSceneBuffer::AddInstance(const std::vector<FVertex>& Vertices, const std::vector<uint32> Indices)
+{
+    const SizeType VertexBufferSize = Vertices.size() * sizeof(FVertex);
+    const SizeType IndexBufferSize = Indices.size() * sizeof(uint32_t);
+
+    FInstanceMetadata Instance;
+    Instance.VertexOffset = CurrentVertexOffset;
+    Instance.VertexCount = (uint32_t)Vertices.size();
+    Instance.IndexOffset = CurrentIndexOffset;
+    Instance.IndexCount = (uint32_t)Indices.size();
+
+    VkDrawIndexedIndirectCommand IndirectCommand = {};
+    IndirectCommand.indexCount = Instance.IndexCount;
+    IndirectCommand.instanceCount = 1;
+    IndirectCommand.firstIndex = Instance.IndexOffset / sizeof(uint32_t);
+    IndirectCommand.vertexOffset = Instance.VertexOffset / sizeof(FVertex);
+    IndirectCommand.firstInstance = (uint32_t)Metadata.GetSize();
+
+    // Write Vertex Data to Staging Buffer
+    void* VertexData = nullptr;
+    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation, &VertexData);
+    memcpy((char*)VertexData + StagingVertexOffset, Vertices.data(), VertexBufferSize);
+    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation);
+
+    // Write Index Data to Staging Buffer
+    void* IndexData = nullptr;
+    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation, &IndexData);
+    memcpy((char*)IndexData + StagingIndexOffset, Indices.data(), IndexBufferSize);
+    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation);
+
+    // Write Indirect Command to Staging Buffer
+    void* IndirectData = nullptr;
+    vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation, &IndirectData);
+    memcpy((char*)IndirectData + StagingIndirectOffset, &IndirectCommand, sizeof(IndirectCommand));
+    vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation);
+
+    GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
+    {
+        VkBufferCopy VertexBufferCopy = {};
+        VertexBufferCopy.srcOffset = StagingVertexOffset;
+        VertexBufferCopy.dstOffset = CurrentVertexOffset;
+        VertexBufferCopy.size = VertexBufferSize;
+        vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingVertexBuffer->Info.Handle, VertexBuffer->Info.Handle, 1, &VertexBufferCopy);
+
+        VkBufferCopy IndexBufferCopy = {};
+        IndexBufferCopy.srcOffset = StagingIndexOffset;
+        IndexBufferCopy.dstOffset = CurrentIndexOffset;
+        IndexBufferCopy.size = IndexBufferSize;
+        vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingIndexBuffer->Info.Handle, IndexBuffer->Info.Handle, 1, &IndexBufferCopy);
+
+        VkBufferCopy IndirectBufferCopy = {};
+        IndirectBufferCopy.srcOffset = StagingIndirectOffset;
+        IndirectBufferCopy.dstOffset = CurrentIndirectOffset;
+        IndirectBufferCopy.size = sizeof(VkDrawIndexedIndirectCommand);
+        vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingIndirectBuffer->Info.Handle, IndirectBuffer->Info.Handle, 1, &IndirectBufferCopy);
+    });
+
+    // Update GPU offsets
+    CurrentVertexOffset += VertexBufferSize;
+    CurrentIndexOffset += IndexBufferSize;
+    CurrentIndirectOffset += sizeof(VkDrawIndexedIndirectCommand);
+
+    // Update staging offsets
+    StagingVertexOffset += VertexBufferSize;
+    StagingIndexOffset += IndexBufferSize;
+    StagingIndirectOffset += sizeof(VkDrawIndexedIndirectCommand);
+
+    // Add metadata entry
+    Metadata.Add(Instance);
+
+    return Metadata.GetSize();
+}
+
+void FVkSceneBuffer::DrawIndexedIndirect(PVulkanCommandBuffer* CommandBuffer)
+{
+    vkCmdDrawIndexedIndirect(CommandBuffer->GetVkCommandBuffer(), IndirectBuffer->Info.Handle, 0, Metadata.GetSize(), sizeof(VkDrawIndexedIndirectCommand));
+}

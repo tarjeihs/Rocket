@@ -4,8 +4,8 @@
 #include "Core/Engine.h"
 #include "Scene/Registry.h"
 
-struct SMeshComponent;
-struct STransformComponent;
+struct FMeshComponent;
+struct FTransformComponent;
 
 class PScene
 {

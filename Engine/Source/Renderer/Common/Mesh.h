@@ -2,22 +2,20 @@
 
 #include <glm/glm.hpp>
 
-struct SVertex
+struct FVertex
 {
-    SVertex()
+    FVertex()
     {
-        static_assert(sizeof(SVertex) == 16, "SVertex size should be 16 bytes.");
+        static_assert(sizeof(FVertex) == 48, "FVertex size is required to be 48 bytes.");
 
-        Position = glm::vec3(0.0f);
+        Position    = glm::vec3(0.0f);
+        Normal      = glm::vec3(0.0f);
+        TexCoord    = glm::vec2(0.0f);
     }
 
     alignas(16) glm::vec3 Position;
-};
-
-struct SMeshBinaryData
-{
-    std::vector<SVertex> Vertices;
-    std::vector<uint32_t> Indices;
+    alignas(16) glm::vec3 Normal;
+    alignas(16) glm::vec2 TexCoord;
 };
 
 class IMesh

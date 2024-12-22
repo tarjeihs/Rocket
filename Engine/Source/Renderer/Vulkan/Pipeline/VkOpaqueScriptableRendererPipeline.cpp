@@ -59,5 +59,5 @@ void FVkOpaqueScriptableRendererPipeline::Bind()
 	vkCmdBindVertexBuffers(CommandBuffer->GetVkCommandBuffer(), 0, 1, &SceneBuffer->VertexBuffer->Info.Handle, Offsets);
 	vkCmdBindIndexBuffer(CommandBuffer->GetVkCommandBuffer(), SceneBuffer->IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
 
-	SceneBuffer->DrawIndirect(CommandBuffer);
+	SceneBuffer->DrawIndexedIndirect(CommandBuffer);
 }

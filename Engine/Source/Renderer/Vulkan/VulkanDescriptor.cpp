@@ -5,10 +5,11 @@
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
-#include "Renderer/Vulkan/VulkanDevice.h"
-#include "Renderer/Vulkan/VulkanSceneRenderer.h"
-#include "Renderer/Vulkan/VulkanFrame.h"
+#include "Renderer/Vulkan/VkRenderer.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VulkanTexture2D.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
+#include "Renderer/Vulkan/VulkanSampler.h"
 
 namespace Utils
 {
@@ -19,7 +20,7 @@ namespace Utils
 			case EVkDescriptorType::SSBO: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			case EVkDescriptorType::SSIO: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			case EVkDescriptorType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 		return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 	}
@@ -75,7 +76,7 @@ void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 	RK_LOG_DEBUG("Vulkan: Created DescriptorPool");
 }
 
-void FVkDescriptorPool::Destroy()
+void FVkDescriptorPool::Shutdown()
 {
 	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorPool, nullptr);
 }
@@ -131,7 +132,7 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate descriptor set.");
 }
 
-void FVkDescriptorSet::Destroy()
+void FVkDescriptorSet::Shutdown()
 {
 	for (SizeType Index = 0; Index < Info.Buffers.GetSize(); ++Index)
 	{
@@ -139,6 +140,11 @@ void FVkDescriptorSet::Destroy()
 		{
 			Info.Buffers[Index][Frame]->Free();
 		}
+	}
+
+	for (SizeType Index = 0; Index < Info.Textures.GetSize(); ++Index)
+	{
+		Info.Textures[Index]->Shutdown();
 	}
 }
 
@@ -168,6 +174,30 @@ void FVkDescriptorSet::ReadBuffer(uint32 Index, FVkBuffer*& Buffer)
 	//{
 	//	Buffer = MoveTemp(Result);
 	//}
+}
+
+void FVkDescriptorSet::WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D)
+{
+    VkDescriptorImageInfo DescriptorImageInfo = {};
+    DescriptorImageInfo.imageView = Texture2D->Info.Image->Info.ImageViewHandle;
+    DescriptorImageInfo.sampler = Texture2D->Info.Sampler->Info.Handle;
+    DescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet WriteDescriptorSet = {};
+    WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    WriteDescriptorSet.dstSet = Info.Handle;             // The Vulkan descriptor set handle
+    WriteDescriptorSet.dstBinding = 0;                  // Binding 0 for the array
+    WriteDescriptorSet.dstArrayElement = Index;          // Specify the index in the array
+    WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    WriteDescriptorSet.descriptorCount = 1;             // We're updating one descriptor
+    WriteDescriptorSet.pImageInfo = &DescriptorImageInfo;
+
+    vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
+}
+
+void FVkDescriptorSet::ReadTexture2D(uint32 Index, FVkTexture2D*& Texture2D)
+{
+
 }
 
 void FVkDescriptorSet::Bind(FVkPipelineLayout* PipelineLayout)
