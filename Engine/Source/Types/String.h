@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include "EngineTypes.h"
 
 class FString
 {

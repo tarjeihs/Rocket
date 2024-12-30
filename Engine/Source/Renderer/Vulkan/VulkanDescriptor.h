@@ -38,10 +38,10 @@ public:
 
 enum class EVkDescriptorType
 {
-    SSBO,
-    SSIO,
+    StructuredBuffer,
+    RWTexture2D,
     Sampler,
-    SamplerImage,
+    Texture2D,
 };
 
 struct FVkDescriptorLayout
@@ -66,7 +66,7 @@ public:
     FVkDescriptorSetLayoutInfo Info;
 
     void Initialize(FVkDescriptorSetLayoutCreateInfo& CreateInfo);
-    void Destroy();
+    void Shutdown();
 };
 
 struct FVkDescriptorSetCreateInfo
@@ -78,8 +78,14 @@ struct FVkDescriptorSetCreateInfo
 struct FVkDescriptorSetInfo
 {
     VkDescriptorSet                     Handle;
+    
     TArray<FVkBuffer**>                 Buffers;
+    TArray<FVkImage**>                  Images;
     TArray<FVkTexture2D*>               Textures;
+
+    TMap<FString, FVkBuffer**>          BufferMap;
+    TMap<FString, FVkImage**>           ImageMap;
+    TMap<FString, FVkTexture2D*>        TextureMap;
 };
 
 class FVkDescriptorSet
@@ -90,11 +96,7 @@ public:
     void Initialize(FVkDescriptorSetCreateInfo& CreateInfo);
     void Shutdown();
 
-    void WriteBuffer(uint32 Index, FVkBuffer* Buffer);
-    void ReadBuffer(uint32 Index, FVkBuffer*& Buffer);
-
-    void WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D);
-    void ReadTexture2D(uint32 Index, FVkTexture2D*& Texture2D);
-
-    void Bind(FVkPipelineLayout* PipelineLayout);
+    void WriteBuffer(uint32 Binding, uint32 Index, FVkBuffer* Buffer);
+    void WriteTexture2D(uint32 Binding, uint32 Index, FVkTexture2D* Texture2D);
+    void WriteImage(uint32 Binding, uint32 Index, FVkImage* Image);
 };

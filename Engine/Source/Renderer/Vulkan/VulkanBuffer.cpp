@@ -58,7 +58,6 @@ void FVkBuffer::Submit(const void* Data, size_t Size, size_t Offset)
     void* MappedData;
     vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), Info.Allocation, &MappedData);
     memcpy(static_cast<uint8_t*>(MappedData) + Offset, Data, Size);
-    //vmaFlushAllocation(GetRHI()->GetSceneRenderer()->GetAllocator()->GetMemoryAllocator(), Info.Allocation, Offset, Size); // Ensure visibility
     vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), Info.Allocation);
 }
 

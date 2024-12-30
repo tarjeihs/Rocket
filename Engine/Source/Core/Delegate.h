@@ -1,11 +1,10 @@
 #pragma once
 
 #include <functional>
-#include <vector>
 #include <unordered_set>
 
 template<typename... TArgs>
-class PDelegate
+class TDelegate
 {
 public:
     using TFunc = std::function<void(TArgs...)>;

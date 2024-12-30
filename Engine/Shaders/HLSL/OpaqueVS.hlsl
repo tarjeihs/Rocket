@@ -20,7 +20,7 @@ struct FVSOutput
 
 struct FGlobalStorageBuffer
 {
-    float Time;
+    float DeltaTime;
 };
 
 struct FCameraStorageBuffer
@@ -37,28 +37,40 @@ struct FMaterialStorageBuffer
     uint32 NormalTextureID;
 };
 
-struct FObjectStorageBuffer
+struct FInstanceStorageBuffer
 {
     float4x4 Transform;
-    float4x4 Normal;
+    float4x4 TransformInverseTranspose;
 };
 
-StructuredBuffer<FGlobalStorageBuffer> GlobalStorageBuffer      : register(t0, space0);
-StructuredBuffer<FCameraStorageBuffer> CameraStorageBuffer      : register(t1, space0);
-StructuredBuffer<FMaterialStorageBuffer> MaterialStorageBuffer  : register(t2, space0);
-StructuredBuffer<FObjectStorageBuffer> ObjectStorageBuffer      : register(t3, space0);
+StructuredBuffer<FGlobalStorageBuffer>      GlobalStorageBuffer[]         : register(t0, space0);
+StructuredBuffer<FCameraStorageBuffer>      CameraStorageBuffer[]         : register(t0, space0);
+StructuredBuffer<FMaterialStorageBuffer>    MaterialStorageBuffer[]       : register(t0, space0);
+StructuredBuffer<FInstanceStorageBuffer>    InstanceStorageBuffer[]       : register(t0, space0);
+
+static const int BINDLESS_BUFFER_INDEX_GLOBAL       = 0;
+static const int BINDLESS_BUFFER_INDEX_CAMERA       = 1;
+static const int BINDLESS_BUFFER_INDEX_MATERIAL     = 2;
+static const int BINDLESS_BUFFER_INDEX_INSTANCE     = 3;
 
 FVSOutput main(FVSInput Input, uint32 InstanceID : SV_InstanceID)
 {
     FVSOutput Output;
 
-    float4 WorldSpacePosition   = mul(ObjectStorageBuffer[InstanceID].Transform, float4(Input.Position, 1.0f));
-    float4 ViewPosition         = mul(CameraStorageBuffer[0].View, WorldSpacePosition);
-    float4 ClipSpacePosition    = mul(CameraStorageBuffer[0].Projection, ViewPosition);
+    FGlobalStorageBuffer        GlobalBuffer        = GlobalStorageBuffer       [BINDLESS_BUFFER_INDEX_GLOBAL]      [0];
+    FCameraStorageBuffer        CameraBuffer        = CameraStorageBuffer       [BINDLESS_BUFFER_INDEX_CAMERA]      [0];
+    FMaterialStorageBuffer      MaterialBuffer      = MaterialStorageBuffer     [BINDLESS_BUFFER_INDEX_MATERIAL]    [InstanceID];
+    FInstanceStorageBuffer      InstanceBuffer      = InstanceStorageBuffer     [BINDLESS_BUFFER_INDEX_INSTANCE]    [InstanceID];
+
+    float4 WorldSpacePosition   = mul(InstanceBuffer.Transform, float4(Input.Position, 1.0f));
+    float4 ViewPosition         = mul(CameraBuffer.View, WorldSpacePosition);
+    float4 ClipSpacePosition    = mul(CameraBuffer.Projection, ViewPosition);
+    float3 WorldSpaceNormal     = mul(InstanceBuffer.TransformInverseTranspose, float4(Input.Normal, 0.0f)).xyz;
 
     Output.ClipSpacePosition    = ClipSpacePosition;
     Output.WorldSpacePosition   = WorldSpacePosition.xyz;
-    Output.Normal               = Input.Normal;
+    Output.Normal               = normalize(WorldSpaceNormal);
     Output.TexCoord             = Input.TexCoord;
+
     return Output;
 }

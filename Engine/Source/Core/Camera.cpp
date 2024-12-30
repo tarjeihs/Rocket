@@ -30,10 +30,10 @@ void PCamera::SetPerspectiveProjection(float FovY, float AspectRatio, float ZNea
 
 void PCamera::CalculateViewMatrix(const glm::vec3& NewPosition, const glm::vec3& NewRotation)
 {
-    const glm::vec3 Forward = glm::vec3(glm::cos(NewRotation.y) * glm::cos(NewRotation.x), glm::sin(NewRotation.x), glm::sin(NewRotation.y) * glm::cos(NewRotation.x));
+    const glm::vec3 Forward = glm::vec3(glm::sin(NewRotation.y) * glm::cos(NewRotation.x), glm::cos(NewRotation.y) * glm::cos(NewRotation.x), glm::sin(NewRotation.x));
     const glm::vec3 Direction = glm::normalize(Forward);
-    const glm::vec3 Right = glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), Direction));
-    const glm::vec3 Up = glm::cross(Direction, Right);
+    const glm::vec3 Right = glm::normalize(glm::cross(Direction, glm::vec3(0.0f, 0.0f, 1.0f)));
+    const glm::vec3 Up = glm::cross(Right, Direction);
 
     ViewMatrix = glm::lookAt(NewPosition, NewPosition + Direction, Up);
     Position = NewPosition;

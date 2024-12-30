@@ -23,7 +23,7 @@ struct SWindowUserData
 class IWindow
 {
 public:
-	PDelegate<uint32_t> OnWindowFocusDelegate;
+	TDelegate<uint32_t> OnWindowFocusDelegate;
 
 	IWindow(const SWindowSpecification& InWindowSpecification)
 		: WindowSpecification(InWindowSpecification)

@@ -34,18 +34,10 @@ struct FObjectStorageBuffer
     float4x4 TransformInverseTranspose;
 };
 
-
-StructuredBuffer<FGlobalStorageBuffer>      GlobalStorageBuffer     : register(t0, space0);
-StructuredBuffer<FCameraStorageBuffer>      CameraStorageBuffer     : register(t1, space0);
-StructuredBuffer<FMaterialStorageBuffer>    MaterialStorageBuffer   : register(t2, space0);
-StructuredBuffer<FObjectStorageBuffer>      ObjectStorageBuffer     : register(t3, space0);
-
 Texture2D<float4> Textures[] : register(t0, space1);
 SamplerState Sampler : register(s0, space1);
 
 float4 main(FPSInput Input) : SV_TARGET
 {
-    float4 Albedo = Textures[0].Sample(Sampler, Input.TexCoord);
-    float4 Normal = Textures[1].Sample(Sampler, Input.TexCoord);
-    return Albedo;
+    return float4(normalize(Input.Normal * 0.5f + 0.5f), 1.0f);
 }

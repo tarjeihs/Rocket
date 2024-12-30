@@ -71,3 +71,9 @@ TUniquePtr<TPointer> MakeUnique()
 {
     return TUniquePtr<TPointer>(new TPointer());
 }
+
+template<typename TPointer, typename... TArgs>
+TUniquePtr<TPointer> MakeUnique(TArgs&&... Args)
+{
+    return TUniquePtr<TPointer>(new TPointer(std::forward<TArgs>(Args)...));
+}

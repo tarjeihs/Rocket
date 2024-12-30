@@ -6,5 +6,5 @@ struct FVkOpaqueScriptableRendererPipeline : public FVkScriptableRendererPipelin
 {
     virtual void Initialize(FVkPipelineLayout* PipelineLayout) override; 
     virtual void Shutdown() override;
-    virtual void Bind() override;
+    virtual void Execute() override;
 };

@@ -5,7 +5,7 @@
 class POverlay
 {
 public:
-    PDelegate<> OnRender;
+    TDelegate<> OnRender;
 
     virtual ~POverlay() = default;
 

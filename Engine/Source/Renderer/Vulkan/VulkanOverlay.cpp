@@ -2,6 +2,7 @@
 #include "VulkanOverlay.h"
 
 #include "Core/Window.h"
+#include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -67,8 +68,6 @@ void PVulkanOverlay::Init()
 	DescriptorPool = new FVkDescriptorPool();
 	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
 
-	VkFormat ColorAttachmentFormatPointer = GetRHI()->GetRenderer()->GetSwapchain()->GetSurfaceFormat().format;
-
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindow()->GetNativeWindow(), true);
 
@@ -83,7 +82,7 @@ void PVulkanOverlay::Init()
 	ImGuiInitInfo.UseDynamicRendering = true;
 	ImGuiInitInfo.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 	ImGuiInitInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	ImGuiInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &ColorAttachmentFormatPointer;
+	ImGuiInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainSurfaceFormat.format;
 	ImGuiInitInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	ImGui_ImplVulkan_Init(&ImGuiInitInfo);

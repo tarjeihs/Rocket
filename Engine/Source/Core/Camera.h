@@ -6,14 +6,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Renderer/Common/Overlay.h"
-
 enum class ECameraProjectionMode 
 { 
 	Perspective, Orthographic
 };
 
-class PCamera
+class ICamera {};
+
+class PCamera : public ICamera
 {
 public:
 	PCamera() 
@@ -22,6 +22,8 @@ public:
     	Settings.FoVY = 66.0f;
     	Settings.ZNear = 0.1f;
     	Settings.ZFar = 1000.0f;
+		
+		ApplySettings();
 
 #if RK_DEBUG
 		//GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);

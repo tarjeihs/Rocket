@@ -1,8 +1,10 @@
-#include "Core/Engine.h"
 #include "EnginePCH.h"
 #include "VkForwardRenderer.h"
 
+#include "Pipeline/VkOverlayScriptableRendererPipeline.h"
+#include "Pipeline/VkPostProcessScriptableRendererPipeline.h"
 #include "Renderer/RHI.h"
+#include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
@@ -11,94 +13,115 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/Pipeline/VkOpaqueScriptableRendererPipeline.h"
+#include "Renderer/Vulkan/VulkanSwapchain.h"
+#include "Scene/Component.h"
 #include "Scene/Scene.h"
+#include "Utils/Profiler.h"
 #include "VulkanTexture2D.h"
-#include "glm/ext/matrix_transform.hpp"
+#include "VulkanImage.h"
 #include "glm/gtc/matrix_inverse.hpp"
+
+// TODO IMPORTANT: Resizing must apply to the tone mapping images aswell..!
 
 void FVkForwardRenderer::Init()
 {
     Super::Init();
 
-	FVkPipelineLayout*			PipelineLayout							= new FVkPipelineLayout();
+	PipelineLayout												= new FVkPipelineLayout();
+					
+	DescriptorSet 												= new FVkDescriptorSet();
+	DescriptorSetLayout 										= new FVkDescriptorSetLayout();
+	DescriptorPool 												= new FVkDescriptorPool();
 
-	FVkDescriptorSetLayout* 	BufferDescriptorSetLayout 				= new FVkDescriptorSetLayout();
-	FVkDescriptorSetLayout* 	TextureDescriptorSetLayout 				= new FVkDescriptorSetLayout();
-	FVkDescriptorSet* 			BufferDescriptorSet 					= new FVkDescriptorSet();
-	FVkDescriptorSet* 			TextureDescriptorSet 					= new FVkDescriptorSet();
-	FVkDescriptorPool* 			DescriptorPool 							= new FVkDescriptorPool();
+	FVkBuffer** 				GlobalBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
+	FVkBuffer** 				CameraBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
+	FVkBuffer** 				MaterialBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
+	FVkBuffer** 				InstanceBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
+	
+	FVkImage**					HDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
+	FVkImage**					SDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
 
-	FVkBuffer** 				GlobalBuffer 							= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
-	FVkBuffer** 				CameraBuffer 							= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
-	FVkBuffer** 				MaterialBuffer 							= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
-	FVkBuffer** 				InstanceBuffer 							= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
-
-	FVkTexture2D*				AlbedoTexture = new FVkTexture2D();
-	FVkTexture2D*				NormalTexture = new FVkTexture2D();
-	//FVkTexture2D*				RoughnessTexture = new FVkTexture2D();
-	//FVkTexture2D*				MetallicTexture = new FVkTexture2D();
-
-	FVkDescriptorSetLayoutCreateInfo BufferDescriptorSetLayoutCreateInfo = 
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo =
 	{{
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 },
-		{ EVkDescriptorType::SSBO, 1 },
+		{ EVkDescriptorType::StructuredBuffer, 	16   },
+		{ EVkDescriptorType::RWTexture2D, 		1024 },
+		{ EVkDescriptorType::Texture2D, 		1024 },
 	}};
 
-	FVkDescriptorSetLayoutCreateInfo ImageDescriptorSetLayoutCreateInfo = 
-	{{
-		{ EVkDescriptorType::SamplerImage, 65536 },
-		{ EVkDescriptorType::SamplerImage, 65536 },
-		{ EVkDescriptorType::SamplerImage, 65536 },
-		{ EVkDescriptorType::SamplerImage, 65536 },
-	}};
-
-	FVkDescriptorSetCreateInfo BufferDescriptorSetCreateInfo =
+	FVkDescriptorSetCreateInfo DescriptorSetCreateInfo =
 	{
 		DescriptorPool,
-		BufferDescriptorSetLayout
-	};
-
-	FVkDescriptorSetCreateInfo ImageDescriptorSetCreateInfo =
-	{
-		DescriptorPool,
-		TextureDescriptorSetLayout
+		DescriptorSetLayout
 	};
 
 	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
 	{
 		{
-    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 	4.0f },
-    		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 	4.0f },
+    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	16.0f },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 	16.0f },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 	16.0f },
 		},
-		2,
+		1,
 		VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
 	};
 
 	FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo =
 	{
 		{ 
-			BufferDescriptorSetLayout, 
-			TextureDescriptorSetLayout 
+			DescriptorSetLayout
 		}
 	};
+	
+	FVkBufferCreateInfo GlobalBufferCreateInfo = 
+	{ 
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		64 
+	};
+	
+	FVkBufferCreateInfo CameraBufferCreateInfo = 
+	{ 
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		160 * 4 
+	};
+	
+	FVkBufferCreateInfo MaterialBufferCreateInfo = 
+	{
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		64 * 1024
+	};
+	
+	FVkBufferCreateInfo InstanceBufferCreateInfo = 
+	{ 
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		128 * 1024 * 1024 
+	};
 
-	FVkBufferCreateInfo GlobalBufferCreateInfo 				= { VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, 64 };
-	FVkBufferCreateInfo CameraBufferCreateInfo 				= { VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, 160 * 4 };
-	FVkBufferCreateInfo MaterialBufferCreateInfo 			= { VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, 48 * 256 };
-	FVkBufferCreateInfo InstanceBufferCreateInfo 			= { VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, 128 * 1024 * 1024 };
+	FVkImageCreateInfo ToneMappingHDR16CreateInfo = 
+	{ 
+		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		GetSwapchain()->Info.SwapchainImageExtent,
+		VK_FORMAT_R16G16B16A16_SFLOAT
+	};
 
-	FVkTexture2DCreateInfo AlbedoTexture2DCreateInfo 		= { "C:/Workspace/Game/Game/Content/sutr_tmave_sedy.jpeg", VK_FORMAT_R8G8B8A8_SRGB };
-	FVkTexture2DCreateInfo NormalTexture2DCreateInfo 		= { "C:/Workspace/Game/Game/Content/sutr_tmave_sedy_NormalsMap.jpeg", VK_FORMAT_R8G8B8A8_UNORM };
-	//FVkTexture2DCreateInfo RoughnessTexture2DCreateInfo 	= { "C:/Workspace/Game/Game/Content/download.png", VK_FORMAT_R8_UNORM };
-	//FVkTexture2DCreateInfo MetallicTexture2DCreateInfo 		= { "C:/Workspace/Game/Game/Content/download.png", VK_FORMAT_R8_UNORM };
+	FVkImageCreateInfo ToneMappingLDR8CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		GetSwapchain()->Info.SwapchainImageExtent,
+		VK_FORMAT_R8G8B8A8_UNORM
+	};
 
 	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
-	BufferDescriptorSetLayout->Initialize(BufferDescriptorSetLayoutCreateInfo);
-	TextureDescriptorSetLayout->Initialize(ImageDescriptorSetLayoutCreateInfo);
-	BufferDescriptorSet->Initialize(BufferDescriptorSetCreateInfo);
-	TextureDescriptorSet->Initialize(ImageDescriptorSetCreateInfo);
+	DescriptorSetLayout->Initialize(DescriptorSetLayoutCreateInfo);
+	DescriptorSet->Initialize(DescriptorSetCreateInfo);
+
 	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
 
 	for (SizeType FrameIndex = 0; FrameIndex < CONCURRENT_FRAME_COUNT; ++FrameIndex)
@@ -108,61 +131,93 @@ void FVkForwardRenderer::Init()
 		MaterialBuffer[FrameIndex] = new FVkBuffer();
 		InstanceBuffer[FrameIndex] = new FVkBuffer();
 
+		HDRImage[FrameIndex] = new FVkImage();
+		SDRImage[FrameIndex] = new FVkImage();
+		
 		GlobalBuffer[FrameIndex]->Initialize(GlobalBufferCreateInfo);
 		CameraBuffer[FrameIndex]->Initialize(CameraBufferCreateInfo);
 		MaterialBuffer[FrameIndex]->Initialize(MaterialBufferCreateInfo);
 		InstanceBuffer[FrameIndex]->Initialize(InstanceBufferCreateInfo);
+		
+		HDRImage[FrameIndex]->Initialize(ToneMappingHDR16CreateInfo);
+		SDRImage[FrameIndex]->Initialize(ToneMappingLDR8CreateInfo);
 	}
 
-	BufferDescriptorSet->Info.Buffers.Add(GlobalBuffer);
-	BufferDescriptorSet->Info.Buffers.Add(CameraBuffer);
-	BufferDescriptorSet->Info.Buffers.Add(MaterialBuffer);
-	BufferDescriptorSet->Info.Buffers.Add(InstanceBuffer);
+	Buffers.Insert("Global", GlobalBuffer);
+	Buffers.Insert("Camera", CameraBuffer);
+	Buffers.Insert("Material", MaterialBuffer);
+	Buffers.Insert("Instance", InstanceBuffer);
 
-	TextureDescriptorSet->Info.Textures.Add(AlbedoTexture);
-	TextureDescriptorSet->Info.Textures.Add(NormalTexture);
-	//TextureDescriptorSet->Info.Textures.Add(RoughnessTexture);
-	//TextureDescriptorSet->Info.Textures.Add(MetallicTexture);
-
-	BufferDescriptorSet->WriteBuffer(0, GlobalBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]);
-	BufferDescriptorSet->WriteBuffer(1, CameraBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]);
-	BufferDescriptorSet->WriteBuffer(2, MaterialBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]);
-	BufferDescriptorSet->WriteBuffer(3, InstanceBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]);
-
-	AlbedoTexture->Initialize(AlbedoTexture2DCreateInfo);
-	NormalTexture->Initialize(NormalTexture2DCreateInfo);
-	//RoughnessTexture->Initialize(RoughnessTexture2DCreateInfo);
-	//MetallicTexture->Initialize(MetallicTexture2DCreateInfo);
-	
-	TextureDescriptorSet->WriteTexture2D(0, AlbedoTexture);
-	TextureDescriptorSet->WriteTexture2D(1, NormalTexture);
-	//TextureDescriptorSet->WriteTexture2D(2, RoughnessTexture);
-	//TextureDescriptorSet->WriteTexture2D(3, MetallicTexture);
-
-	DescriptorPoolData.Add(DescriptorPool);
-	DescriptorSetLayoutData.Add(BufferDescriptorSetLayout);
-	DescriptorSetLayoutData.Add(TextureDescriptorSetLayout);
-	DescriptorSetData.Add(BufferDescriptorSet);
-	DescriptorSetData.Add(TextureDescriptorSet);
+	RWTexture2D.Insert("HDR", HDRImage);
+	RWTexture2D.Insert("SDR", SDRImage);
 
 	FVkOpaqueScriptableRendererPipeline* OpaqueSRP = new FVkOpaqueScriptableRendererPipeline();
 	OpaqueSRP->Initialize(PipelineLayout);
-	ScriptableRendererPipelineData.Insert("Opaque", OpaqueSRP);
+	ScriptableRendererPipelineData.Add(OpaqueSRP);
 
-	SharedPipelineLayout = PipelineLayout;
+	FVkPostProcessScriptableRendererPipeline* PostProcessSRP = new FVkPostProcessScriptableRendererPipeline();
+	PostProcessSRP->Initialize(PipelineLayout);
+	ScriptableRendererPipelineData.Add(PostProcessSRP);
 
-	GetRenderGraph()->AddCommand([=](PVulkanCommandBuffer* CB) mutable
+	FVkOverlayScriptableRendererPipeline* OverlaySRP = new FVkOverlayScriptableRendererPipeline();
+	OverlaySRP->Initialize(PipelineLayout);
+	ScriptableRendererPipelineData.Add(OverlaySRP);
+}
+
+void FVkForwardRenderer::Shutdown() 
+{
+    Super::Shutdown();
+
+	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout->Info.Handle, VK_NULL_HANDLE);
+
+	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
+	{
+		for (const auto& Buffer : Buffers)
+		{
+			Buffer.Value[Index]->Free();
+		}
+
+		for (const auto& Image : RWTexture2D)
+		{
+			Image.Value[Index]->Shutdown();
+		}
+	}
+
+	DescriptorSet->Shutdown();
+	DescriptorSetLayout->Shutdown();
+	DescriptorPool->Shutdown();
+
+	for (const auto& Pair : ScriptableRendererPipelineData)
+	{
+		Pair->Shutdown();
+	}
+}
+
+void FVkForwardRenderer::Bind()
+{
+	PROFILE_FUNC_SCOPE("FVkForwardRenderer::Bind")
+
+	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
+	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
+
+	DescriptorSet->WriteBuffer(0, 0, (*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+	DescriptorSet->WriteBuffer(0, 1, (*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+	DescriptorSet->WriteBuffer(0, 2, (*Buffers.Find("Material"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+	DescriptorSet->WriteBuffer(0, 3, (*Buffers.Find("Instance"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+
+	DescriptorSet->WriteImage(1, 0, (*RWTexture2D.Find("HDR"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+	DescriptorSet->WriteImage(1, 1, (*RWTexture2D.Find("SDR"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
+
 	{
 		struct FGlobalData
 		{
-    		float Time;
+    		float DeltaTime;
 		} GlobalData;
-		GlobalData.Time = GetEngine()->Time.GetElapsedTimeAsSeconds();
+		GlobalData.DeltaTime = GetEngine()->Timestep.GetDeltaTime();
 		
-		GlobalBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&GlobalData, sizeof(FGlobalData));
-	});
+		(*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&GlobalData, sizeof(FGlobalData));
+	}
 
-	GetRenderGraph()->AddCommand([=](PVulkanCommandBuffer* CB) mutable
 	{
 		struct FCameraData
 		{
@@ -176,76 +231,49 @@ void FVkForwardRenderer::Init()
 		CameraData.Position = GetScene()->GetCamera()->GetPosition();
 		CameraData.Direction = GetScene()->GetCamera()->GetRotation();
 
-		CameraBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&CameraData, sizeof(FCameraData));
-	});
+		(*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&CameraData, sizeof(FCameraData));
+	}
 
-	GetRenderGraph()->AddCommand([=](PVulkanCommandBuffer* CB) mutable
 	{
 		struct FMaterialData
 		{
 			alignas(4) uint32 AlbedoTextureID;
     		alignas(4) uint32 NormalTextureID;
-		} MaterialData;
-		MaterialData.AlbedoTextureID = 0;
-		MaterialData.NormalTextureID = 0;
+		};
 
-		MaterialBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&MaterialData, sizeof(FMaterialData));
-	});
+		TArray<FMaterialData> MaterialData;
+		GetScene()->GetRegistry()->View<FMaterialComponent>([&](const FMaterialComponent& MaterialComponent)
+		{
+			uint32 AlbedoTextureID = 0;
+			uint32 NormalTextureID = 0;
 
-	GetRenderGraph()->AddCommand([=](PVulkanCommandBuffer* CB) mutable
+			FMaterialData Material = { .AlbedoTextureID = AlbedoTextureID, .NormalTextureID = NormalTextureID };
+			MaterialData.Add(Material);			
+		});
+		(*Buffers.Find("Material"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(MaterialData.GetData(), sizeof(FMaterialData) * MaterialData.GetSize());
+	}
+
 	{
 		struct FInstanceData
 		{
 			alignas(16) glm::mat4 Transform;
 			alignas(16) glm::mat4 TransformInverseTranspose;
-		} InstanceData;
-		InstanceData.Transform = glm::identity<glm::mat4>();
-		InstanceData.TransformInverseTranspose = glm::inverseTranspose(glm::identity<glm::mat4>());
+		};
 
-		InstanceBuffer[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&InstanceData, sizeof(FInstanceData));
-	});
-}
+		TArray<FInstanceData> InstanceData;
+		GetScene()->GetRegistry()->View<FTransformComponent, FMeshComponent>([&](const FTransformComponent& TransformComponent, const FMeshComponent& MeshComponent)
+		{
+			glm::mat4 Transform = TransformComponent.Transform.ToMatrix();
+			glm::mat4 TransformInverseTranspose = glm::inverseTranspose(TransformComponent.Transform.ToMatrix());
 
-void FVkForwardRenderer::Shutdown() 
-{
-    Super::Shutdown();
+			FInstanceData Instance = { .Transform = Transform, .TransformInverseTranspose = TransformInverseTranspose };
+			InstanceData.Add(Instance);
+		});
 
-	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), SharedPipelineLayout->Info.Handle, VK_NULL_HANDLE);
-
-	for (const auto& DescriptorSet : DescriptorSetData)
-	{
-		DescriptorSet->Shutdown();
-	}
-
-	for (const auto& DescriptorSetLayout : DescriptorSetLayoutData)
-	{
-		DescriptorSetLayout->Destroy();
-	}
-
-	for (const auto& DescriptorPool : DescriptorPoolData)
-	{
-		DescriptorPool->Shutdown();
-	}
-
-	for (const auto& Pair : ScriptableRendererPipelineData)
-	{
-		Pair.Value->Shutdown();
+		(*Buffers.Find("Instance"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(InstanceData.GetData(), sizeof(FInstanceData) * InstanceData.GetSize());
 	}
 }
 
-void FVkForwardRenderer::Bind()
+void FVkForwardRenderer::BindImGui()
 {
-	PROFILE_FUNC_SCOPE("FVkForwardRenderer::Bind")
-
-	TArray<VkDescriptorSet> DescriptorSets;
-	for (const auto& DescriptorSet : DescriptorSetData)
-	{
-		DescriptorSets.Add(DescriptorSet->Info.Handle);
-	}
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, SharedPipelineLayout->Info.Handle, 0, DescriptorSets.GetSize(), DescriptorSets.GetData(), 0, 0);
-
-	for (const auto& Pair : ScriptableRendererPipelineData)
-	{
-		Pair.Value->Bind();
-	}
 }

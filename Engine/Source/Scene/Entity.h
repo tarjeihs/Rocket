@@ -36,7 +36,7 @@ TComponent& FEntity::AddComponent(TArgs&&... Args) const
 }
 
 template<typename TComponent>
-TComponent & FEntity::GetComponent() const
+TComponent& FEntity::GetComponent() const
 {
     TComponent& Component = GetScene()->GetRegistry()->GetComponent<TComponent>(EntityID);
     return Component;

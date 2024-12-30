@@ -43,5 +43,6 @@ public:
 	FVkPipelineInfo Info;
 
 	void Initialize(FVkPipelineCreateInfo& CreateInfo);
+	void InitCompute(FVkPipelineCreateInfo& CreateInfo);
 	void Shutdown();
 };

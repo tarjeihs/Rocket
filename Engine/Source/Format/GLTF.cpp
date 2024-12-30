@@ -1,7 +1,8 @@
 #include "EnginePCH.h"
+#include "Utils/Profiler.h"
 #include "GLTF.h"
 
-void GLTF::Import(const std::string& Path, std::vector<FVertex>& Vertices, std::vector<uint32_t>& Indices)
+void GLTF::Import(const FString& Path, TArray<FVertex>& Vertices, TArray<uint32_t>& Indices)
 {
     const SBlob& Blob = PFileSystem::ReadFileBinary(Path);
 
@@ -99,7 +100,7 @@ void GLTF::Import(const std::string& Path, std::vector<FVertex>& Vertices, std::
                     //Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
                 } 
 
-                Vertices.push_back(Vertex);
+                Vertices.Add(Vertex);
             }
 
             if (Primitive.indices >= 0)
@@ -139,19 +140,19 @@ void GLTF::Import(const std::string& Path, std::vector<FVertex>& Vertices, std::
                     }
                 }
 
-                Indices.push_back(IndexValue);
+                Indices.Add(IndexValue);
             }
         }
     }
 
-    for (size_t i = 0; i < Vertices.size(); ++i)
+    for (size_t i = 0; i < Vertices.GetSize(); ++i)
     {
         //MeshBinaryObject.Vertices[i].Tangent = glm::vec3(0.0f);
         //MeshBinaryObject.Vertices[i].Bitangent = glm::vec3(0.0f);
     }
 
     // Compute tangents and bitangents for each triangle
-    for (size_t i = 0; i < Indices.size(); i += 3)
+    for (size_t i = 0; i < Indices.GetSize(); i += 3)
     {
 //        uint32_t idx0 = Indices[i];
 //        uint32_t idx1 = Indices[i + 1];
@@ -190,7 +191,7 @@ void GLTF::Import(const std::string& Path, std::vector<FVertex>& Vertices, std::
     }
 
     // Normalize and orthogonalize tangents and bitangents
-    for (size_t i = 0; i < Vertices.size(); ++i)
+    for (size_t i = 0; i < Vertices.GetSize(); ++i)
     {
         //FVertex& vertex = Vertices[i];
         //glm::vec3& n = vertex.Normal;

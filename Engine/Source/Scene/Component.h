@@ -1,27 +1,37 @@
 #pragma once
 
+#include "Core/Camera.h"
 #include "Math/Transform.h"
 #include "Utils/UUID64.h"
-#include "Renderer/Common/Mesh.h"
+#include "Types/String.h"
+#include "EngineTypes.h"
+
+class IMesh;
+class IMaterial;
 
 struct IComponent {};
 
+struct FUUIDComponent : IComponent
+{
+    FUUIDComponent() = default;
+
+    FUUID64 UUID;
+};
+
 struct FTagComponent : IComponent
 {
-    std::string Tag;
+    FTagComponent() = default;
+    FTagComponent(const FString& InTag) : Tag(InTag) {}
+
+    FString Tag;
 };
 
 struct FTransformComponent : IComponent
 {
     FTransformComponent() = default;
-    FTransformComponent(const STransform& InTransform) : Transform(InTransform) {}
+    FTransformComponent(const FTransform& InTransform) : Transform(InTransform) {}
 
-    STransform Transform;
-};
-
-struct FUUIDComponent : IComponent
-{
-    SUUID64 UUID;
+    FTransform Transform;
 };
 
 struct FMeshComponent : IComponent
@@ -32,10 +42,18 @@ struct FMeshComponent : IComponent
     IMesh* Mesh;
 };
 
-struct FInstancedMeshComponent : IComponent
+struct FMaterialComponent : IComponent
 {
-    FInstancedMeshComponent() = default;
-    FInstancedMeshComponent(IMesh* InMesh) : Mesh(InMesh) {}
+    FMaterialComponent() = default;
+    FMaterialComponent(IMaterial* InMaterial) : Material(InMaterial) {}
 
-    IMesh* Mesh;
+    IMaterial* Material;
+};
+
+struct FCameraComponent : IComponent
+{
+    FCameraComponent() = default;
+    FCameraComponent(ICamera* InCamera) : Camera(InCamera) {}
+
+    ICamera* Camera;
 };

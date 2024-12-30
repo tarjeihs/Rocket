@@ -2,32 +2,25 @@
 #include "RHIAPI.h"
 
 #include "Renderer/RHI.h"
-#include "Renderer/Vulkan/VkSceneBuffer.h"
-#include "Renderer/Vulkan/VulkanMaterial.h"
-#include "Renderer/Vulkan/VulkanShader.h"
-#include "SceneBuffer.h"
+#include "Renderer/Vulkan/VulkanTexture2D.h"
+#include "Renderer/Vulkan/VkMesh.h"
+#include "Renderer/Vulkan/VkRenderer.h"
+#include "Format/GLTF.h"
+#include "Types/Vertex.h"
 
 template<>
-struct TRHIAPI<ISceneBuffer>
+struct TRHIAPI<IMesh>
 {
 #if RK_RHI == VULKAN
-    using Type = FVkSceneBuffer;
+    using Type = FVkMesh;
 #endif
 };
 
 template<>
-struct TRHIAPI<IShader>
+struct TRHIAPI<ITexture2D>
 {
 #if RK_RHI == VULKAN
-    using Type = FVkShader;
-#endif
-};
-
-template<>
-struct TRHIAPI<IMaterial>
-{
-#if RK_RHI == VULKAN
-    using Type = PVulkanMaterial;
+    using Type = FVkTexture2D;
 #endif
 };
 
@@ -39,15 +32,5 @@ TObject* NewObject()
     return new Type();
 }
 
-template ISceneBuffer* NewObject<ISceneBuffer>();
-template IShader* NewObject<IShader>();
-template IMaterial* NewObject<IMaterial>();
-
-uint32 AddInstance(std::vector<FVertex> Vertices, std::vector<uint32> Indices)
-{
-    uint32 InstanceID = 0;
-#if RK_RHI == VULKAN
-    GetRHI()->GetRenderer()->GetSceneBuffer()->AddInstance(Vertices, Indices);
-    return InstanceID;
-#endif
-}
+template IMesh* NewObject<IMesh>();
+template ITexture2D* NewObject<ITexture2D>();

@@ -10,6 +10,7 @@
 #include "Renderer/Vulkan/VulkanTexture2D.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanSampler.h"
+#include "Utils/Profiler.h"
 
 namespace Utils
 {
@@ -17,10 +18,10 @@ namespace Utils
 	{
 		switch (DescriptorType)
 		{
-			case EVkDescriptorType::SSBO: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			case EVkDescriptorType::SSIO: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			case EVkDescriptorType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-			case EVkDescriptorType::SamplerImage: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			case EVkDescriptorType::StructuredBuffer: 	return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			case EVkDescriptorType::RWTexture2D: 		return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case EVkDescriptorType::Sampler: 			return VK_DESCRIPTOR_TYPE_SAMPLER;
+			case EVkDescriptorType::Texture2D: 			return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 		return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 	}
@@ -29,10 +30,10 @@ namespace Utils
     {
 		switch (DescriptorType)
 		{
-			case EVkDescriptorType::SSBO: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-			case EVkDescriptorType::SSIO: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-			case EVkDescriptorType::Sampler: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-			case EVkDescriptorType::SamplerImage: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::StructuredBuffer: 	return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::RWTexture2D: 		return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::Sampler: 			return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			case EVkDescriptorType::Texture2D: 			return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
 		return UINT32_MAX;
     }
@@ -41,10 +42,10 @@ namespace Utils
 	{
 		switch (DescriptorType)
 		{
-			case EVkDescriptorType::SSBO: return VMA_MEMORY_USAGE_CPU_TO_GPU;
-			case EVkDescriptorType::SSIO: return VMA_MEMORY_USAGE_CPU_TO_GPU;
-			case EVkDescriptorType::Sampler: return VMA_MEMORY_USAGE_CPU_TO_GPU;
-			case EVkDescriptorType::SamplerImage: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::StructuredBuffer: 	return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::RWTexture2D: 		return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::Sampler: 			return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case EVkDescriptorType::Texture2D: 			return VMA_MEMORY_USAGE_CPU_TO_GPU;
 		}
 		return VMA_MEMORY_USAGE_UNKNOWN;
 	}
@@ -114,7 +115,7 @@ void FVkDescriptorSetLayout::Initialize(FVkDescriptorSetLayoutCreateInfo& Create
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor set layout.");	
 }
 
-void FVkDescriptorSetLayout::Destroy()
+void FVkDescriptorSetLayout::Shutdown()
 {
 	vkDestroyDescriptorSetLayout(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, nullptr);
 }
@@ -134,11 +135,16 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 
 void FVkDescriptorSet::Shutdown()
 {
-	for (SizeType Index = 0; Index < Info.Buffers.GetSize(); ++Index)
+	for (SizeType Frame = 0; Frame < CONCURRENT_FRAME_COUNT; ++Frame)
 	{
-		for (SizeType Frame = 0; Frame < CONCURRENT_FRAME_COUNT; ++Frame)
+		for (SizeType Index = 0; Index < Info.Buffers.GetSize(); ++Index)
 		{
 			Info.Buffers[Index][Frame]->Free();
+		}
+
+		for (SizeType Index = 0; Index < Info.Images.GetSize(); ++Index)
+		{
+			Info.Images[Index][Frame]->Shutdown();
 		}
 	}
 
@@ -148,8 +154,10 @@ void FVkDescriptorSet::Shutdown()
 	}
 }
 
-void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
+void FVkDescriptorSet::WriteBuffer(uint32 Binding, uint32 Index, FVkBuffer* Buffer)
 {
+	PROFILE_FUNC_SCOPE("FVkDescriptorSet::WriteBuffer")
+
 	VkDescriptorBufferInfo DescriptorBufferInfo = {};
 	DescriptorBufferInfo.buffer = Buffer->Info.Handle;
 	DescriptorBufferInfo.range = VK_WHOLE_SIZE;
@@ -158,8 +166,8 @@ void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
 	VkWriteDescriptorSet WriteDescriptorSet = {};
 	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	WriteDescriptorSet.dstSet = Info.Handle;
-	WriteDescriptorSet.dstBinding = Index;
-	WriteDescriptorSet.dstArrayElement = 0;
+	WriteDescriptorSet.dstBinding = Binding;
+	WriteDescriptorSet.dstArrayElement = Index;
 	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	WriteDescriptorSet.descriptorCount = 1;
 	WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
@@ -167,17 +175,10 @@ void FVkDescriptorSet::WriteBuffer(uint32 Index, FVkBuffer* Buffer)
 	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
-void FVkDescriptorSet::ReadBuffer(uint32 Index, FVkBuffer*& Buffer)
+void FVkDescriptorSet::WriteTexture2D(uint32 Binding, uint32 Index, FVkTexture2D* Texture2D)
 {
-	//FVkBuffer* Result = Info.Buffer[Index];
-	//if (Result)
-	//{
-	//	Buffer = MoveTemp(Result);
-	//}
-}
+	PROFILE_FUNC_SCOPE("FVkDescriptorSet::WriteTexture2D")
 
-void FVkDescriptorSet::WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D)
-{
     VkDescriptorImageInfo DescriptorImageInfo = {};
     DescriptorImageInfo.imageView = Texture2D->Info.Image->Info.ImageViewHandle;
     DescriptorImageInfo.sampler = Texture2D->Info.Sampler->Info.Handle;
@@ -186,7 +187,7 @@ void FVkDescriptorSet::WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D)
     VkWriteDescriptorSet WriteDescriptorSet = {};
     WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     WriteDescriptorSet.dstSet = Info.Handle;             // The Vulkan descriptor set handle
-    WriteDescriptorSet.dstBinding = 0;                  // Binding 0 for the array
+    WriteDescriptorSet.dstBinding = Binding;                  // Binding 0 for the array
     WriteDescriptorSet.dstArrayElement = Index;          // Specify the index in the array
     WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     WriteDescriptorSet.descriptorCount = 1;             // We're updating one descriptor
@@ -195,12 +196,23 @@ void FVkDescriptorSet::WriteTexture2D(uint32 Index, FVkTexture2D* Texture2D)
     vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
-void FVkDescriptorSet::ReadTexture2D(uint32 Index, FVkTexture2D*& Texture2D)
+void FVkDescriptorSet::WriteImage(uint32 Binding, uint32 Index, FVkImage* Image)
 {
+	PROFILE_FUNC_SCOPE("FVkDescriptorSet::WriteImage")
+	
+	VkDescriptorImageInfo DescriptorImageInfo = {};
+	DescriptorImageInfo.imageView = Image->Info.ImageViewHandle;
+	DescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	DescriptorImageInfo.sampler = VK_NULL_HANDLE;
 
-}
+	VkWriteDescriptorSet WriteDescriptorSet = {};
+	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	WriteDescriptorSet.dstSet = Info.Handle;
+	WriteDescriptorSet.dstBinding = Binding;
+	WriteDescriptorSet.dstArrayElement = Index;
+	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	WriteDescriptorSet.descriptorCount = 1;
+	WriteDescriptorSet.pImageInfo = &DescriptorImageInfo;
 
-void FVkDescriptorSet::Bind(FVkPipelineLayout* PipelineLayout)
-{
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &Info.Handle, 0, 0);
+	vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }

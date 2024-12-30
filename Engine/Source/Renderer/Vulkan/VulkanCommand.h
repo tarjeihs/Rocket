@@ -24,6 +24,5 @@ public:
 	
 	VkCommandBuffer GetVkCommandBuffer() const;
 
-private:
 	VkCommandBuffer CommandBuffer;
 };

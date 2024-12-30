@@ -2,10 +2,12 @@
 #include "VkSceneBuffer.h"
 
 #include "Renderer/Common/Mesh.h"
+#include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
+#include "Renderer/Vulkan/VulkanDevice.h"
 
-void FVkSceneBuffer::Initialize()
+void FVkSceneInstanceManager::Initialize()
 {
     FVkBufferCreateInfo VertexBufferCreateInfo;
     VertexBufferCreateInfo.Size = 1024 * MiB;
@@ -32,20 +34,20 @@ void FVkSceneBuffer::Initialize()
     StagingBufferCreateInfo.UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     StagingBufferCreateInfo.MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_ONLY;
 
-    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingBufferCreateInfo.Size = 128 * MiB;
     StagingVertexBuffer = MakeShared<FVkBuffer>();
     StagingVertexBuffer->Initialize(StagingBufferCreateInfo);
 
-    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingBufferCreateInfo.Size = 128 * MiB;
     StagingIndexBuffer = MakeShared<FVkBuffer>();
     StagingIndexBuffer->Initialize(StagingBufferCreateInfo);
 
-    StagingBufferCreateInfo.Size = 1024 * MiB;
+    StagingBufferCreateInfo.Size = 128 * MiB;
     StagingIndirectBuffer = MakeShared<FVkBuffer>();
     StagingIndirectBuffer->Initialize(StagingBufferCreateInfo);
 }
 
-void FVkSceneBuffer::Shutdown()
+void FVkSceneInstanceManager::Shutdown()
 {
     StagingIndexBuffer->Free();
     StagingVertexBuffer->Free();
@@ -55,16 +57,16 @@ void FVkSceneBuffer::Shutdown()
     IndexBuffer->Free();
 }
 
-uint32 FVkSceneBuffer::AddInstance(const std::vector<FVertex>& Vertices, const std::vector<uint32> Indices)
+uint32 FVkSceneInstanceManager::AddObject(const TArray<FVertex>& Vertices, const TArray<uint32>& Indices)
 {
-    const SizeType VertexBufferSize = Vertices.size() * sizeof(FVertex);
-    const SizeType IndexBufferSize = Indices.size() * sizeof(uint32_t);
+    const SizeType VertexBufferSize = Vertices.GetSize() * sizeof(FVertex);
+    const SizeType IndexBufferSize = Indices.GetSize() * sizeof(uint32_t);
 
     FInstanceMetadata Instance;
     Instance.VertexOffset = CurrentVertexOffset;
-    Instance.VertexCount = (uint32_t)Vertices.size();
+    Instance.VertexCount = (uint32_t)Vertices.GetSize();
     Instance.IndexOffset = CurrentIndexOffset;
-    Instance.IndexCount = (uint32_t)Indices.size();
+    Instance.IndexCount = (uint32_t)Indices.GetSize();
 
     VkDrawIndexedIndirectCommand IndirectCommand = {};
     IndirectCommand.indexCount = Instance.IndexCount;
@@ -76,37 +78,38 @@ uint32 FVkSceneBuffer::AddInstance(const std::vector<FVertex>& Vertices, const s
     // Write Vertex Data to Staging Buffer
     void* VertexData = nullptr;
     vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation, &VertexData);
-    memcpy((char*)VertexData + StagingVertexOffset, Vertices.data(), VertexBufferSize);
+    memcpy((char*)VertexData, Vertices.GetData(), VertexBufferSize);
     vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingVertexBuffer->Info.Allocation);
 
     // Write Index Data to Staging Buffer
     void* IndexData = nullptr;
     vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation, &IndexData);
-    memcpy((char*)IndexData + StagingIndexOffset, Indices.data(), IndexBufferSize);
+    memcpy((char*)IndexData, Indices.GetData(), IndexBufferSize);
     vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndexBuffer->Info.Allocation);
 
     // Write Indirect Command to Staging Buffer
     void* IndirectData = nullptr;
     vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation, &IndirectData);
-    memcpy((char*)IndirectData + StagingIndirectOffset, &IndirectCommand, sizeof(IndirectCommand));
+    memcpy((char*)IndirectData, &IndirectCommand, sizeof(IndirectCommand));
     vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingIndirectBuffer->Info.Allocation);
 
+    // Immediate Submit
     GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
     {
         VkBufferCopy VertexBufferCopy = {};
-        VertexBufferCopy.srcOffset = StagingVertexOffset;
+        VertexBufferCopy.srcOffset = 0;
         VertexBufferCopy.dstOffset = CurrentVertexOffset;
         VertexBufferCopy.size = VertexBufferSize;
         vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingVertexBuffer->Info.Handle, VertexBuffer->Info.Handle, 1, &VertexBufferCopy);
 
         VkBufferCopy IndexBufferCopy = {};
-        IndexBufferCopy.srcOffset = StagingIndexOffset;
+        IndexBufferCopy.srcOffset = 0;
         IndexBufferCopy.dstOffset = CurrentIndexOffset;
         IndexBufferCopy.size = IndexBufferSize;
         vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingIndexBuffer->Info.Handle, IndexBuffer->Info.Handle, 1, &IndexBufferCopy);
 
         VkBufferCopy IndirectBufferCopy = {};
-        IndirectBufferCopy.srcOffset = StagingIndirectOffset;
+        IndirectBufferCopy.srcOffset = 0;
         IndirectBufferCopy.dstOffset = CurrentIndirectOffset;
         IndirectBufferCopy.size = sizeof(VkDrawIndexedIndirectCommand);
         vkCmdCopyBuffer(CommandBuffer->GetVkCommandBuffer(), StagingIndirectBuffer->Info.Handle, IndirectBuffer->Info.Handle, 1, &IndirectBufferCopy);
@@ -118,9 +121,9 @@ uint32 FVkSceneBuffer::AddInstance(const std::vector<FVertex>& Vertices, const s
     CurrentIndirectOffset += sizeof(VkDrawIndexedIndirectCommand);
 
     // Update staging offsets
-    StagingVertexOffset += VertexBufferSize;
-    StagingIndexOffset += IndexBufferSize;
-    StagingIndirectOffset += sizeof(VkDrawIndexedIndirectCommand);
+    //StagingVertexOffset += VertexBufferSize;
+    //StagingIndexOffset += IndexBufferSize;
+    //StagingIndirectOffset += sizeof(VkDrawIndexedIndirectCommand);
 
     // Add metadata entry
     Metadata.Add(Instance);
@@ -128,7 +131,8 @@ uint32 FVkSceneBuffer::AddInstance(const std::vector<FVertex>& Vertices, const s
     return Metadata.GetSize();
 }
 
-void FVkSceneBuffer::DrawIndexedIndirect(PVulkanCommandBuffer* CommandBuffer)
+
+void FVkSceneInstanceManager::DrawIndexedIndirect(PVulkanCommandBuffer* CommandBuffer)
 {
     vkCmdDrawIndexedIndirect(CommandBuffer->GetVkCommandBuffer(), IndirectBuffer->Info.Handle, 0, Metadata.GetSize(), sizeof(VkDrawIndexedIndirectCommand));
 }

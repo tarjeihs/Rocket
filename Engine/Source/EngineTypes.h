@@ -12,6 +12,8 @@ using int32 = int32_t;
 using int16 = int16_t;
 using int8 = int8_t;
 
+static constexpr int32 INDEX_Invalid = 0xffffffff;
+
 static constexpr uint64 KiB = 1024;
 static constexpr uint64 MiB = 1024 * 1024;
 static constexpr uint64 GiB = 1024 * 1024 * 1024;

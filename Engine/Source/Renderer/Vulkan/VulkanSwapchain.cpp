@@ -4,6 +4,7 @@
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
+#include <vulkan/vulkan_core.h>
 
 // Prioritize VK_PRESENT_MODE_IMMEDIATE_KHR to disable V-Sync
 static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
@@ -59,9 +60,9 @@ namespace Utils
 
 void PVulkanSwapchain::Init()
 {
-	SwapchainSurfaceFormat = Utils::SelectSwapchainSurfaceFormat(GetRHI()->GetDevice()->GetSurfaceFormats());
-	SwapchainPresentMode = Utils::SelectSwapchainPresentMode(GetRHI()->GetDevice()->GetPresentModes(), SwapchainPresentMode);
-	SwapchainImageExtent = Utils::SelectSwapchainSurfaceExtent(GetRHI()->GetDevice()->GetSurfaceCapabilities());
+	Info.SwapchainSurfaceFormat = Utils::SelectSwapchainSurfaceFormat(GetRHI()->GetDevice()->GetSurfaceFormats());
+	Info.SwapchainPresentMode = Utils::SelectSwapchainPresentMode(GetRHI()->GetDevice()->GetPresentModes(), Info.SwapchainPresentMode);
+	Info.SwapchainImageExtent = Utils::SelectSwapchainSurfaceExtent(GetRHI()->GetDevice()->GetSurfaceCapabilities());
 
 	// Number of images to use in the swapchain
 	uint32_t ImageCount = GetRHI()->GetDevice()->GetSurfaceCapabilities().minImageCount + 1;
@@ -74,14 +75,14 @@ void PVulkanSwapchain::Init()
 	SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	SwapchainCreateInfo.surface = GetRHI()->GetInstance()->GetVkSurfaceKHR();
 	SwapchainCreateInfo.minImageCount = ImageCount;
-	SwapchainCreateInfo.imageFormat = SwapchainSurfaceFormat.format;
-	SwapchainCreateInfo.imageColorSpace = SwapchainSurfaceFormat.colorSpace;
-	SwapchainCreateInfo.imageExtent = SwapchainImageExtent;
+	SwapchainCreateInfo.imageFormat = Info.SwapchainSurfaceFormat.format;
+	SwapchainCreateInfo.imageColorSpace = Info.SwapchainSurfaceFormat.colorSpace;
+	SwapchainCreateInfo.imageExtent = Info.SwapchainImageExtent;
 	SwapchainCreateInfo.imageArrayLayers = 1;
 	SwapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	SwapchainCreateInfo.preTransform = GetRHI()->GetDevice()->GetSurfaceCapabilities().currentTransform;
 	SwapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	SwapchainCreateInfo.presentMode = SwapchainPresentMode;
+	SwapchainCreateInfo.presentMode = Info.SwapchainPresentMode;
 	SwapchainCreateInfo.clipped = VK_TRUE;
 	SwapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -101,57 +102,56 @@ void PVulkanSwapchain::Init()
 		SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 
-	VkResult Result = vkCreateSwapchainKHR(GetRHI()->GetDevice()->GetVkDevice(), &SwapchainCreateInfo, nullptr, &SwapchainKHR);
+	VkResult Result = vkCreateSwapchainKHR(GetRHI()->GetDevice()->GetVkDevice(), &SwapchainCreateInfo, nullptr, &Info.SwapchainKHR);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain.");
 
 	// Obtain the array of presentable images associated with a swapchain
-	std::vector<VkImage> QuerySwapchainImages;
-	vkGetSwapchainImagesKHR(GetRHI()->GetDevice()->GetVkDevice(), SwapchainKHR, &ImageCount, nullptr);
-	QuerySwapchainImages.resize(ImageCount);
-	SwapchainImages.resize(ImageCount);
-	vkGetSwapchainImagesKHR(GetRHI()->GetDevice()->GetVkDevice(), SwapchainKHR, &ImageCount, QuerySwapchainImages.data());
+	TArray<VkImage> QuerySwapchainImages;
+	vkGetSwapchainImagesKHR(GetRHI()->GetDevice()->GetVkDevice(), Info.SwapchainKHR, &ImageCount, nullptr);
+	QuerySwapchainImages.Resize(ImageCount);
+	Info.Backbuffer.Resize(ImageCount);
+	vkGetSwapchainImagesKHR(GetRHI()->GetDevice()->GetVkDevice(), Info.SwapchainKHR, &ImageCount, QuerySwapchainImages.GetData());
 	
 	for (size_t Index = 0; Index < ImageCount; ++Index)
 	{
-		PVulkanImage* Image = new PVulkanImage();
-		Image->Init(SwapchainImageExtent, SwapchainSurfaceFormat.format);
-		Image->ApplyImage(QuerySwapchainImages[Index]);
-		Image->CreateImageView(VK_IMAGE_ASPECT_COLOR_BIT);
-		SwapchainImages[Index] = Image;
+		FVkImage* Image = new FVkImage();
+		Image->Info.ImageHandle = QuerySwapchainImages[Index];
+		Image->Info.Format = Info.SwapchainSurfaceFormat.format;
+		Image->Info.Extent = Info.SwapchainImageExtent;
+		
+		VkImageViewCreateInfo ImageViewCreateInfo = {};
+		ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		ImageViewCreateInfo.image = Image->Info.ImageHandle;
+		ImageViewCreateInfo.format = Image->Info.Format;
+		ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+		ImageViewCreateInfo.subresourceRange.levelCount = 1;
+		ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+		ImageViewCreateInfo.subresourceRange.layerCount = 1;
+		ImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		Result = vkCreateImageView(GetRHI()->GetDevice()->GetVkDevice(), &ImageViewCreateInfo, nullptr, &Image->Info.ImageViewHandle);
+		RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
+
+		Info.Backbuffer[Index] = Image;
 	}
 }
 
 void PVulkanSwapchain::Shutdown()
 {
-	while (SwapchainImages.size())
+	while (Info.Backbuffer.GetSize())
 	{
-		PVulkanImage* Image = SwapchainImages[0];
-		Image->DestroyImageView();
+		FVkImage* Image = Info.Backbuffer[0];
+		vkDestroyImageView(GetRHI()->GetDevice()->GetVkDevice(), Image->Info.ImageViewHandle, VK_NULL_HANDLE);
 
 		delete Image;
-		SwapchainImages.erase(SwapchainImages.begin());
+		Info.Backbuffer.RemoveAt(0);
 	}
 	
 	// Vulkan does internal destruction of swapchain images
-	vkDestroySwapchainKHR(GetRHI()->GetDevice()->GetVkDevice(), SwapchainKHR, nullptr);
-}
-
-VkSwapchainKHR PVulkanSwapchain::GetVkSwapchain() const
-{
-	return SwapchainKHR;
-}
-
-VkSurfaceFormatKHR PVulkanSwapchain::GetSurfaceFormat() const
-{
-	return SwapchainSurfaceFormat;
-}
-
-VkExtent2D PVulkanSwapchain::GetVkExtent() const
-{
-	return SwapchainImageExtent;
-}
-
-const std::vector<PVulkanImage*>& PVulkanSwapchain::GetSwapchainImages() const
-{
-	return SwapchainImages;
+	vkDestroySwapchainKHR(GetRHI()->GetDevice()->GetVkDevice(), Info.SwapchainKHR, nullptr);
 }

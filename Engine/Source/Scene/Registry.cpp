@@ -1,3 +1,4 @@
+#include "Component.h"
 #include "EnginePCH.h"
 #include "Registry.h"
 
@@ -5,6 +6,7 @@ FEntity PRegistry::CreateEntity()
 {
     FEntity Entity{};
     Entity.EntityID = Registry.create();
+    Entity.AddComponent<FUUIDComponent>();
     return Entity;
 }
 

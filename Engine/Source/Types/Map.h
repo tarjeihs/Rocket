@@ -39,6 +39,10 @@ struct THash
     }
 };
 
+// A templated hash map implementation using open addressing with double hashing for collision resolution.
+// TMap is a generic hash map that associates keys of type TKey with values of type TValue. It provides efficient insertion, retrieval, and removal of key-value pairs.
+// The hash map uses open addressing with double hashing to handle collisions, ensuring good performance even at higher load factors.
+
 template<typename TKey, typename TValue>
 class TMap
 {
@@ -60,44 +64,93 @@ public:
 
     void Insert(const TKey& Key, const TValue& Value)
     {
-        SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TOptionalPair& Pair = Buckets[BucketIndex];
-        
-        if (!Pair.IsValid())
-        {
-            Pair = TPair(Key, Value);
-            ++ElementCount;
+        SizeType BucketSize = Buckets.GetSize();
+        SizeType BucketIndex = PrimaryHash(Key, BucketSize);
+        SizeType StepSize = SecondaryHash(Key);
+        SizeType StartIndex = BucketIndex;
 
-            if (static_cast<float>(ElementCount) / Buckets.GetSize() > 0.75f)
+        while (Buckets[BucketIndex].IsValid())
+        {
+            if (Buckets[BucketIndex]->Key == Key) // Update existing key
             {
-                Resize(Buckets.GetSize() * 2);
+                Buckets[BucketIndex]->Value = Value;
+                return;
             }
+
+            // Probe using double hashing
+            BucketIndex = (BucketIndex + StepSize) % BucketSize;
+        }
+
+        Buckets[BucketIndex] = TPair(Key, Value);
+        ++ElementCount;
+
+        if (static_cast<float>(ElementCount) / BucketSize > 0.75f)
+        {
+            Resize(BucketSize * 2);
         }
     }
 
     bool Remove(const TKey& Key)
     {
-        SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TOptionalPair& Pair = Buckets[BucketIndex];
+        SizeType BucketSize = Buckets.GetSize();
+        SizeType BucketIndex = PrimaryHash(Key, BucketSize);
+        SizeType StepSize = SecondaryHash(Key);
+        SizeType StartIndex = BucketIndex;
 
-        if (Pair.IsValid() && Pair->Key == Key)
+        while (Buckets[BucketIndex].IsValid())
         {
-            Pair.Reset();
-            --ElementCount;
-            return true;
+            if (Buckets[BucketIndex]->Key == Key)
+            {
+                Buckets[BucketIndex].Reset();
+                --ElementCount;
+
+                // Rehash elements in the same cluster
+                SizeType NextIndex = (BucketIndex + StepSize) % BucketSize;
+                while (Buckets[NextIndex].IsValid())
+                {
+                    TOptionalPair MovedPair = Buckets[NextIndex];
+                    Buckets[NextIndex].Reset();
+                    --ElementCount;
+                    Insert(MovedPair->Key, MovedPair->Value);
+                    BucketIndex = NextIndex;
+                    NextIndex = (BucketIndex + StepSize) % BucketSize;
+                }
+
+                return true;
+            }
+
+            BucketIndex = (BucketIndex + StepSize) % BucketSize;
+            if (BucketIndex == StartIndex) // We've looped through all buckets
+            {
+                break;
+            }
         }
+
         return false;
     }
 
     TValue* Find(const TKey& Key)
     {
-        SizeType BucketIndex = GetBucketIndex(Key, Buckets.GetSize());
-        TOptionalPair& Pair = Buckets[BucketIndex];
+        SizeType BucketSize = Buckets.GetSize();
+        SizeType BucketIndex = PrimaryHash(Key, BucketSize);
+        SizeType StepSize = SecondaryHash(Key);
+        SizeType StartIndex = BucketIndex;
 
-        if (Pair.IsValid() && Pair->Key == Key)
+        while (Buckets[BucketIndex].IsValid())
         {
-            return &Pair->Value;
+            if (Buckets[BucketIndex]->Key == Key)
+            {
+                return &Buckets[BucketIndex]->Value;
+            }
+
+            // Probe using double hashing
+            BucketIndex = (BucketIndex + StepSize) % BucketSize;
+            if (BucketIndex == StartIndex) // We've looped through all buckets
+            {
+                break;
+            }
         }
+
         return nullptr;
     }
 
@@ -226,23 +279,29 @@ public:
     }
 
 protected:
-    void Resize(SizeType BucketSize)
+    void Resize(SizeType NewSize)
     {
-        TArray<TOptionalPair> NewBuckets;
-        NewBuckets.Resize(BucketSize);
+        TArray<TOptionalPair> OldBuckets = MoveTemp(Buckets);
+        Buckets.Resize(NewSize);
+        ElementCount = 0;
 
-        for (TOptionalPair Pair : Buckets)
+        for (TOptionalPair& Pair : OldBuckets)
         {
-            SizeType NewBucketIndex = GetBucketIndex(Pair->Key, NewBuckets.GetSize());
-            NewBuckets[NewBucketIndex] = Pair;
+            if (Pair.IsValid())
+            {
+                Insert(Pair->Key, Pair->Value); // Reinsert all valid pairs
+            }
         }
-
-        Buckets = MoveTemp(NewBuckets);
     }
 
-    SizeType GetBucketIndex(const TKey& Key, SizeType Size) const
+    SizeType PrimaryHash(const TKey& Key, SizeType Size) const
     {
         return THash<TKey>::Hash(Key) % Size;
+    }
+
+    SizeType SecondaryHash(const TKey& Key) const
+    {
+        return 1 + (THash<TKey>::Hash(Key) % (Buckets.GetSize() - 1));
     }
 
 private:

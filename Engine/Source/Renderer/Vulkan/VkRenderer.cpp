@@ -3,13 +3,12 @@
 
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
+#include "Renderer/Vulkan/VkScriptableRendererPipeline.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
-#include "Renderer/Vulkan/VkSceneBuffer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
-#include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Types/UniquePtr.h"
 #include "Utils/Profiler.h"
@@ -21,16 +20,42 @@ void FVkRenderer::Init()
 
 	Swapchain->Init();
 
-	ColorAttachmentImage = MakeUnique<PVulkanImage>();
-	ColorAttachmentImage->Init(Swapchain->GetVkExtent(), VK_FORMAT_R16G16B16A16_SFLOAT);
-	ColorAttachmentImage->CreateImage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-	ColorAttachmentImage->CreateImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+	FVkImageCreateInfo ColorAttachment16CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		GetSwapchain()->Info.SwapchainImageExtent,
+		VK_FORMAT_R16G16B16A16_SFLOAT
+	};
+	
+	FVkImageCreateInfo ColorAttachment8CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		GetSwapchain()->Info.SwapchainImageExtent,
+		VK_FORMAT_B8G8R8A8_SRGB
+	};
 
-	DepthAttachmentImage = MakeUnique<PVulkanImage>();
-	DepthAttachmentImage->Init(Swapchain->GetVkExtent(), VK_FORMAT_D32_SFLOAT);
-	DepthAttachmentImage->CreateImage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-	DepthAttachmentImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
-    
+	FVkImageCreateInfo DepthAttachment16CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_DEPTH_BIT,
+		GetSwapchain()->Info.SwapchainImageExtent,
+		VK_FORMAT_D32_SFLOAT
+	};
+
+	ColorAttachment16 = MakeUnique<FVkImage>();
+	ColorAttachment16->Initialize(ColorAttachment16CreateInfo);
+
+	ColorAttachment8 = MakeUnique<FVkImage>();
+	ColorAttachment8->Initialize(ColorAttachment8CreateInfo);
+
+	DepthAttachmentD32 = MakeUnique<FVkImage>();
+	DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
+
 	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
     {
         CommandPool[Index] = MakeUnique<PVulkanCommandPool>();
@@ -73,19 +98,17 @@ void FVkRenderer::Init()
 	VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &ImmediateFenceCreateInfo, nullptr, &ImmediateRenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create immediate render fence.");
 
-	SceneBuffer = MakeUnique<FVkSceneBuffer>();
-	SceneBuffer->Initialize();
+	MeshAllocator = MakeUnique<FVkMeshAllocator>();
+	MeshAllocator->Initialize();
 }
 
 void FVkRenderer::Shutdown()
 {
     Swapchain->Shutdown();
 
-	ColorAttachmentImage->DestroyImage();
-	ColorAttachmentImage->DestroyImageView();
-
-	DepthAttachmentImage->DestroyImage();
-	DepthAttachmentImage->DestroyImageView();
+	ColorAttachment16->Shutdown();
+	ColorAttachment8->Shutdown();
+	DepthAttachmentD32->Shutdown();
 
     for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
     {
@@ -98,27 +121,36 @@ void FVkRenderer::Shutdown()
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), ImmediateRenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), ImmediateCommandPool->GetVkCommandPool(), nullptr);
 
-	SceneBuffer->Shutdown();
+	MeshAllocator->Shutdown();
 }
 
 void FVkRenderer::Render()
 {
-	PROFILE_FUNC_SCOPE("FVkRenderer::Render")
+    PROFILE_FUNC_SCOPE("FVkRenderer::Render")
 
-	BeginFrame();
-	ColorAttachmentImage->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	DepthAttachmentImage->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-	RenderGraph->BeginRendering();
-	RenderGraph->Execute(CommandBuffer[FrameIndex].Get());
-	Bind();
-	RenderGraph->EndRendering();
-	ColorAttachmentImage->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    BeginFrame();
+
+    ColorAttachment16->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	ColorAttachment8->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    DepthAttachmentD32->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
+    Bind(); // Bind descriptor sets, update buffers, etc...
 	
-	Swapchain->GetSwapchainImages()[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	ColorAttachmentImage->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->GetSwapchainImages()[NextImageIndex[FrameIndex]]->GetVkImage(), ColorAttachmentImage->GetImageExtent2D(), Swapchain->GetVkExtent());
-	Swapchain->GetSwapchainImages()[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-	
-	EndFrame();
+	for (const auto& Pipeline : ScriptableRendererPipelineData)
+	{
+		Pipeline->Execute();
+	}
+
+    ColorAttachment16->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    ColorAttachment8->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    
+	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    ColorAttachment8->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, ColorAttachment8->Info.Extent, Swapchain->Info.SwapchainImageExtent);
+	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    EndFrame();
+
+    FrameIndex = (FrameIndex + 1) % CONCURRENT_FRAME_COUNT;
 }
 
 void FVkRenderer::Resize()
@@ -128,27 +160,49 @@ void FVkRenderer::Resize()
 	Swapchain->Shutdown();
 	Swapchain->Init();
 
-	ColorAttachmentImage->DestroyImage();
-	ColorAttachmentImage->DestroyImageView();
-	ColorAttachmentImage->Reset();
-	ColorAttachmentImage->Init(GetSwapchain()->GetVkExtent(), VK_FORMAT_R16G16B16A16_SFLOAT);
-	ColorAttachmentImage->CreateImage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-	ColorAttachmentImage->CreateImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+	FVkImageCreateInfo ColorAttachment16CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		Swapchain->Info.SwapchainImageExtent,
+		VK_FORMAT_R16G16B16A16_SFLOAT
+	};
+	
+	FVkImageCreateInfo ColorAttachment8CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		Swapchain->Info.SwapchainImageExtent,
+		VK_FORMAT_B8G8R8A8_SRGB
+	};
 
-	DepthAttachmentImage->DestroyImage();
-	DepthAttachmentImage->DestroyImageView();
-	DepthAttachmentImage->Reset();
-	DepthAttachmentImage->Init(GetSwapchain()->GetVkExtent(), VK_FORMAT_D32_SFLOAT);
-	DepthAttachmentImage->CreateImage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-	DepthAttachmentImage->CreateImageView(VK_IMAGE_ASPECT_DEPTH_BIT);	
+	FVkImageCreateInfo DepthAttachmentCreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_DEPTH_BIT,
+		Swapchain->Info.SwapchainImageExtent,
+		VK_FORMAT_D32_SFLOAT
+	};
+
+	ColorAttachment16->Shutdown();
+	ColorAttachment16->Initialize(ColorAttachment16CreateInfo);
+
+	ColorAttachment8->Shutdown();
+	ColorAttachment8->Initialize(ColorAttachment8CreateInfo);
+
+	DepthAttachmentD32->Shutdown();
+	DepthAttachmentD32->Initialize(DepthAttachmentCreateInfo);
 }
 
 void FVkRenderer::BeginFrame()
 {
-    PROFILE_FUNC_SCOPE("FVkRenderer::BeginFrame")
+    PROFILE_FUNC_SCOPE("FVkRenderer::BeginFrame") 
 
 	vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence[FrameIndex], VK_TRUE, UINT64_MAX);
-	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), Swapchain->GetVkSwapchain(), UINT64_MAX, SwapchainSemaphore[FrameIndex], VK_NULL_HANDLE, &NextImageIndex[FrameIndex]);
+	vkAcquireNextImageKHR(GetRHI()->GetDevice()->GetVkDevice(), Swapchain->Info.SwapchainKHR, UINT64_MAX, SwapchainSemaphore[FrameIndex], VK_NULL_HANDLE, &NextImageIndex[FrameIndex]);
 	vkResetFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &RenderFence[FrameIndex]);
 	
 	CommandBuffer[FrameIndex]->ResetCommandBuffer();
@@ -187,7 +241,7 @@ void FVkRenderer::EndFrame()
 	VkResult Result = vkQueueSubmit2(GetRHI()->GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, RenderFence[FrameIndex]);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
-	VkSwapchainKHR SwapchainPointer = Swapchain->GetVkSwapchain();
+	VkSwapchainKHR SwapchainPointer = Swapchain->Info.SwapchainKHR;
 	VkPresentInfoKHR PresentInfo = {};
 	PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	PresentInfo.pNext = VK_NULL_HANDLE;
@@ -245,14 +299,3 @@ void FVkRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& F
 	Result = vkQueueSubmit2(GetRHI()->GetDevice()->GetGraphicsQueue(), 1, &SubmitInfo, ImmediateRenderFence);
 	Result = vkWaitForFences(GetRHI()->GetDevice()->GetVkDevice(), 1, &ImmediateRenderFence, true, UINT64_MAX);
 }
-
-// Set 0 SSBO 
-//				0	Global
-//				1	Camera
-//				2	Material
-//				3	Instance
-
-// Set 1 Textures w/ Samplers
-//				0	Albedo
-//				1	Metallic
-//				2 	Normal

@@ -11,14 +11,14 @@ namespace UUID64
     static std::uniform_int_distribution<uint64_t> UniformDistribution;
 }
 
-struct SUUID64
+struct FUUID64
 {
-    SUUID64()
+    FUUID64()
     {
         UUID = UUID64::UniformDistribution(UUID64::Engine);
     }
 
-    SUUID64(uint32_t InUUID)
+    FUUID64(uint32_t InUUID)
     {
         UUID = InUUID;
     }
@@ -37,9 +37,9 @@ namespace std
     template <typename T> struct hash;
 
     template<>
-    struct hash<SUUID64>
+    struct hash<FUUID64>
     {
-        std::size_t operator()(const SUUID64& UUID) const noexcept
+        std::size_t operator()(const FUUID64& UUID) const noexcept
         {
             return (uint64_t)UUID;
         }

@@ -2,17 +2,38 @@
 
 #include "Core/Assert.h"
 
-template<typename TElement>
-class TSharedPtr
+struct FPointerReferenceCounter
 {
-public:
-    TSharedPtr() 
-        : Pointer(nullptr), RefCount(new uint32_t(1)) 
+    FPointerReferenceCounter()
+        : StrongCounter(0), WeakCounter(0)
     {
     }
 
-    explicit TSharedPtr(TElement* InPointer) 
-        : Pointer(InPointer), RefCount(new uint32_t(1)) 
+    FPointerReferenceCounter(uint32 InStrongCounter, uint32 InWeakCounter)
+        : StrongCounter(InStrongCounter), WeakCounter(InWeakCounter)
+    {
+    }
+
+    uint32 StrongCounter;
+    uint32 WeakCounter;
+};
+
+template<typename TPointer>
+class TSharedPtr
+{
+public:
+    TSharedPtr()
+        : Pointer(nullptr), PointerReferenceCounter() 
+    {
+    }
+    
+    explicit TSharedPtr(TPointer* InPointer)
+        : Pointer(InPointer), PointerReferenceCounter(new FPointerReferenceCounter(1, 0))
+    {
+    }
+
+    explicit TSharedPtr(TPointer* InPointer, FPointerReferenceCounter* InPointerReferenceCounter) 
+        : Pointer(InPointer), PointerReferenceCounter(InPointerReferenceCounter)
     {
     }
 
@@ -21,117 +42,113 @@ public:
         Release();
     }
 
-    TSharedPtr(const TSharedPtr<TElement>& Other)
+    TSharedPtr(const TSharedPtr<TPointer>& Other)
     {
         Pointer = Other.Pointer;
-        RefCount = Other.RefCount;
-        (*RefCount)++;
+        PointerReferenceCounter = Other.PointerReferenceCounter;
+        PointerReferenceCounter->StrongCounter++;
     }
 
-    TSharedPtr(TSharedPtr<TElement>&& Other) noexcept
+    TSharedPtr(TSharedPtr<TPointer>&& Other) noexcept
     {
         Pointer = Other.Pointer;
-        RefCount = Other.RefCount;
+        PointerReferenceCounter = Other.PointerReferenceCounter;
         Other.Pointer = nullptr;
-        Other.RefCount = nullptr;
+        Other.PointerReferenceCounter = nullptr;
     }
 
-    TSharedPtr<TElement>& operator=(const TSharedPtr<TElement>& Other)
+    TSharedPtr<TPointer>& operator=(const TSharedPtr<TPointer>& Other)
     {
         if (this != &Other)
         {
             Release(); // Release current object
             Pointer = Other.Pointer;
-            RefCount = Other.RefCount;
-            (*RefCount)++;
+            PointerReferenceCounter = Other.PointerReferenceCounter;
+            PointerReferenceCounter->StrongCounter++;
         }
         return *this;
     }
 
-    TSharedPtr<TElement>& operator=(TSharedPtr<TElement>&& Other) noexcept
+    TSharedPtr<TPointer>& operator=(TSharedPtr<TPointer>&& Other) noexcept
     {
         if (this != &Other)
         {
             Release(); // Release current object
             Pointer = Other.Pointer;
-            RefCount = Other.RefCount;
+            PointerReferenceCounter = Other.PointerReferenceCounter;
             Other.Pointer = nullptr;
-            Other.RefCount = nullptr;
+            Other.PointerReferenceCounter = nullptr;
         }
         return *this;
     }
 
-    TElement& operator*() const
+    TPointer& operator*() const
     {
         RK_ASSERT(Pointer != nullptr, "Dereferencing a null pointer.");
         return *Pointer;
     }
 
-    TElement* operator->() const
+    TPointer* operator->() const
     {
         RK_ASSERT(Pointer != nullptr, "Dereferencing a null pointer.");
         return Pointer;
     }
 
-    TElement* Get() const
+    TPointer* Get() const
     {
-
+        RK_ASSERT(Pointer != nullptr, "Dereferencing a null pointer.");
         return Pointer;
     }
 
     bool IsValid() const
     {
-        return Pointer != nullptr && RefCount != nullptr;
+        return Pointer != nullptr && PointerReferenceCounter->StrongCounter != nullptr;
     }
 
-    uint32_t* GetRefCount() const
+    FPointerReferenceCounter* GetPointerReferenceCounter() const
     {
-        return RefCount;
+        return PointerReferenceCounter;
     }
 
-    void Reset(TElement* InPointer = nullptr)
+    void Reset(TPointer* InPointer = nullptr)
     {
         static_assert(false, "Function implemention is missing");
     }
 
     void Release()
     {
-        if (!RefCount)
-        {
-            return;
-        }
+        PointerReferenceCounter->StrongCounter--;
 
-        (*RefCount)--;
-
-        if (RefCount == 0)
+        if (PointerReferenceCounter->StrongCounter == 0)
         {
             delete Pointer;
-            delete RefCount;
             Pointer = nullptr;
-            RefCount = nullptr;
+            
+            if (PointerReferenceCounter->WeakCounter == 0)
+            {
+                delete PointerReferenceCounter;
+                PointerReferenceCounter = nullptr;
+            }
         }
     }
 
 private:
-    TElement* Pointer;
-    
-    uint32_t* RefCount;
-};
+    TPointer* Pointer;
 
-// TODO: Move to a suitable place
-struct FMemoryInfo
-{
-    uint64 AliveObjectSize;
-    uint64 TotalObjectSize;
-};
+    FPointerReferenceCounter* PointerReferenceCounter;
 
-static FMemoryInfo GMemoryInfo;
+    template<typename U>
+    friend class TWeakPtr;
+};
 
 template<typename TPointer>
 TSharedPtr<TPointer> MakeShared()
 {
-#if RK_DEBUG
-    GMemoryInfo.TotalObjectSize += 1;
-#endif
     return TSharedPtr<TPointer>(new TPointer());
+}
+
+template<typename TPointer, typename... TArgs>
+TSharedPtr<TPointer> MakeShared(TArgs&&... Args)
+{
+    return TSharedPtr<TPointer>(new TPointer(std::forward<TArgs>(Args)...));
 }

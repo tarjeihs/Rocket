@@ -95,4 +95,41 @@ namespace Math
     
         return 1.0f / Y;
     }
+
+    // Factorial function
+    static long long Factorial(int n) {
+        if (n <= 1) return 1;
+        return n * Factorial(n - 1);
+    }
+
+    // Power function
+    static double Power(double base, int exp) {
+        double result = 1.0;
+        for (int i = 0; i < exp; ++i) {
+            result *= base;
+        }
+        return result;
+    }
+
+    // Sine function using Taylor series
+    static double Sin(double x, int terms = 10) {
+        double result = 0.0;
+        for (int n = 0; n < terms; ++n) {
+            // Taylor series term for sin(x)
+            double term = Power(-1, n) * Power(x, 2 * n + 1) / Factorial(2 * n + 1);
+            result += term;
+        }
+        return result;
+    }
+
+    // Cosine function using Taylor series
+    static double Cos(double x, int terms = 10) {
+        double result = 0.0;
+        for (int n = 0; n < terms; ++n) {
+            // Taylor series term for cos(x)
+            double term = Power(-1, n) * Power(x, 2 * n) / Factorial(2 * n);
+            result += term;
+        }
+        return result;
+    }
 }

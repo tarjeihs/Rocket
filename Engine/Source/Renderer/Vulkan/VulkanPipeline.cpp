@@ -1,7 +1,6 @@
 #include "EnginePCH.h"
 #include "VulkanPipeline.h"
 
-#include "Renderer/Common/Mesh.h"
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
@@ -9,6 +8,7 @@
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VkRenderer.h"
+#include "Types/Vertex.h"
 
 void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo)
 {
@@ -47,7 +47,6 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
         ShaderStageCreateInfos.Add(ShaderStageCreateInfo);
     }
 
-    VkFormat ColorAttachmentFormat = GetRHI()->GetRenderer()->GetColorAttachmentImage()->GetVkFormat();
     TArray<VkDynamicState> DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     VkVertexInputBindingDescription VertexInputBindingDescription = {};
@@ -124,8 +123,8 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
     VkPipelineRenderingCreateInfo RenderingCreateInfo{};
     RenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     RenderingCreateInfo.colorAttachmentCount = 1;
-    RenderingCreateInfo.pColorAttachmentFormats = &ColorAttachmentFormat;
-    RenderingCreateInfo.depthAttachmentFormat = GetRHI()->GetRenderer()->GetDepthAttachmentImage()->GetVkFormat();
+    RenderingCreateInfo.pColorAttachmentFormats = &GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Format;
+    RenderingCreateInfo.depthAttachmentFormat = GetRHI()->GetRenderer()->GetDepthAttachmentD32()->Info.Format;
 
     VkPipelineViewportStateCreateInfo ViewportStateCreateInfo{};
     ViewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -168,4 +167,27 @@ void FVkPipeline::Initialize(FVkPipelineCreateInfo& CreateInfo)
 void FVkPipeline::Shutdown()
 {
     vkDestroyPipeline(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, VK_NULL_HANDLE);
+}
+
+void FVkPipeline::InitCompute(FVkPipelineCreateInfo& CreateInfo)
+{
+    RK_ASSERT(CreateInfo.Shaders.GetSize() == 1, "Compute pipeline requires exactly one compute shader.");
+    const FVkShader* ComputeShader = CreateInfo.Shaders[0];
+
+    VkPipelineShaderStageCreateInfo ShaderStageCreateInfo = {};
+    ShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ShaderStageCreateInfo.pNext = nullptr;
+    ShaderStageCreateInfo.stage = ComputeShader->Info.Stage;
+    ShaderStageCreateInfo.module = ComputeShader->Info.Module;
+    ShaderStageCreateInfo.pName = "main";
+
+    VkComputePipelineCreateInfo PipelineCreateInfo = {};
+    PipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    PipelineCreateInfo.pNext = nullptr;
+    PipelineCreateInfo.flags = 0;
+    PipelineCreateInfo.stage = ShaderStageCreateInfo;
+    PipelineCreateInfo.layout = CreateInfo.PipelineLayout->Info.Handle;
+
+    VkResult Result = vkCreateComputePipelines(GetRHI()->GetDevice()->GetVkDevice(), VK_NULL_HANDLE, 1, &PipelineCreateInfo, nullptr, &Info.Handle);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to create compute pipeline.");
 }

@@ -18,14 +18,22 @@ namespace Utils
 		}
 		return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 	}
+
+	std::string GetTextShaderStage(const EShaderStage ShaderStage)
+	{
+		switch (ShaderStage)
+		{
+			case EShaderStage::Vertex: 		return "vs_6_0";
+			case EShaderStage::Pixel: 		return "ps_6_0";
+			case EShaderStage::Compute: 	return "cs_6_0";
+		}
+		return std::string();
+	}
 }
 
 void FVkShader::Init(FShaderCreateInfo& CreateInfo)
 {
-	std::string VS = "vs_6_0";
-	std::string PS = "ps_6_0";
-
-    FHLSL HLSL = Format::ImportHLSL(CreateInfo.Path, "main", CreateInfo.Stage == EShaderStage::Vertex ? VS : PS);
+    FHLSL HLSL = Format::ImportHLSL(CreateInfo.Path, "main", Utils::GetTextShaderStage(CreateInfo.Stage));
 
 	VkShaderModuleCreateInfo ShaderModuleCreateInfo{};
 	ShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
