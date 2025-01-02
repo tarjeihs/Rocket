@@ -44,7 +44,7 @@ public:
     virtual void Init();
     virtual void Shutdown();
     void Render();
-    void Resize();
+    virtual void Resize();
 
     virtual void Bind() = 0;
     virtual void BindImGui() = 0;

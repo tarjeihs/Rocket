@@ -12,6 +12,7 @@ struct FPSInput
 struct FGlobalStorageBuffer
 {
     float Time;
+    float PP_FilmGrainIntensity;
 };
 
 struct FCameraStorageBuffer

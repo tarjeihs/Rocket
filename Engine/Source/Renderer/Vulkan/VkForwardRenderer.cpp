@@ -11,14 +11,25 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/Pipeline/VkOpaqueScriptableRendererPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
-#include "Scene/Component.h"
 #include "Scene/Scene.h"
 #include "Utils/Profiler.h"
 #include "VulkanTexture2D.h"
 #include "VulkanImage.h"
-#include "glm/gtc/matrix_inverse.hpp"
 
-// TODO IMPORTANT: Resizing must apply to the tone mapping images aswell..!
+struct FGlobalData
+{
+	float DeltaTime = 0.0f;
+} GlobalData;
+
+struct FCameraData
+{
+	alignas(16) glm::mat4 View = glm::identity<glm::mat4>();
+	alignas(16) glm::mat4 Projection = glm::identity<glm::mat4>();
+	alignas(16) glm::vec3 Position = glm::vec3(0.0f);
+	alignas(16) glm::vec3 Direction = glm::vec3(0.0f);
+	alignas(16) float PP_FilmGrainIntensity = 0.0f;
+	alignas(16) float PP_ChromaticAberration = 0.0f;
+} CameraData;
 
 void FVkForwardRenderer::Init()
 {
@@ -85,13 +96,13 @@ void FVkForwardRenderer::Init()
 		MaterialBuffer[FrameIndex] = new FVkBuffer();
 		InstanceBuffer[FrameIndex] = new FVkBuffer();
 
-		HDRImage[FrameIndex] = new FVkImage();
-		SDRImage[FrameIndex] = new FVkImage();
-		
 		GlobalBuffer[FrameIndex]->Initialize(GlobalBufferCreateInfo);
 		CameraBuffer[FrameIndex]->Initialize(CameraBufferCreateInfo);
 		MaterialBuffer[FrameIndex]->Initialize(MaterialBufferCreateInfo);
 		InstanceBuffer[FrameIndex]->Initialize(InstanceBufferCreateInfo);
+		
+		HDRImage[FrameIndex] = new FVkImage();
+		SDRImage[FrameIndex] = new FVkImage();
 		
 		HDRImage[FrameIndex]->Initialize(ToneMappingHDR16CreateInfo);
 		SDRImage[FrameIndex]->Initialize(ToneMappingLDR8CreateInfo);
@@ -141,6 +152,41 @@ void FVkForwardRenderer::Shutdown()
 	}
 }
 
+void FVkForwardRenderer::Resize()
+{
+	Super::Resize();
+	
+	FVkImageCreateInfo ToneMappingHDR16CreateInfo = 
+	{ 
+		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		Swapchain->Info.SwapchainImageExtent,
+		VK_FORMAT_R16G16B16A16_SFLOAT
+	};
+
+	FVkImageCreateInfo ToneMappingLDR8CreateInfo = 
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		Swapchain->Info.SwapchainImageExtent,
+		VK_FORMAT_R8G8B8A8_UNORM
+	};
+
+	FVkImage** HDR = *RWTexture2D.Find("HDR");
+	FVkImage** SDR = *RWTexture2D.Find("SDR");
+
+	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
+	{
+		HDR[Index]->Shutdown();
+		HDR[Index]->Initialize(ToneMappingHDR16CreateInfo);
+
+		SDR[Index]->Shutdown();
+		SDR[Index]->Initialize(ToneMappingLDR8CreateInfo);
+	}
+}
+
 void FVkForwardRenderer::Bind()
 {
 	PROFILE_FUNC_SCOPE("FVkForwardRenderer::Bind")
@@ -153,31 +199,17 @@ void FVkForwardRenderer::Bind()
 	DescriptorSet->WriteImage(1, 0, (*RWTexture2D.Find("HDR"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
 	DescriptorSet->WriteImage(1, 1, (*RWTexture2D.Find("SDR"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
 
-	{
-		struct FGlobalData
-		{
-    		float DeltaTime;
-		} GlobalData;
-		GlobalData.DeltaTime = GetEngine()->Timestep.GetDeltaTime();
-		
-		(*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&GlobalData, sizeof(FGlobalData));
-	}
+	GlobalData.DeltaTime = GetEngine()->Timestep.GetDeltaTime();
 
-	{
-		struct FCameraData
-		{
-			alignas(16) glm::mat4 View;
-			alignas(16) glm::mat4 Projection;
-			alignas(16) glm::vec3 Position;
-			alignas(16) glm::vec3 Direction;
-		} CameraData;
-		CameraData.View = GetScene()->GetCamera()->GetViewMatrix();
-		CameraData.Projection = GetScene()->GetCamera()->GetProjectionMatrix();
-		CameraData.Position = GetScene()->GetCamera()->GetPosition();
-		CameraData.Direction = GetScene()->GetCamera()->GetRotation();
+	CameraData.View = GetScene()->GetCamera()->GetViewMatrix();
+	CameraData.Projection = GetScene()->GetCamera()->GetProjectionMatrix();
+	CameraData.Position = GetScene()->GetCamera()->GetPosition();
+	CameraData.Direction = GetScene()->GetCamera()->GetRotation();
+	CameraData.PP_FilmGrainIntensity = GetScene()->GetCamera()->Settings.FilmGrainIntensity;
+	CameraData.PP_ChromaticAberration = GetScene()->GetCamera()->Settings.ChromaticAberration;
 
-		(*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&CameraData, sizeof(FCameraData));
-	}
+	(*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&GlobalData, sizeof(FGlobalData));
+	(*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&CameraData, sizeof(FCameraData));
 
 	{
 		struct FMaterialData

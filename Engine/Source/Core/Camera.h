@@ -24,6 +24,8 @@ public:
     	Settings.FoVY = 66.0f;
     	Settings.ZNear = 0.1f;
     	Settings.ZFar = 1000.0f;
+		Settings.FilmGrainIntensity = 0.0f;
+		Settings.ChromaticAberration = 0.0f;
 		
 		ApplySettings();
 
@@ -68,6 +70,8 @@ public:
 		float FoVY;
 		float ZNear;
 		float ZFar;
+		float FilmGrainIntensity;
+		float ChromaticAberration;
 	} Settings;
 
 private:

@@ -10,6 +10,8 @@ void PCamera::OnImGuiRender()
     ImGui::DragFloat("Field of View", &Settings.FoVY, 1.0f, 30.0f, 145.0f);
     ImGui::DragFloat("Z Near", &Settings.ZNear, 1.0f, 0.1f, 10000.0f);
     ImGui::DragFloat("Z Far", &Settings.ZFar, 1.0f, 0.1f, 10000.0f);
+    ImGui::DragFloat("Film Grain", &Settings.FilmGrainIntensity, 0.001f, 0.0f, 1.0f);
+    ImGui::DragFloat("Chromatic Aberration", &Settings.ChromaticAberration, 0.1f, 0.0f, 5.0f);
     ImGui::End();
 
     ApplySettings();

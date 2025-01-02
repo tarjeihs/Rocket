@@ -1,7 +1,6 @@
 #include "EnginePCH.h"
 #include "VkPostProcessScriptableRendererPipeline.h"
 
-#include "Renderer/Common/Overlay.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
@@ -34,19 +33,11 @@ void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pip
 	Pipeline->InitCompute(PipelineCreateInfo);
 
     ComputeShader->Free();
-
-#if RK_DEBUG
-    GOverlay->OnRender.Bind(this, &FVkPostProcessScriptableRendererPipeline::OnImGuiRender);
-#endif
 }
 
 void FVkPostProcessScriptableRendererPipeline::Shutdown()
 {
     Pipeline->Shutdown();
-
-#if RK_DEBUG
-//    GOverlay->OnRender.Unbind(this, &FVkPostProcessScriptableRendererPipeline::OnImGuiRender);
-#endif
 }
 
 void FVkPostProcessScriptableRendererPipeline::Execute()
@@ -68,14 +59,12 @@ void FVkPostProcessScriptableRendererPipeline::Execute()
     DrawImage->CopyImageRegion(CommandBuffer, HDR->Info.ImageHandle, DrawImage->Info.Extent, HDR->Info.Extent);
     DrawImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+    const uint32 GroupCountX = (GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width + 15) / 16;
+    const uint32 GroupCountY = (GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.height + 15) / 16;
+    
     vkCmdBindPipeline(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline->Info.Handle);
-    vkCmdDispatch(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), std::ceil(HDR->Info.Extent.width / 16), std::ceil(HDR->Info.Extent.height / 16), 1);
+    vkCmdDispatch(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), GroupCountX, GroupCountY, 1);
 
     SDR->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     SDR->CopyImageRegion(CommandBuffer, FinalImage->Info.ImageHandle, SDR->Info.Extent, FinalImage->Info.Extent);
-}
-
-void FVkPostProcessScriptableRendererPipeline::OnImGuiRender()
-{
-
 }

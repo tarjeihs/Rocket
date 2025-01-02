@@ -8,6 +8,7 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanShader.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
+#include "Renderer/Vulkan/VulkanSwapchain.h"
 
 void FVkOpaqueScriptableRendererPipeline::Initialize(FVkPipelineLayout* PipelineLayout)
 {
@@ -78,7 +79,7 @@ void FVkOpaqueScriptableRendererPipeline::Execute()
     VkRenderingInfo RenderingInfo{};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     RenderingInfo.pNext = nullptr;
-    RenderingInfo.renderArea = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.width, GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.height }};
+    RenderingInfo.renderArea = VkRect2D { VkOffset2D { 0, 0 }, VkExtent2D { GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width, GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.height }};
     RenderingInfo.layerCount = 1;
     RenderingInfo.colorAttachmentCount = 1;
     RenderingInfo.pColorAttachments = &ColorAttachment;
@@ -88,16 +89,16 @@ void FVkOpaqueScriptableRendererPipeline::Execute()
     VkViewport Viewport{};
     Viewport.x = 0;
     Viewport.y = 0;
-    Viewport.width = GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.width;
-    Viewport.height = GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.height;
+    Viewport.width = GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width;
+    Viewport.height = GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.height;
     Viewport.minDepth = 0.0f;
     Viewport.maxDepth = 1.0f;
 
     VkRect2D Scissor = {};
     Scissor.offset.x = 0;
     Scissor.offset.y = 0;
-    Scissor.extent.width = GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.width;
-    Scissor.extent.height = GetRHI()->GetRenderer()->GetColorAttachment16()->Info.Extent.height;
+    Scissor.extent.width = GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width;
+    Scissor.extent.height = GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.height;
 
     vkCmdBeginRendering(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), &RenderingInfo);
     vkCmdSetViewport(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &Viewport);
