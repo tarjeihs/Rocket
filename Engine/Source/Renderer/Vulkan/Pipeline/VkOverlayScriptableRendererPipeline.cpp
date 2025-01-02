@@ -14,7 +14,7 @@ void FVkOverlayScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pipelin
 	//ImGuiInitInfo.PhysicalDevice = GetRHI()->GetDevice()->GetVkPhysicalDevice();
 	//ImGuiInitInfo.Device = GetRHI()->GetDevice()->GetVkDevice();
 	//ImGuiInitInfo.Queue = GetRHI()->GetDevice()->GetGraphicsQueue();
-	//ImGuiInitInfo.DescriptorPool = GetRHI()->GetRenderer()->ImGuiDescriptorPool->Info.DescriptorPool;
+	//ImGuiInitInfo.DescriptorPool = GetRHI()->GetRenderer()->DescriptorPool->Info.Handle;
 	//ImGuiInitInfo.MinImageCount = 3;
 	//ImGuiInitInfo.ImageCount = 3;
 	//ImGuiInitInfo.UseDynamicRendering = true;
@@ -22,7 +22,7 @@ void FVkOverlayScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pipelin
 	//ImGuiInitInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
 	//ImGuiInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainSurfaceFormat.format;
 	//ImGuiInitInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-	
+	//
     //ImGui::CreateContext();
 	//ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindow()->GetNativeWindow(), true);
 	//ImGui_ImplVulkan_Init(&ImGuiInitInfo);

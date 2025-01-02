@@ -2,7 +2,10 @@
 
 #include "Core/Camera.h"
 #include "Core/Engine.h"
+#include "Scene/Component.h"
 #include "Scene/Registry.h"
+#include "glm/gtc/type_ptr.hpp"
+#include "imgui.h"
 
 struct FMeshComponent;
 struct FTransformComponent;
@@ -14,6 +17,10 @@ public:
 	{
 		Camera = new PCamera();
 		Registry = new PRegistry();
+
+#if RK_DEBUG
+		GOverlay->OnRender.Bind(this, &PScene::OnImGuiRender);
+#endif
 	}
 
 	void Update()
@@ -36,6 +43,8 @@ public:
 	{
 		return Registry;
 	}
+
+	void OnImGuiRender();
 
 private:
 	PCamera* Camera;

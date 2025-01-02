@@ -6,12 +6,17 @@ class PVulkanRHI;
 class PVulkanCommandBuffer;
 class FVkDescriptorPool;
 
-class PVulkanOverlay : public POverlay // TODO: Can this be seperated into it's own renderer? It probably should be 
+struct FVkOverlayInfo
+{
+    FVkDescriptorPool* DescriptorPool;
+};
+
+class FVkOverlay : public FOverlay
 {
 public:
+    FVkOverlayInfo Info;
+
 	virtual void Init() override;
 	virtual void Shutdown() override;
-
-private:
-	FVkDescriptorPool* DescriptorPool;
+    virtual void Execute() override;
 };

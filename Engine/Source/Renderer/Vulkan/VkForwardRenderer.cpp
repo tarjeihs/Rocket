@@ -5,13 +5,10 @@
 #include "Pipeline/VkPostProcessScriptableRendererPipeline.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
-#include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
-#include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
-#include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/Pipeline/VkOpaqueScriptableRendererPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Scene/Component.h"
@@ -27,12 +24,6 @@ void FVkForwardRenderer::Init()
 {
     Super::Init();
 
-	PipelineLayout												= new FVkPipelineLayout();
-					
-	DescriptorSet 												= new FVkDescriptorSet();
-	DescriptorSetLayout 										= new FVkDescriptorSetLayout();
-	DescriptorPool 												= new FVkDescriptorPool();
-
 	FVkBuffer** 				GlobalBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
 	FVkBuffer** 				CameraBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
 	FVkBuffer** 				MaterialBuffer 					= new FVkBuffer*			[CONCURRENT_FRAME_COUNT];
@@ -40,37 +31,6 @@ void FVkForwardRenderer::Init()
 	
 	FVkImage**					HDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
 	FVkImage**					SDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
-
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo =
-	{{
-		{ EVkDescriptorType::StructuredBuffer, 	16   },
-		{ EVkDescriptorType::RWTexture2D, 		1024 },
-		{ EVkDescriptorType::Texture2D, 		1024 },
-	}};
-
-	FVkDescriptorSetCreateInfo DescriptorSetCreateInfo =
-	{
-		DescriptorPool,
-		DescriptorSetLayout
-	};
-
-	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
-	{
-		{
-    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	16.0f },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 	16.0f },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 	16.0f },
-		},
-		1,
-		VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
-	};
-
-	FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo =
-	{
-		{ 
-			DescriptorSetLayout
-		}
-	};
 	
 	FVkBufferCreateInfo GlobalBufferCreateInfo = 
 	{ 
@@ -118,12 +78,6 @@ void FVkForwardRenderer::Init()
 		VK_FORMAT_R8G8B8A8_UNORM
 	};
 
-	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
-	DescriptorSetLayout->Initialize(DescriptorSetLayoutCreateInfo);
-	DescriptorSet->Initialize(DescriptorSetCreateInfo);
-
-	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
-
 	for (SizeType FrameIndex = 0; FrameIndex < CONCURRENT_FRAME_COUNT; ++FrameIndex)
 	{
 		GlobalBuffer[FrameIndex] = new FVkBuffer();
@@ -168,8 +122,6 @@ void FVkForwardRenderer::Shutdown()
 {
     Super::Shutdown();
 
-	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout->Info.Handle, VK_NULL_HANDLE);
-
 	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
 	{
 		for (const auto& Buffer : Buffers)
@@ -183,10 +135,6 @@ void FVkForwardRenderer::Shutdown()
 		}
 	}
 
-	DescriptorSet->Shutdown();
-	DescriptorSetLayout->Shutdown();
-	DescriptorPool->Shutdown();
-
 	for (const auto& Pair : ScriptableRendererPipelineData)
 	{
 		Pair->Shutdown();
@@ -196,9 +144,6 @@ void FVkForwardRenderer::Shutdown()
 void FVkForwardRenderer::Bind()
 {
 	PROFILE_FUNC_SCOPE("FVkForwardRenderer::Bind")
-
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
 
 	DescriptorSet->WriteBuffer(0, 0, (*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]);
 	DescriptorSet->WriteBuffer(0, 1, (*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]);

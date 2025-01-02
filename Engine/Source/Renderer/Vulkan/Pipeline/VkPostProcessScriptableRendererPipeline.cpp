@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "VkPostProcessScriptableRendererPipeline.h"
 
+#include "Renderer/Common/Overlay.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
@@ -9,7 +10,6 @@
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VkRenderer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
-#include <vulkan/vulkan_core.h>
 
 void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* PipelineLayout)
 {
@@ -17,7 +17,7 @@ void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pip
 
     FShaderCreateInfo ComputeShaderCreateInfo
 	{
-		RK_ENGINE_DIR "/Shaders/HLSL/Tone.hlsl", EShaderStage::Compute
+		RK_ENGINE_DIR "/Shaders/HLSL/PostProcess.hlsl", EShaderStage::Compute
 	};
 
     FVkPipelineCreateInfo PipelineCreateInfo
@@ -34,11 +34,19 @@ void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pip
 	Pipeline->InitCompute(PipelineCreateInfo);
 
     ComputeShader->Free();
+
+#if RK_DEBUG
+    GOverlay->OnRender.Bind(this, &FVkPostProcessScriptableRendererPipeline::OnImGuiRender);
+#endif
 }
 
 void FVkPostProcessScriptableRendererPipeline::Shutdown()
 {
     Pipeline->Shutdown();
+
+#if RK_DEBUG
+//    GOverlay->OnRender.Unbind(this, &FVkPostProcessScriptableRendererPipeline::OnImGuiRender);
+#endif
 }
 
 void FVkPostProcessScriptableRendererPipeline::Execute()
@@ -65,4 +73,9 @@ void FVkPostProcessScriptableRendererPipeline::Execute()
 
     SDR->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     SDR->CopyImageRegion(CommandBuffer, FinalImage->Info.ImageHandle, SDR->Info.Extent, FinalImage->Info.Extent);
+}
+
+void FVkPostProcessScriptableRendererPipeline::OnImGuiRender()
+{
+
 }

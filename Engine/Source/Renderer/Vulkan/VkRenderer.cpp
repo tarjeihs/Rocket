@@ -1,24 +1,64 @@
 #include "EnginePCH.h"
 #include "VkRenderer.h"
 
+#include "Renderer/Common/Overlay.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VkScriptableRendererPipeline.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
-#include "Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "Renderer/Vulkan/VkOverlay.h"
 #include "Types/UniquePtr.h"
 #include "Utils/Profiler.h"
 
 void FVkRenderer::Init()
 {
 	Swapchain = MakeUnique<PVulkanSwapchain>();
-    RenderGraph = MakeUnique<PVulkanRenderGraph>();
-
 	Swapchain->Init();
+
+	PipelineLayout												= new FVkPipelineLayout();
+	DescriptorSet 												= new FVkDescriptorSet();
+	DescriptorSetLayout 										= new FVkDescriptorSetLayout();
+	DescriptorPool 												= new FVkDescriptorPool();
+
+	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo =
+	{{
+		{ EVkDescriptorType::StructuredBuffer, 	16 },
+		{ EVkDescriptorType::RWTexture2D, 		16 },
+		{ EVkDescriptorType::Texture2D, 		16 },
+	}};
+
+	FVkDescriptorSetCreateInfo DescriptorSetCreateInfo =
+	{
+		DescriptorPool,
+		DescriptorSetLayout
+	};
+
+	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
+	{
+		{
+    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	16.0f },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 	16.0f },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 	16.0f },
+		},
+		1,
+		VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
+	};
+
+	FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo =
+	{
+		{ 
+			DescriptorSetLayout
+		}
+	};
+
+	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
+	DescriptorSetLayout->Initialize(DescriptorSetLayoutCreateInfo);
+	DescriptorSet->Initialize(DescriptorSetCreateInfo);
+	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
 
 	FVkImageCreateInfo ColorAttachment16CreateInfo = 
 	{
@@ -100,15 +140,27 @@ void FVkRenderer::Init()
 
 	MeshAllocator = MakeUnique<FVkMeshAllocator>();
 	MeshAllocator->Initialize();
+
+	GOverlay = new FVkOverlay();
+	GOverlay->Init();
 }
 
 void FVkRenderer::Shutdown()
 {
+	GOverlay->Shutdown();
+	delete GOverlay;
+
     Swapchain->Shutdown();
 
 	ColorAttachment16->Shutdown();
 	ColorAttachment8->Shutdown();
 	DepthAttachmentD32->Shutdown();
+
+	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout->Info.Handle, VK_NULL_HANDLE);
+
+	DescriptorSet->Shutdown();
+	DescriptorSetLayout->Shutdown();
+	DescriptorPool->Shutdown();
 
     for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
     {
@@ -134,6 +186,9 @@ void FVkRenderer::Render()
 	ColorAttachment8->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     DepthAttachmentD32->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
+	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
+	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
+
     Bind(); // Bind descriptor sets, update buffers, etc...
 	
 	for (const auto& Pipeline : ScriptableRendererPipelineData)
@@ -144,6 +199,8 @@ void FVkRenderer::Render()
     ColorAttachment16->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     ColorAttachment8->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     
+	GOverlay->Execute();
+
 	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     ColorAttachment8->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, ColorAttachment8->Info.Extent, Swapchain->Info.SwapchainImageExtent);
 	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

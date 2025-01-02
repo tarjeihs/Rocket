@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Renderer/Common/Overlay.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -26,7 +28,7 @@ public:
 		ApplySettings();
 
 #if RK_DEBUG
-		//GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
+		GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
 #endif
 	}
 

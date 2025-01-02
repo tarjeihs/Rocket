@@ -2,16 +2,18 @@
 
 #include "Core/Delegate.h"
 
-class POverlay
+class FOverlay
 {
 public:
     TDelegate<> OnRender;
 
-    virtual ~POverlay() = default;
+    virtual ~FOverlay() = default;
 
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
+    virtual void Execute() = 0;
+
 };
 
-// Overlay is declared as a global pointer
-extern POverlay* GOverlay;
+// ImGui is declared as a global pointer
+extern FOverlay* GOverlay;

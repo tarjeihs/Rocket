@@ -71,7 +71,7 @@ void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.GetSize());
 	DescriptorPoolCreateInfo.pPoolSizes = PoolSizes.GetData();
 
-	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Info.DescriptorPool);
+	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Info.Handle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor pool.");
 
 	RK_LOG_DEBUG("Vulkan: Created DescriptorPool");
@@ -79,7 +79,7 @@ void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 
 void FVkDescriptorPool::Shutdown()
 {
-	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Info.DescriptorPool, nullptr);
+	vkDestroyDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), Info.Handle, nullptr);
 }
 
 void FVkDescriptorSetLayout::Initialize(FVkDescriptorSetLayoutCreateInfo& CreateInfo)
@@ -125,7 +125,7 @@ void FVkDescriptorSet::Initialize(FVkDescriptorSetCreateInfo& CreateInfo)
 	VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {};
 	DescriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	DescriptorSetAllocateInfo.pNext = nullptr;
-	DescriptorSetAllocateInfo.descriptorPool = CreateInfo.DescriptorPool->Info.DescriptorPool;
+	DescriptorSetAllocateInfo.descriptorPool = CreateInfo.DescriptorPool->Info.Handle;
 	DescriptorSetAllocateInfo.descriptorSetCount = 1;
 	DescriptorSetAllocateInfo.pSetLayouts = &CreateInfo.DescriptorSetLayout->Info.Handle;
 

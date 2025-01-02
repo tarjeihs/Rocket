@@ -10,6 +10,7 @@
 #include "Renderer/Allocators/VkMeshAllocator.h"
 #include "VulkanTexture2D.h"
 
+class FVkOverlay;
 class IRenderer;
 class PVulkanAllocator;
 class PVulkanSwapchain;
@@ -52,7 +53,6 @@ public:
     inline FVkImage* GetDepthAttachmentD32() const;
     inline PVulkanCommandPool* GetCommandPool() const;
     inline PVulkanCommandBuffer* GetCommandBuffer() const;
-    inline PVulkanRenderGraph* GetRenderGraph() const;
     inline PVulkanSwapchain* GetSwapchain() const;
     inline SizeType GetFrameIndex() const;
     inline uint32 GetNextImageIndex() const;
@@ -78,7 +78,7 @@ public:
     VkFence                                             ImmediateRenderFence;
         
     TUniquePtr<PVulkanSwapchain>                        Swapchain;
-    TUniquePtr<PVulkanRenderGraph>                      RenderGraph;
+    TUniquePtr<FVkOverlay>                                ImGui;
         
     TUniquePtr<FVkImage>                                ColorAttachment16;
     TUniquePtr<FVkImage>                                ColorAttachment8;
@@ -115,11 +115,6 @@ inline PVulkanCommandPool* FVkRenderer::GetCommandPool() const
 inline PVulkanCommandBuffer* FVkRenderer::GetCommandBuffer() const
 {
     return CommandBuffer[FrameIndex].Get();
-}
-
-inline PVulkanRenderGraph* FVkRenderer::GetRenderGraph() const
-{
-    return RenderGraph.Get();
 }
 
 inline PVulkanSwapchain* FVkRenderer::GetSwapchain() const

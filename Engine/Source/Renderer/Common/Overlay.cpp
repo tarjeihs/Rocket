@@ -1,4 +1,5 @@
 #include "EnginePCH.h"
-#include "Overlay.h"
+#include "Types/UniquePtr.h"
+#include "ImGui.h"
 
-POverlay* GOverlay = nullptr;
+FOverlay* GOverlay = nullptr;

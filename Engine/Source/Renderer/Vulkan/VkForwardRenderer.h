@@ -8,4 +8,9 @@ class FVkForwardRenderer : public FVkRenderer
     virtual void Shutdown() override;
     virtual void Bind() override;
     virtual void BindImGui() override;
+
+    void OnSubmitGlobalBuffer();
+    void OnSubmitCameraBuffer();
+    void OnSubmitMaterialBuffer();
+    void OnSubmitInstanceBuffer();
 };

@@ -23,7 +23,7 @@ struct FVkDescriptorPoolCreateInfo
 
 struct FVkDescriptorPoolInfo
 {
-    VkDescriptorPool DescriptorPool;
+    VkDescriptorPool Handle;
 };
 
 class FVkDescriptorPool
