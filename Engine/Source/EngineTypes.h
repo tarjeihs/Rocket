@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <cstdint>
+#include <type_traits>
+
 using SizeType = size_t;
 
 using uint64 = uint64_t;

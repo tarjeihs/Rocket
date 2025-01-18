@@ -30,6 +30,57 @@ public:
         Clear();
     }
 
+	TDoubleLinkedList(const TDoubleLinkedList& Other)
+		: Head(nullptr), Tail(nullptr), Size(0)
+	{
+		TDoubleLinkedListNode<TElement>* Current = Other.Head;
+		while (Current)
+		{
+			PushBack(Current->Element);
+			Current = Current->Next;
+		}
+	}
+
+	TDoubleLinkedList(TDoubleLinkedList&& Other) noexcept
+		: Head(Other.Head), Tail(Other.Tail), Size(Other.Size)
+	{
+		Other.Head = nullptr;
+		Other.Tail = nullptr;
+		Other.Size = 0;
+	}
+
+	TDoubleLinkedList& operator=(const TDoubleLinkedList& Other)
+	{
+		if (this != &Other)
+		{
+			Clear();
+
+			TDoubleLinkedListNode<TElement>* Current = Other.Head;
+			while (Current)
+			{
+				PushBack(Current->Element);
+				Current = Current->Next;
+			}
+		}
+		return *this;
+	}
+
+	TDoubleLinkedList& operator=(TDoubleLinkedList&& Other) noexcept
+	{
+		if (this != &Other)
+		{
+			Clear();
+
+			Head = Other.Head;
+			Tail = Other.Tail;
+			Size = Other.Size;
+			Other.Head = nullptr;
+			Other.Tail = nullptr;
+			Other.Size = 0;
+		}
+		return *this;
+	}
+
     void PushFront(const TElement& Element)
     {
         TDoubleLinkedListNode<TElement>* Node = new TDoubleLinkedListNode<TElement>(Element);

@@ -1,15 +1,15 @@
 #pragma once
 
-enum class EImageFormat
+enum class ETexture2DFormat
 {
-    RGBA32_SRGB,
-    RGBA32_UNORM  
+    SRGB, UNORM
 };
 
 struct FTexture2DCreateInfo
 {
-    FString Path;
-    EImageFormat ImageFormat;
+    unsigned char* Data;
+    uint32 Width = 0, Height = 0, Components = 0, Bits = 0;
+    ETexture2DFormat Format;
 };
 
 class ITexture2D
@@ -19,4 +19,6 @@ public:
 
     virtual void Initialize(FTexture2DCreateInfo CreateInfo) = 0;
     virtual void Shutdown() = 0;
+
+    virtual int32 GetTextureID() const = 0;
 };

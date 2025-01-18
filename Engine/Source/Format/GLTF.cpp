@@ -1,8 +1,12 @@
 #include "EnginePCH.h"
-#include "Utils/Profiler.h"
 #include "GLTF.h"
 
-void GLTF::Import(const FString& Path, TArray<FVertex>& Vertices, TArray<uint32_t>& Indices)
+#include "Renderer/Common/Geometry.h"
+#include <Renderer/Common/Texture2D.h>
+#include <Renderer/Common/RHIAPI.h>
+#include <Renderer/Vulkan/VkRenderer.h>
+
+void GLTF::Import(const FString& Path, FPrefab& Prefab)
 {
     const SBlob& Blob = PFileSystem::ReadFileBinary(Path);
 
@@ -14,29 +18,95 @@ void GLTF::Import(const FString& Path, TArray<FVertex>& Vertices, TArray<uint32_
 
     Loader.LoadBinaryFromMemory(&Model, &Error, &Warning, Blob.Data.data(), Blob.Data.size());
 
-    for (const auto& Mesh : Model.meshes)
+    for (const auto& Node : Model.nodes)
     {
+        if (Node.mesh == INDEX_Invalid)
+        {
+            continue;
+        }
+
+        auto& Mesh = Model.meshes[Node.mesh];
+
         for (const auto& Primitive : Mesh.primitives)
         {
+            FSubmesh Submesh;
+            Submesh.Name = Mesh.name;
+            
+            //auto& Material = Model.materials[Primitive.material];
+            //
+            //if (Material.pbrMetallicRoughness.baseColorTexture.index >= 0)
+            //{
+            //    auto& Texture = Model.textures[Material.pbrMetallicRoughness.baseColorTexture.index];
+            //    if (Texture.source >= 0 && Texture.source < Model.images.size())
+            //    {
+            //        auto& Image = Model.images[Texture.source];
+            //        
+            //        if (ITexture2D** Ptr = Memory.Texture2D.Find(Image.name))
+            //        {
+            //            ITexture2D* AlbedoTexture = *Ptr;
+            //            Submesh.Material.AlbedoID = AlbedoTexture->GetTextureID();
+            //            
+            //            continue;
+            //        }
+            //        
+            //        FTexture2DCreateInfo Texture2DCreateInfo
+            //        {
+            //            Image.image.data(),
+            //            Image.width,
+            //            Image.height,
+            //            Image.component,
+            //            Image.bits,
+            //            EImageFormat::SRGB
+            //        };
+            //        
+            //        ITexture2D* AlbedoTexture = NewObject<ITexture2D>();
+            //        AlbedoTexture->Initialize(Texture2DCreateInfo);
+            //        GetGPUMemory()->AddTexture2D(AlbedoTexture);
+            //        
+            //        Submesh.Material.AlbedoID = AlbedoTexture->GetTextureID();
+            //    }
+            //}
+
+            if (Node.translation.size())
+            {
+                glm::vec3 Translation = glm::vec3(Node.translation[0], Node.translation[1], Node.translation[2]);
+
+                Submesh.Transform.Translation = Translation;
+            }
+
+            if (Node.rotation.size())
+            {
+                glm::quat Rotation = glm::quat(Node.rotation[3], Node.rotation[0], Node.rotation[1], Node.rotation[2]);
+
+                Submesh.Transform.Rotation = glm::degrees(glm::eulerAngles(Rotation));
+            }
+
+            if (Node.scale.size())
+            {
+                glm::vec3 Scale = glm::vec3(Node.scale[0], Node.scale[1], Node.scale[2]);
+
+                Submesh.Transform.Scale = Scale;
+            }
+            
+            SizeType VertexOffset = Submesh.Vertices.GetSize();
+
             const float* Positions = nullptr;
             const float* TexCoords = nullptr;
             const float* Normals = nullptr;
-            const float* Colors = nullptr;
-            const uint8_t* indexData = nullptr;
+            const uint8_t* Index = nullptr;
 
-            size_t TexCoordStride = 0;
-            size_t PositionStride = 0;
-            size_t NormalStride = 0;
-            size_t ColorStride = 0;
-            size_t IndexStride = 0;
+            SizeType TexCoordStride = 0;
+            SizeType PositionStride = 0;
+            SizeType NormalStride = 0;
+            SizeType IndexStride = 0;
 
-            size_t VertexCount = 0;
-            size_t IndexCount = 0;
-            size_t TriangleCount = 0;
+            SizeType VertexCount = 0;
+            SizeType IndexCount = 0;
+            SizeType TriangleCount = 0;
 
             if (Primitive.attributes.find("POSITION") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("POSITION")->second];
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.at("POSITION")];
                 const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
                 const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
 
@@ -47,32 +117,25 @@ void GLTF::Import(const FString& Path, TArray<FVertex>& Vertices, TArray<uint32_
 
             if (Primitive.attributes.find("TEXCOORD_0") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("TEXCOORD_0")->second];
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.at("TEXCOORD_0")];
                 const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
                 const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+
                 TexCoords = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
                 TexCoordStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec2);
             }
 
             if (Primitive.attributes.find("NORMAL") != Primitive.attributes.end())
             {
-                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("NORMAL")->second];
+                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.at("NORMAL")];
                 const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
                 const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
+
                 Normals = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
                 NormalStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec3);
             }
 
-            if (Primitive.attributes.find("COLOR_0") != Primitive.attributes.end())
-            {
-                const tinygltf::Accessor& Accessor = Model.accessors[Primitive.attributes.find("COLOR_0")->second];
-                const tinygltf::BufferView& BufferView = Model.bufferViews[Accessor.bufferView];
-                const tinygltf::Buffer& Buffer = Model.buffers[BufferView.buffer];
-                Colors = reinterpret_cast<const float*>(&Buffer.data[BufferView.byteOffset + Accessor.byteOffset]);
-                ColorStride = Accessor.ByteStride(BufferView) ? Accessor.ByteStride(BufferView) : sizeof(glm::vec4);
-            }
-
-            for (size_t Index = 0; Index < VertexCount; ++Index)
+            for (SizeType Index = 0; Index < VertexCount; ++Index)
             {
                 FVertex Vertex;
 
@@ -82,132 +145,113 @@ void GLTF::Import(const FString& Path, TArray<FVertex>& Vertices, TArray<uint32_
                     Vertex.Position = glm::vec3(Position[0], Position[1], Position[2]);
                 }
 
-                if (TexCoords) 
+                if (TexCoords)
                 {
                     const float* TexCoord = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(TexCoords) + Index * TexCoordStride);
                     Vertex.TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
-                } 
+                }
 
-                if (Normals) 
+                if (Normals)
                 {
                     const float* Normal = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Normals) + Index * NormalStride);
                     Vertex.Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
-                } 
+                }
 
-                if (Colors) 
-                {
-                    const float* Color = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Colors) + Index * ColorStride);
-                    //Vertex.Color = glm::vec4(Color[0], Color[1], Color[2], Color[3]);
-                } 
-
-                Vertices.Add(Vertex);
+                Submesh.Vertices.Add(Vertex);
             }
 
             if (Primitive.indices >= 0)
             {
-                const tinygltf::Accessor &indexAccessor = Model.accessors[Primitive.indices];
-                const tinygltf::BufferView &indexBufferView = Model.bufferViews[indexAccessor.bufferView];
-                const tinygltf::Buffer &indexBuffer = Model.buffers[indexBufferView.buffer];
-                indexData = &indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset];
+                const tinygltf::Accessor& indexAccessor = Model.accessors[Primitive.indices];
+                const tinygltf::BufferView& indexBufferView = Model.bufferViews[indexAccessor.bufferView];
+                const tinygltf::Buffer& indexBuffer = Model.buffers[indexBufferView.buffer];
+
+                Index = &indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset];
                 IndexStride = indexAccessor.componentType;
                 IndexCount = indexAccessor.count;
                 TriangleCount = indexAccessor.count / 3;
-            }
 
-            for (size_t Index = 0; Index < IndexCount; ++Index)
-            {
-                uint32_t IndexValue;
-
-                switch (IndexStride)
+                for (size_t i = 0; i < IndexCount; ++i)
                 {
+                    uint32_t IndexValue;
+
+                    switch (IndexStride)
+                    {
                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
                     {
-                        const uint8_t* Value8 = reinterpret_cast<const uint8_t*>(indexData);
-                        IndexValue = static_cast<uint32_t>(Value8[Index]);
+                        const uint8_t* Value8 = reinterpret_cast<const uint8_t*>(Index);
+                        IndexValue = static_cast<uint32_t>(Value8[i]) + static_cast<uint32_t>(VertexOffset);
                         break;
                     }
                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
                     {
-                        const uint16_t* Value16 = reinterpret_cast<const uint16_t*>(indexData);
-                        IndexValue = static_cast<uint32_t>(Value16[Index]);
+                        const uint16_t* Value16 = reinterpret_cast<const uint16_t*>(Index);
+                        IndexValue = static_cast<uint32_t>(Value16[i]) + static_cast<uint32_t>(VertexOffset);
                         break;
                     }
                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
                     {
-                        const uint32_t* Value32 = reinterpret_cast<const uint32_t*>(indexData);
-                        IndexValue = static_cast<uint32_t>(Value32[Index]);
+                        const uint32_t* Value32 = reinterpret_cast<const uint32_t*>(Index);
+                        IndexValue = static_cast<uint32_t>(Value32[i]) + static_cast<uint32_t>(VertexOffset);
                         break;
                     }
+                    }
+
+                    Submesh.Indices.Add(IndexValue);
                 }
-
-                Indices.Add(IndexValue);
             }
+            
+            for (SizeType Index = 0; Index < Submesh.Indices.GetSize(); Index += 3)
+            {
+                uint32 Idx0 = Submesh.Indices[Index];
+                uint32 Idx1 = Submesh.Indices[Index + 1];
+                uint32 Idx2 = Submesh.Indices[Index + 2];
+
+                FVertex& Vertex0 = Submesh.Vertices[Idx0];
+                FVertex& Vertex1 = Submesh.Vertices[Idx1];
+                FVertex& Vertex2 = Submesh.Vertices[Idx2];
+
+                const glm::vec3& Position0 = Vertex0.Position;
+                const glm::vec3& Position1 = Vertex1.Position;
+                const glm::vec3& Position2 = Vertex2.Position;
+
+                const glm::vec2& TexCoord0 = Vertex0.TexCoord;
+                const glm::vec2& TexCoord1 = Vertex1.TexCoord;
+                const glm::vec2& TexCoord2 = Vertex2.TexCoord;
+
+                glm::vec3 Edge1 = Position1 - Position0;
+                glm::vec3 Edge2 = Position2 - Position0;
+
+                glm::vec2 DeltaTexCoord1 = TexCoord1 - TexCoord0;
+                glm::vec2 DeltaTexCoord2 = TexCoord2 - TexCoord0;
+
+                float F = 1.0f / (DeltaTexCoord1.x * DeltaTexCoord2.y - DeltaTexCoord2.x * DeltaTexCoord1.y + 1e-7f);
+
+                glm::vec3 Tangent = F * (Edge1 * DeltaTexCoord2.y - Edge2 * DeltaTexCoord1.y);
+                glm::vec3 Bitangent = F * (-Edge1 * DeltaTexCoord2.x + Edge2 * DeltaTexCoord1.x);
+
+                Vertex0.Tangent += Tangent;
+                Vertex1.Tangent += Tangent;
+                Vertex2.Tangent += Tangent;
+
+                Vertex0.Bitangent += Bitangent;
+                Vertex1.Bitangent += Bitangent;
+                Vertex2.Bitangent += Bitangent;
+            }
+
+            for (SizeType Index = 0; Index < Submesh.Vertices.GetSize(); ++Index)
+            {
+                FVertex& Vertex = Submesh.Vertices[Index];
+
+                glm::vec3& N = Vertex.Normal;
+                glm::vec3& T = Vertex.Tangent;
+                glm::vec3& B = Vertex.Bitangent;
+
+                T = glm::normalize(T - N * glm::dot(N, T));
+                B = glm::normalize(glm::cross(N, T));
+            }
+
+            Prefab.Submeshes.Add(Submesh);
         }
-    }
-
-    for (size_t i = 0; i < Vertices.GetSize(); ++i)
-    {
-        //MeshBinaryObject.Vertices[i].Tangent = glm::vec3(0.0f);
-        //MeshBinaryObject.Vertices[i].Bitangent = glm::vec3(0.0f);
-    }
-
-    // Compute tangents and bitangents for each triangle
-    for (size_t i = 0; i < Indices.GetSize(); i += 3)
-    {
-//        uint32_t idx0 = Indices[i];
-//        uint32_t idx1 = Indices[i + 1];
-//        uint32_t idx2 = Indices[i + 2];
-//
-//        FVertex& v0 = Vertices[idx0];
-//        FVertex& v1 = Vertices[idx1];
-//        FVertex& v2 = Vertices[idx2];
-//
-//        glm::vec3& p0 = v0.Position;
-//        glm::vec3& p1 = v1.Position;
-//        glm::vec3& p2 = v2.Position;
-//
-//        glm::vec2& uv0 = v0.TexCoord;
-//        glm::vec2& uv1 = v1.TexCoord;
-//        glm::vec2& uv2 = v2.TexCoord;
-//
-//        glm::vec3 edge1 = p1 - p0;
-//        glm::vec3 edge2 = p2 - p0;
-//
-//        glm::vec2 deltaUV1 = uv1 - uv0;
-//        glm::vec2 deltaUV2 = uv2 - uv0;
-
-        //float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y + 1e-7f);
-//
-        //glm::vec3 tangent = f * (edge1 * deltaUV2.y - edge2 * deltaUV1.y);
-        //glm::vec3 bitangent = f * (-edge1 * deltaUV2.x + edge2 * deltaUV1.x);
-
-        //v0.Tangent += tangent;
-        //v1.Tangent += tangent;
-        //v2.Tangent += tangent;
-//
-        //v0.Bitangent += bitangent;
-        //v1.Bitangent += bitangent;
-        //v2.Bitangent += bitangent;
-    }
-
-    // Normalize and orthogonalize tangents and bitangents
-    for (size_t i = 0; i < Vertices.GetSize(); ++i)
-    {
-        //FVertex& vertex = Vertices[i];
-        //glm::vec3& n = vertex.Normal;
-        //glm::vec3& t = vertex.Tangent;
-        //glm::vec3& b = vertex.Bitangent;
-
-        // Orthogonalize tangent
-        //t = glm::normalize(t - n * glm::dot(n, t));
-//
-        //// Recompute bitangent
-        //b = glm::normalize(glm::cross(n, t));
-//
-        //// Optional: Ensure correct handedness
-        //if (glm::dot(glm::cross(n, t), b) < 0.0f)
-        //{
-        //    b = b * -1.0f;
-        //}
     }
 }

@@ -8,10 +8,10 @@ class PVulkanDescriptorSetLayoutManager;
 class PVulkanDescriptorSetObjectManager;
 class PVulkanPipelineStateObjectManager;
 
-class PVulkanDevice
+class FVkDevice
 {
 public:
-    PVulkanDevice()
+    FVkDevice()
     {
         GPU = nullptr;
         Device = nullptr;

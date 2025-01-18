@@ -26,12 +26,4 @@ struct FTransform
 	glm::vec3 Translation;
 	glm::vec3 Rotation;
 	glm::vec3 Scale;
-
-	friend std::ostream& operator<<(std::ostream& OutputStream, const FTransform& Transform) 
-	{
-	    OutputStream << "(Translation) X: " << Transform.Translation.x << ", Y: " << Transform.Translation.y << ", Z: " << Transform.Translation.z;
-	    OutputStream << "(Rotation) X: " << Transform.Rotation.x << ", Y: " << Transform.Rotation.y << ", Z: " << Transform.Rotation.z;
-	    OutputStream << "(Scale) X: " << Transform.Scale.x << ", Y: " << Transform.Scale.y << ", Z: " << Transform.Scale.z;
-	    return OutputStream;
-	}
 };

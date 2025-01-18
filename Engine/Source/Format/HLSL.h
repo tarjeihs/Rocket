@@ -8,5 +8,5 @@ struct FHLSL
 
 namespace Format
 {
-    FHLSL ImportHLSL(const std::string& Path, const std::string& Entrypoint, const std::string& TargetProfile);
+    FHLSL ImportHLSL(const FString& Path, const std::string& Entrypoint, const std::string& TargetProfile);
 }

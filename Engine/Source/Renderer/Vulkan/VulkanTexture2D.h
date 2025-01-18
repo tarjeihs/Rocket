@@ -19,4 +19,6 @@ struct FVkTexture2D : public ITexture2D
 
     virtual void Initialize(FTexture2DCreateInfo CreateInfo) override;
     virtual void Shutdown() override;
+
+    virtual int32 GetTextureID() const override;
 };

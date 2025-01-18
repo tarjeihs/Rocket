@@ -1,8 +1,8 @@
 #include "EnginePCH.h"
 #include "VkForwardRenderer.h"
 
-#include "Pipeline/VkOverlayScriptableRendererPipeline.h"
 #include "Pipeline/VkPostProcessScriptableRendererPipeline.h"
+#include "Pipeline/VkOpaqueSkinnedGfxPipeline.h"
 #include "Renderer/RHI.h"
 #include "Renderer/Settings.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
@@ -11,14 +11,14 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/Pipeline/VkOpaqueScriptableRendererPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
+#include "Renderer/Common/Memory.h"
 #include "Scene/Scene.h"
 #include "Utils/Profiler.h"
 #include "VulkanTexture2D.h"
-#include "VulkanImage.h"
 
 struct FGlobalData
 {
-	float DeltaTime = 0.0f;
+	alignas(4) float DeltaTime = 0.0f;
 } GlobalData;
 
 struct FCameraData
@@ -31,6 +31,20 @@ struct FCameraData
 	alignas(16) float PP_ChromaticAberration = 0.0f;
 } CameraData;
 
+struct FMaterialData
+{
+	alignas(4) int32 AlbedoTextureID;
+	alignas(4) int32 NormalTextureID;
+	alignas(4) int32 RoughnessTextureID;
+	alignas(4) int32 MetallicTextureID;
+};
+
+struct FInstanceData
+{
+	alignas(16) glm::mat4 Transform;
+	alignas(16) glm::mat4 TransformInverseTranspose;
+};
+
 void FVkForwardRenderer::Init()
 {
     Super::Init();
@@ -42,51 +56,55 @@ void FVkForwardRenderer::Init()
 	
 	FVkImage**					HDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
 	FVkImage**					SDRImage 						= new FVkImage*				[CONCURRENT_FRAME_COUNT];
-	
-	FVkBufferCreateInfo GlobalBufferCreateInfo = 
+
+	FBufferCreateInfo GlobalBufferCreateInfo = 
 	{ 
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		EBufferUsageFlag::Storage, 
+		EBufferTransferFlag::None,
+		EBufferMemoryFlag::HostToDevice,
 		64 
 	};
 	
-	FVkBufferCreateInfo CameraBufferCreateInfo = 
+	FBufferCreateInfo CameraBufferCreateInfo = 
 	{ 
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-		VMA_MEMORY_USAGE_CPU_TO_GPU, 
-		160 * 4 
+		EBufferUsageFlag::Storage,
+		EBufferTransferFlag::None,
+		EBufferMemoryFlag::HostToDevice,
+		160 * 4
 	};
 	
-	FVkBufferCreateInfo MaterialBufferCreateInfo = 
+	FBufferCreateInfo MaterialBufferCreateInfo = 
 	{
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		EBufferUsageFlag::Storage,
+		EBufferTransferFlag::None,
+		EBufferMemoryFlag::HostToDevice,
 		64 * 1024
 	};
 	
-	FVkBufferCreateInfo InstanceBufferCreateInfo = 
+	FBufferCreateInfo InstanceBufferCreateInfo = 
 	{ 
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-		VMA_MEMORY_USAGE_CPU_TO_GPU, 
+		EBufferUsageFlag::Storage,
+		EBufferTransferFlag::None,
+		EBufferMemoryFlag::HostToDevice,
 		128 * 1024 * 1024 
 	};
 
-	FVkImageCreateInfo ToneMappingHDR16CreateInfo = 
-	{ 
-		VK_IMAGE_LAYOUT_UNDEFINED, 
-		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		GetSwapchain()->Info.SwapchainImageExtent,
-		VK_FORMAT_R16G16B16A16_SFLOAT
+	FImageCreateInfo ToneMappingHDR16CreateInfo =
+	{
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R16G16B16A16_SFLOAT
 	};
 
-	FVkImageCreateInfo ToneMappingLDR8CreateInfo = 
+	FImageCreateInfo ToneMappingLDR8CreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		GetSwapchain()->Info.SwapchainImageExtent,
-		VK_FORMAT_R8G8B8A8_UNORM
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferSrc,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R8G8B8A8_UNORM
 	};
 
 	for (SizeType FrameIndex = 0; FrameIndex < CONCURRENT_FRAME_COUNT; ++FrameIndex)
@@ -116,17 +134,20 @@ void FVkForwardRenderer::Init()
 	RWTexture2D.Insert("HDR", HDRImage);
 	RWTexture2D.Insert("SDR", SDRImage);
 
-	FVkOpaqueScriptableRendererPipeline* OpaqueSRP = new FVkOpaqueScriptableRendererPipeline();
-	OpaqueSRP->Initialize(PipelineLayout);
-	ScriptableRendererPipelineData.Add(OpaqueSRP);
+	auto* OpaquePipeline = new FVkOpaqueGfxPipeline();
+	auto* SkinningPipeline = new FVkOpaqueSkinnedMeshGfxPipeline();
+	auto* PostProcessPipeline = new FVkPostProcessComputePipeline();
 
-	FVkPostProcessScriptableRendererPipeline* PostProcessSRP = new FVkPostProcessScriptableRendererPipeline();
-	PostProcessSRP->Initialize(PipelineLayout);
-	ScriptableRendererPipelineData.Add(PostProcessSRP);
-
-	FVkOverlayScriptableRendererPipeline* OverlaySRP = new FVkOverlayScriptableRendererPipeline();
-	OverlaySRP->Initialize(PipelineLayout);
-	ScriptableRendererPipelineData.Add(OverlaySRP);
+	OpaquePipeline->Initialize(PipelineLayout);
+	SkinningPipeline->Initialize(PipelineLayout);
+	PostProcessPipeline->Initialize(PipelineLayout);
+	
+	ScriptableRendererPipelineData = 
+	{
+		OpaquePipeline,
+		SkinningPipeline,
+		PostProcessPipeline,
+	};
 }
 
 void FVkForwardRenderer::Shutdown() 
@@ -137,7 +158,7 @@ void FVkForwardRenderer::Shutdown()
 	{
 		for (const auto& Buffer : Buffers)
 		{
-			Buffer.Value[Index]->Free();
+			Buffer.Value[Index]->Shutdown();
 		}
 
 		for (const auto& Image : RWTexture2D)
@@ -156,22 +177,40 @@ void FVkForwardRenderer::Resize()
 {
 	Super::Resize();
 	
-	FVkImageCreateInfo ToneMappingHDR16CreateInfo = 
-	{ 
-		VK_IMAGE_LAYOUT_UNDEFINED, 
-		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		Swapchain->Info.SwapchainImageExtent,
-		VK_FORMAT_R16G16B16A16_SFLOAT
+	//FVkImageCreateInfo ToneMappingHDR16CreateInfo = 
+	//{ 
+	//	VK_IMAGE_LAYOUT_UNDEFINED, 
+	//	VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+	//	VK_IMAGE_ASPECT_COLOR_BIT,
+	//	Swapchain->Info.SwapchainImageExtent,
+	//	VK_FORMAT_R16G16B16A16_SFLOAT
+	//};
+	//
+	//FVkImageCreateInfo ToneMappingLDR8CreateInfo = 
+	//{
+	//	VK_IMAGE_LAYOUT_UNDEFINED,
+	//	VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+	//	VK_IMAGE_ASPECT_COLOR_BIT,
+	//	Swapchain->Info.SwapchainImageExtent,
+	//	VK_FORMAT_R8G8B8A8_UNORM
+	//};
+
+	FImageCreateInfo ToneMappingHDR16CreateInfo =
+	{
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R16G16B16A16_SFLOAT
 	};
 
-	FVkImageCreateInfo ToneMappingLDR8CreateInfo = 
+	FImageCreateInfo ToneMappingLDR8CreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		Swapchain->Info.SwapchainImageExtent,
-		VK_FORMAT_R8G8B8A8_UNORM
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferSrc,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R8G8B8A8_UNORM
 	};
 
 	FVkImage** HDR = *RWTexture2D.Find("HDR");
@@ -208,47 +247,32 @@ void FVkForwardRenderer::Bind()
 	CameraData.PP_FilmGrainIntensity = GetScene()->GetCamera()->Settings.FilmGrainIntensity;
 	CameraData.PP_ChromaticAberration = GetScene()->GetCamera()->Settings.ChromaticAberration;
 
+	TArray<FMaterialData> MaterialData;
+	GetScene()->GetRegistry()->View<FMaterialComponent>([&](const FMaterialComponent& MaterialComponent)
+	{
+		int32 AlbedoTextureID = MaterialComponent.Material.AlbedoID;
+		int32 NormalTextureID = MaterialComponent.Material.NormalID;
+		int32 RoughnessTextureID = MaterialComponent.Material.RoughnessID;
+		int32 MetallicTextureID = MaterialComponent.Material.MetallicID;
+
+		FMaterialData Material = { AlbedoTextureID, NormalTextureID, RoughnessTextureID, MetallicTextureID };
+		MaterialData.Add(Material);			
+	});
+
+	TArray<FInstanceData> InstanceData;
+	GetScene()->GetRegistry()->View<FTransformComponent, FMeshComponent>([&](const FTransformComponent& TransformComponent, const FMeshComponent& MeshComponent)
+	{
+		glm::mat4 Transform = TransformComponent.Transform.ToMatrix();
+		glm::mat4 TransformInverseTranspose = glm::inverseTranspose(TransformComponent.Transform.ToMatrix());
+
+		FInstanceData Instance = { .Transform = Transform, .TransformInverseTranspose = TransformInverseTranspose };
+		InstanceData.Add(Instance);
+	});
+
 	(*Buffers.Find("Global"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&GlobalData, sizeof(FGlobalData));
 	(*Buffers.Find("Camera"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(&CameraData, sizeof(FCameraData));
-
-	{
-		struct FMaterialData
-		{
-			alignas(4) uint32 AlbedoTextureID;
-    		alignas(4) uint32 NormalTextureID;
-		};
-
-		TArray<FMaterialData> MaterialData;
-		GetScene()->GetRegistry()->View<FMaterialComponent>([&](const FMaterialComponent& MaterialComponent)
-		{
-			uint32 AlbedoTextureID = 0;
-			uint32 NormalTextureID = 0;
-
-			FMaterialData Material = { .AlbedoTextureID = AlbedoTextureID, .NormalTextureID = NormalTextureID };
-			MaterialData.Add(Material);			
-		});
-		(*Buffers.Find("Material"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(MaterialData.GetData(), sizeof(FMaterialData) * MaterialData.GetSize());
-	}
-
-	{
-		struct FInstanceData
-		{
-			alignas(16) glm::mat4 Transform;
-			alignas(16) glm::mat4 TransformInverseTranspose;
-		};
-
-		TArray<FInstanceData> InstanceData;
-		GetScene()->GetRegistry()->View<FTransformComponent, FMeshComponent>([&](const FTransformComponent& TransformComponent, const FMeshComponent& MeshComponent)
-		{
-			glm::mat4 Transform = TransformComponent.Transform.ToMatrix();
-			glm::mat4 TransformInverseTranspose = glm::inverseTranspose(TransformComponent.Transform.ToMatrix());
-
-			FInstanceData Instance = { .Transform = Transform, .TransformInverseTranspose = TransformInverseTranspose };
-			InstanceData.Add(Instance);
-		});
-
-		(*Buffers.Find("Instance"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(InstanceData.GetData(), sizeof(FInstanceData) * InstanceData.GetSize());
-	}
+	(*Buffers.Find("Material"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(MaterialData.GetData(), sizeof(FMaterialData) * MaterialData.GetSize());
+	(*Buffers.Find("Instance"))[GetRHI()->GetRenderer()->GetFrameIndex()]->Submit(InstanceData.GetData(), sizeof(FInstanceData) * InstanceData.GetSize());
 }
 
 void FVkForwardRenderer::BindImGui()

@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "EngineTypes.h"
 
 class FString
@@ -27,6 +28,14 @@ public:
     {
         Data = (char*)malloc(Size + 1);
         memcpy(Data, InData, Size);
+        Data[Size] = '\0';
+    }
+
+    FString(const std::string& InData)
+        : Size(InData.size())
+    {
+        Data = (char*)malloc(Size + 1);
+        memcpy(Data, InData.c_str(), Size);
         Data[Size] = '\0';
     }
 
@@ -135,6 +144,66 @@ public:
         }
         return false;
     }
+
+    class FIterator
+    {
+    public:
+        FIterator(char* InPointer) : Pointer(InPointer) {}
+        
+        char& operator*() { return *Pointer; }
+
+        FIterator& operator++()
+        {
+            ++Pointer;
+            return *this;
+        }
+
+        FIterator operator++(int32)
+        {
+            FIterator Temp = *this;
+            ++Pointer;
+            return Temp;
+        }
+
+        bool operator==(const FIterator& Other) const { return Pointer == Other.Pointer; }
+        bool operator!=(const FIterator& Other) const { return Pointer != Other.Pointer; }
+
+    private:
+        char* Pointer;
+    };
+
+	class FConstIterator
+	{
+	public:
+		FConstIterator(const char* InPointer) : Pointer(InPointer) {}
+
+		const char& operator*() const { return *Pointer; }
+
+		FConstIterator& operator++()
+		{
+			++Pointer;
+			return *this;
+		}
+
+		FConstIterator operator++(int32)
+		{
+			FConstIterator Temp = *this;
+			++Pointer;
+			return Temp;
+		}
+
+		bool operator==(const FConstIterator& Other) const { return Pointer == Other.Pointer; }
+		bool operator!=(const FConstIterator& Other) const { return Pointer != Other.Pointer; }
+
+	private:
+		const char* Pointer;
+	};
+
+    FIterator begin() { return FIterator(Data); }
+    FIterator end() { return FIterator(Data + Size); }
+
+    FConstIterator cbegin() const { return FConstIterator(Data); }
+    FConstIterator cend() const { return FConstIterator(Data + Size); }
 
 private:
     char* Data;

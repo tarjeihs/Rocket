@@ -13,7 +13,7 @@
 #endif
 
 #ifdef RK_PLATFORM_WINDOWS
-FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint, const std::string& TargetProfile)
+FHLSL Format::ImportHLSL(const FString& Path, const std::string& Entrypoint, const std::string& TargetProfile)
 {
 	HMODULE DxcDllHandle = LoadLibrary("dxcompiler.dll");
 	RK_ASSERT(DxcDllHandle, "Failed to dynamically load DXC library (Ensure that the DLL is installed and environment is set).");
@@ -22,7 +22,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	typedef HRESULT(WINAPI* DxcCreateInstanceProc)(REFCLSID, REFIID, LPVOID*);
 	auto DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(DxcDllHandle, "DxcCreateInstance");
 	RK_ASSERT(DxcCreateInstance, "Failed to locate DxcCreateInstance function address.");
-
+	
 	Microsoft::WRL::ComPtr<IDxcBlob> ShaderBlob;
 	Microsoft::WRL::ComPtr<IDxcCompiler> Compiler;
 	Microsoft::WRL::ComPtr<IDxcLibrary> Library;
@@ -38,7 +38,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	RK_ASSERT(!FAILED(Result), "Failed to create DXC Compiler instance.");
 	
 	// Load and encode the shader source file
-	Result = Library->CreateBlobFromFile(std::wstring(Path.begin(), Path.end()).c_str(), nullptr, &SourceBlob);
+	Result = Library->CreateBlobFromFile(std::wstring(Path.cbegin(), Path.cend()).c_str(), nullptr, &SourceBlob);
 	RK_ASSERT(!FAILED(Result), "Failed to load shader source file.");
 
 	// For dynamic loading of shared libraries on Linuxint.c_str());
@@ -55,7 +55,7 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	// Compile HLSL into SPIR-V bytecode using DirectX Shader Compiler
 	Result = Compiler->Compile(
 		SourceBlob.Get(),
-		std::wstring(Path.begin(), Path.end()).c_str(),
+		std::wstring(Path.cbegin(), Path.cend()).c_str(),
 		std::wstring(Entrypoint.begin(), Entrypoint.end()).c_str(),
 		TargetProfileW.c_str(),
 		Arguments.data(),
@@ -99,6 +99,8 @@ FHLSL Format::ImportHLSL(const std::string& Path, const std::string& Entrypoint,
 	OperationResult.Reset();
 
 	FreeLibrary(DxcDllHandle);
+
+	RK_LOG_DEBUG("Shader {} compiled successfully. Size: {} bytes", Path.GetData(), Size);
 
 	FHLSL HLSL;
 	HLSL.Data = Copy;

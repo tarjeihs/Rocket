@@ -73,8 +73,6 @@ void FVkDescriptorPool::Initialize(FVkDescriptorPoolCreateInfo& CreateInfo)
 
 	VkResult Result = vkCreateDescriptorPool(GetRHI()->GetDevice()->GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &Info.Handle);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create descriptor pool.");
-
-	RK_LOG_DEBUG("Vulkan: Created DescriptorPool");
 }
 
 void FVkDescriptorPool::Shutdown()
@@ -139,7 +137,7 @@ void FVkDescriptorSet::Shutdown()
 	{
 		for (SizeType Index = 0; Index < Info.Buffers.GetSize(); ++Index)
 		{
-			Info.Buffers[Index][Frame]->Free();
+			Info.Buffers[Index][Frame]->Shutdown();
 		}
 
 		for (SizeType Index = 0; Index < Info.Images.GetSize(); ++Index)
@@ -186,11 +184,11 @@ void FVkDescriptorSet::WriteTexture2D(uint32 Binding, uint32 Index, FVkTexture2D
 
     VkWriteDescriptorSet WriteDescriptorSet = {};
     WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    WriteDescriptorSet.dstSet = Info.Handle;             // The Vulkan descriptor set handle
-    WriteDescriptorSet.dstBinding = Binding;                  // Binding 0 for the array
-    WriteDescriptorSet.dstArrayElement = Index;          // Specify the index in the array
+    WriteDescriptorSet.dstSet = Info.Handle;
+    WriteDescriptorSet.dstBinding = Binding;
+    WriteDescriptorSet.dstArrayElement = Index;
     WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    WriteDescriptorSet.descriptorCount = 1;             // We're updating one descriptor
+    WriteDescriptorSet.descriptorCount = 1;
     WriteDescriptorSet.pImageInfo = &DescriptorImageInfo;
 
     vkUpdateDescriptorSets(GetRHI()->GetDevice()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);

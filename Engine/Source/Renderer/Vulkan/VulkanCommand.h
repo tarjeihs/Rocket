@@ -1,10 +1,10 @@
 #pragma once
 
-class PVulkanCommandPool
+class FVkCommandPool
 {
 public:
-	void Create(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags = 0);
-	void Destroy();
+	void Initialize(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags = 0);
+	void Shutdown();
 
 	VkCommandPool GetVkCommandPool() const;
 
@@ -12,11 +12,11 @@ private:
 	VkCommandPool CommandPool;
 };
 
-class PVulkanCommandBuffer
+class FVkCommandBuffer
 {
 public:
-	void Create(PVulkanCommandPool* CommandPool);
-	void Destroy(PVulkanCommandPool* CommandPool);
+	void Initialize(FVkCommandPool* CommandPool);
+	void Shutdown(FVkCommandPool* CommandPool);
 
 	void ResetCommandBuffer();
 	void BeginCommandBuffer();
@@ -24,5 +24,6 @@ public:
 	
 	VkCommandBuffer GetVkCommandBuffer() const;
 
+private:
 	VkCommandBuffer CommandBuffer;
 };

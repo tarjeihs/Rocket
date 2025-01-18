@@ -64,7 +64,8 @@ void FVkOverlay::Execute()
 	VkRenderingAttachmentInfo ColorRenderingAttachmentAttachment = {};
 	ColorRenderingAttachmentAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	ColorRenderingAttachmentAttachment.pNext = nullptr;
-	ColorRenderingAttachmentAttachment.imageView = GetRHI()->GetRenderer()->ColorAttachment8->Info.ImageViewHandle;
+	ColorRenderingAttachmentAttachment.imageView = GetRHI()->GetRenderer()->PresentColorAttachment->Info.ImageViewHandle;
+	//ColorRenderingAttachmentAttachment.imageView = GetRHI()->GetRenderer()->GetSwapchain()->Info.Backbuffer[GetRHI()->GetRenderer()->GetNextImageIndex()]->Info.ImageViewHandle;
 	ColorRenderingAttachmentAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	ColorRenderingAttachmentAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	ColorRenderingAttachmentAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;

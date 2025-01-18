@@ -1,5 +1,8 @@
 #pragma once
 
+#include "EngineTypes.h"
+#include "Core/Assert.h"
+
 template<typename TElement>
 class TArray final
 {
@@ -188,6 +191,18 @@ public:
         Data = nullptr;
         Size = 0;
         Capacity = 0;
+    }
+
+    TElement* At(uint32 Index)
+	{
+		RK_ASSERT(Index < Size, "Index is out of bounds");
+		return Data[Index];
+	}
+
+    const TElement* At(uint32 Index) const
+    {
+		RK_ASSERT(Index < Size, "Index is out of bounds");
+        return Data[Index];
     }
 
     TElement* GetData()

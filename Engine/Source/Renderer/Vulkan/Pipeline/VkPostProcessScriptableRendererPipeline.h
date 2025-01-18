@@ -2,7 +2,7 @@
 
 #include "Renderer/Vulkan/VkScriptableRendererPipeline.h"
 
-class FVkPostProcessScriptableRendererPipeline : public FVkScriptableRendererPipeline
+class FVkPostProcessComputePipeline : public IPipeline2
 {
 public:
     virtual void Initialize(FVkPipelineLayout* PipelineLayout) override;

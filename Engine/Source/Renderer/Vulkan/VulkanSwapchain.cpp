@@ -4,7 +4,6 @@
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
-#include <vulkan/vulkan_core.h>
 
 // Prioritize VK_PRESENT_MODE_IMMEDIATE_KHR to disable V-Sync
 static constexpr VkPresentModeKHR PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
@@ -15,11 +14,16 @@ namespace Utils
 	{
 		for (const auto& Format : Formats)
 		{
-			// Prefer SRGB if available (results in more accurate perceived colors and is the golden standard).
-			if (Format.format == VK_FORMAT_B8G8R8A8_SRGB && Format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			if (Format.format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 && Format.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT)
 			{
 				return Format;
 			}
+
+			// Prefer SRGB if available (results in more accurate perceived colors and is the golden standard).
+			//if (Format.format == VK_FORMAT_B8G8R8A8_SRGB && Format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			//{
+			//	return Format;
+			//}
 		}
 		return Formats[0];
 	}

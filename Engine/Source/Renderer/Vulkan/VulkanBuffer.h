@@ -2,22 +2,7 @@
 
 #include "EnginePCH.h"
 #include "EngineTypes.h"
-
-enum class EVkBufferType
-{
-    None = 0,
-    StorageBuffer,
-    StorageImage,
-    Sampler,
-    SamplerImage
-};
-
-struct FVkBufferCreateInfo
-{
-    VkBufferUsageFlags UsageFlags;
-    VmaMemoryUsage MemoryUsageFlags;
-    SizeType Size;
-};
+#include "Renderer/Common/Buffer.h"
 
 struct FVkBufferInfo
 {
@@ -26,12 +11,12 @@ struct FVkBufferInfo
     VmaAllocationInfo AllocationInfo;
 };
 
-class FVkBuffer
+class FVkBuffer : public IBuffer
 {
 public:
     FVkBufferInfo Info;
 
-    void Initialize(FVkBufferCreateInfo& CreateInfo);
-    void Submit(const void* Data, size_t Size, size_t Offset = 0);
-    void Free();
+    void Initialize(FBufferCreateInfo& CreateInfo) override;
+    void Shutdown() override;
+    void Submit(const void* Data, size_t Size, size_t Offset = 0) override;
 };

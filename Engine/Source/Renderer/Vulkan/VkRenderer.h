@@ -12,10 +12,10 @@
 
 class FVkOverlay;
 class IRenderer;
-class PVulkanAllocator;
+class FVkAllocator;
 class PVulkanSwapchain;
-class PVulkanCommandPool;
-class PVulkanCommandBuffer;
+class FVkCommandPool;
+class FVkCommandBuffer;
 class PVulkanRenderGraph;
 class PVulkanImage;
 class FVkBuffer;
@@ -24,7 +24,7 @@ class FVkPipelineLayout;
 class FVkDescriptorPool;
 class FVkDescriptorSet;
 class FVkDescriptorSetLayout;
-class FVkScriptableRendererPipeline;
+class IPipeline2;
 class FVkSceneInstanceManager;
 
 class FVkRenderer : public IRenderer
@@ -37,9 +37,9 @@ public:
     FVkDescriptorSetLayout* 	DescriptorSetLayout     = nullptr;
     FVkDescriptorSet* 			DescriptorSet           = nullptr;
     FVkDescriptorPool* 			DescriptorPool          = nullptr;
-    
     TMap<FString, FVkBuffer**>  Buffers;
     TMap<FString, FVkImage**>   RWTexture2D;
+    TArray<FVkTexture2D*>           Texture2Ds;
     
     virtual void Init();
     virtual void Shutdown();
@@ -51,55 +51,57 @@ public:
 
     inline FVkImage* GetColorAttachment16() const;
     inline FVkImage* GetDepthAttachmentD32() const;
-    inline PVulkanCommandPool* GetCommandPool() const;
-    inline PVulkanCommandBuffer* GetCommandBuffer() const;
+    inline FVkCommandPool* GetCommandPool() const;
+    inline FVkCommandBuffer* GetCommandBuffer() const;
     inline PVulkanSwapchain* GetSwapchain() const;
     inline SizeType GetFrameIndex() const;
     inline uint32 GetNextImageIndex() const;
 
-    inline FVkMeshAllocator* GetMeshAllocator() const;
+    inline FVkStaticMeshBuffer* GetMeshAllocator() const;
 
-    void ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func);
+    void ImmediateSubmit(std::function<void(FVkCommandBuffer*)>&& Func);
 
 protected:
     void BeginFrame();
     void EndFrame();
 
 public: 
-    TUniquePtr<PVulkanCommandPool>                      CommandPool                     [CONCURRENT_FRAME_COUNT];
-    TUniquePtr<PVulkanCommandBuffer>                    CommandBuffer                   [CONCURRENT_FRAME_COUNT];
+    TUniquePtr<FVkCommandPool>                      CommandPool                     [CONCURRENT_FRAME_COUNT];
+    TUniquePtr<FVkCommandBuffer>                    CommandBuffer                   [CONCURRENT_FRAME_COUNT];
     VkSemaphore                                         SwapchainSemaphore              [CONCURRENT_FRAME_COUNT];
     VkSemaphore                                         RenderSemaphore                 [CONCURRENT_FRAME_COUNT];
     VkFence                                             RenderFence                     [CONCURRENT_FRAME_COUNT];
     uint32                                              NextImageIndex                  [CONCURRENT_FRAME_COUNT];
         
-    TUniquePtr<PVulkanCommandBuffer>                    ImmediateCommandBuffer;
-    TUniquePtr<PVulkanCommandPool>                      ImmediateCommandPool;
+    TUniquePtr<FVkCommandBuffer>                    ImmediateCommandBuffer;
+    TUniquePtr<FVkCommandPool>                      ImmediateCommandPool;
     VkFence                                             ImmediateRenderFence;
         
     TUniquePtr<PVulkanSwapchain>                        Swapchain;
-    TUniquePtr<FVkOverlay>                                ImGui;
-        
-    TUniquePtr<FVkImage>                                ColorAttachment16;
-    TUniquePtr<FVkImage>                                ColorAttachment8;
-    TUniquePtr<FVkImage>                                DepthAttachmentD32;
+    TUniquePtr<FVkOverlay>                               ImGui;
         
     SizeType                                            FrameIndex = 0;
 
+    class IRendererFrontend*                            RendererFrontend;
+
+
+
+
+
+
+
+
+    TUniquePtr<FVkImage>                                IntermediateColorAttachment;
+    TUniquePtr<FVkImage>                                PresentColorAttachment;
+    TUniquePtr<FVkImage>                                DepthAttachmentD32;
     FVkPipelineLayout*                                  PipelineLayout;
-
-    TArray<FVkDescriptorPool*>                          DescriptorPoolData;
-    TArray<FVkDescriptorSet*>                           DescriptorSetData;
-    TArray<FVkDescriptorSetLayout*>                     DescriptorSetLayoutData;
-    
-    TArray<FVkScriptableRendererPipeline*>              ScriptableRendererPipelineData;
-
-    TUniquePtr<FVkMeshAllocator>                        MeshAllocator;
+    TArray<IPipeline2*>              ScriptableRendererPipelineData;
+    TUniquePtr<FVkStaticMeshBuffer>                     MeshAllocator;
 };
 
 inline FVkImage* FVkRenderer::GetColorAttachment16() const
 {
-    return ColorAttachment16.Get();
+    return IntermediateColorAttachment.Get();
 }
 
 inline FVkImage* FVkRenderer::GetDepthAttachmentD32() const
@@ -107,12 +109,12 @@ inline FVkImage* FVkRenderer::GetDepthAttachmentD32() const
     return DepthAttachmentD32.Get();
 }
 
-inline PVulkanCommandPool* FVkRenderer::GetCommandPool() const
+inline FVkCommandPool* FVkRenderer::GetCommandPool() const
 {
     return CommandPool[FrameIndex].Get();
 }
 
-inline PVulkanCommandBuffer* FVkRenderer::GetCommandBuffer() const
+inline FVkCommandBuffer* FVkRenderer::GetCommandBuffer() const
 {
     return CommandBuffer[FrameIndex].Get();
 }
@@ -127,7 +129,7 @@ inline SizeType FVkRenderer::GetFrameIndex() const
     return FrameIndex;
 }
 
-inline FVkMeshAllocator* FVkRenderer::GetMeshAllocator() const
+inline FVkStaticMeshBuffer* FVkRenderer::GetMeshAllocator() const
 {
     return MeshAllocator.Get();
 }

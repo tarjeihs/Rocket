@@ -1,9 +1,9 @@
 #pragma once
 
-class PVulkanInstance
+class FVkInstance
 {
 public:
-	PVulkanInstance()
+	FVkInstance()
 	{		
 		Instance = VK_NULL_HANDLE;
 		Surface = VK_NULL_HANDLE;

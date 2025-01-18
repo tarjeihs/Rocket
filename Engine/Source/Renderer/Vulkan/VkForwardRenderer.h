@@ -15,3 +15,5 @@ class FVkForwardRenderer : public FVkRenderer
     void OnSubmitMaterialBuffer();
     void OnSubmitInstanceBuffer();
 };
+
+class IMemory;

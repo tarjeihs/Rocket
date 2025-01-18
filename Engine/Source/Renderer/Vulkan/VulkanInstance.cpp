@@ -39,7 +39,7 @@ namespace Utils
 	}
 }
 
-void PVulkanInstance::Init()
+void FVkInstance::Init()
 {
 	// GLFW required Vulkan extensions
 	uint32_t GlfwExtensionCount = 0;
@@ -81,7 +81,7 @@ void PVulkanInstance::Init()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
 }
 
-void PVulkanInstance::Shutdown()
+void FVkInstance::Shutdown()
 {
 	vkDestroySurfaceKHR(Instance, Surface, nullptr);
 
@@ -92,12 +92,12 @@ void PVulkanInstance::Shutdown()
 	vkDestroyInstance(Instance, nullptr);
 }
 
-VkInstance PVulkanInstance::GetVkInstance() const
+VkInstance FVkInstance::GetVkInstance() const
 {
 	return Instance;
 }
 
-VkSurfaceKHR PVulkanInstance::GetVkSurfaceKHR() const
+VkSurfaceKHR FVkInstance::GetVkSurfaceKHR() const
 {
 	return Surface;
 }

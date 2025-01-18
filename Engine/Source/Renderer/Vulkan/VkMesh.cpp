@@ -1,21 +1,17 @@
 #include "EnginePCH.h"
 #include "VkMesh.h"
 
+#include "Renderer/Common/Geometry.h"
 #include "Renderer/Vulkan/VkRenderer.h"
-#include "Renderer/Allocators/VkMeshAllocator.h"
 
-void FVkMesh::CreateMesh(FGeometry& Geometry)
+void FVkMesh::CreateMesh(FSubmesh& Submesh)
 {
-    Info.Vertices = Geometry.Vertices;
-    Info.Indices = Geometry.Indices;
+    Info.Submeshes = Submesh;
 
     GetRHI()->GetRenderer()->GetMeshAllocator()->AppendInstance(this);
 }
 
-void FVkMesh::UpdateMesh(FGeometry& Geometry)
+void FVkMesh::UpdateMesh(FSubmesh& Submesh)
 {
-    Info.Vertices = Geometry.Vertices;
-    Info.Indices = Geometry.Indices;
-
-    GetRHI()->GetRenderer()->GetMeshAllocator()->UpdateInstance(this);
+//    GetRHI()->GetRenderer()->GetMeshAllocator()->UpdateInstance(this);
 }

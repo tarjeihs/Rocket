@@ -1,6 +1,6 @@
 #pragma once
 
-class PVulkanAllocator
+class FVkAllocator
 {
 public:
     void Init();

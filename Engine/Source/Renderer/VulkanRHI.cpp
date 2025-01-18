@@ -13,9 +13,9 @@ void PVulkanRHI::Init()
 	ExtensionFamily.InstanceExtensions.push_back("VK_EXT_debug_utils");
 #endif
 
-	Instance = new PVulkanInstance();
-	Device = new PVulkanDevice();
-	Allocator = new PVulkanAllocator();
+	Instance = new FVkInstance();
+	Device = new FVkDevice();
+	Allocator = new FVkAllocator();
 	Renderer = new FVkForwardRenderer();
 
 	Instance->Init();

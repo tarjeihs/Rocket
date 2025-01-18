@@ -3,7 +3,7 @@
 #include "Renderer/Common/Overlay.h"
 
 class PVulkanRHI;
-class PVulkanCommandBuffer;
+class FVkCommandBuffer;
 class FVkDescriptorPool;
 
 struct FVkOverlayInfo

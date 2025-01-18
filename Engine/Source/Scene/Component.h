@@ -2,12 +2,12 @@
 
 #include "Core/Camera.h"
 #include "Math/Transform.h"
+#include "Renderer/Common/Geometry.h"
 #include "Utils/UUID64.h"
 #include "Types/String.h"
 #include "EngineTypes.h"
 
 class IMesh;
-class IMaterial;
 
 struct IComponent {};
 
@@ -45,9 +45,9 @@ struct FMeshComponent : IComponent
 struct FMaterialComponent : IComponent
 {
     FMaterialComponent() = default;
-    FMaterialComponent(IMaterial* InMaterial) : Material(InMaterial) {}
+    FMaterialComponent(FMaterial InMaterial) : Material(InMaterial) {}
 
-    IMaterial* Material;
+    FMaterial Material;
 };
 
 struct FCameraComponent : IComponent

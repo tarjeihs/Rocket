@@ -9,8 +9,9 @@
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VkRenderer.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
+#include "Types/Vertex.h"
 
-void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* PipelineLayout)
+void FVkPostProcessComputePipeline::Initialize(FVkPipelineLayout* PipelineLayout)
 {
     TUniquePtr<FVkShader> ComputeShader  = MakeUnique<FVkShader>();
 
@@ -19,52 +20,57 @@ void FVkPostProcessScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pip
 		RK_ENGINE_DIR "/Shaders/HLSL/PostProcess.hlsl", EShaderStage::Compute
 	};
 
+	TArray<FVkVertexAttribute> Attributes
+	{
+	};
+
     FVkPipelineCreateInfo PipelineCreateInfo
 	{
 		{
 			ComputeShader.Get()
 		},
+        Attributes,
 		PipelineLayout
 	};
 
     ComputeShader->Init(ComputeShaderCreateInfo);
     
-    Pipeline = MakeUnique<FVkPipeline>();
-	Pipeline->InitCompute(PipelineCreateInfo);
+    Pipeline = MakeUnique<FVkPipelineCompute>();
+	Pipeline->Initialize(PipelineCreateInfo);
 
     ComputeShader->Free();
 }
 
-void FVkPostProcessScriptableRendererPipeline::Shutdown()
+void FVkPostProcessComputePipeline::Shutdown()
 {
     Pipeline->Shutdown();
 }
 
-void FVkPostProcessScriptableRendererPipeline::Execute()
+void FVkPostProcessComputePipeline::Execute()
 {
-    PROFILE_FUNC_SCOPE("FVkPostProcessScriptableRendererPipeline::Execute")
+    PROFILE_FUNC_SCOPE("FVkPostProcessComputePipeline::Execute")
     
-    PVulkanCommandBuffer* CommandBuffer = GetRHI()->GetRenderer()->GetCommandBuffer();
+    FVkCommandBuffer* CommandBuffer = GetRHI()->GetRenderer()->GetCommandBuffer();
 
-    FVkImage* DrawImage = GetRHI()->GetRenderer()->ColorAttachment16.Get();
-    FVkImage* FinalImage = GetRHI()->GetRenderer()->ColorAttachment8.Get();
+    FVkImage* IntermediateColorAttachment = GetRHI()->GetRenderer()->IntermediateColorAttachment.Get();
+    FVkImage* PresentColorAttachment = GetRHI()->GetRenderer()->PresentColorAttachment.Get();
 
-    FVkImage* HDR = (*GetRHI()->GetRenderer()->RWTexture2D.Find("HDR"))[GetRHI()->GetRenderer()->GetFrameIndex()];
-    FVkImage* SDR = (*GetRHI()->GetRenderer()->RWTexture2D.Find("SDR"))[GetRHI()->GetRenderer()->GetFrameIndex()];
+    FVkImage* TonemapInputImage = (*GetRHI()->GetRenderer()->RWTexture2D.Find("HDR"))[GetRHI()->GetRenderer()->GetFrameIndex()];
+    FVkImage* TonemapOutputImage = (*GetRHI()->GetRenderer()->RWTexture2D.Find("SDR"))[GetRHI()->GetRenderer()->GetFrameIndex()];
 
-    HDR->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    SDR->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-    DrawImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    DrawImage->CopyImageRegion(CommandBuffer, HDR->Info.ImageHandle, DrawImage->Info.Extent, HDR->Info.Extent);
-    DrawImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
+    TonemapInputImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    TonemapOutputImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    
+    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    IntermediateColorAttachment->CopyImageRegion(CommandBuffer, TonemapInputImage->Info.ImageHandle, IntermediateColorAttachment->Info.Extent, TonemapInputImage->Info.Extent);
+    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    
     const uint32 GroupCountX = (GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width + 15) / 16;
     const uint32 GroupCountY = (GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.height + 15) / 16;
     
     vkCmdBindPipeline(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline->Info.Handle);
     vkCmdDispatch(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), GroupCountX, GroupCountY, 1);
-
-    SDR->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    SDR->CopyImageRegion(CommandBuffer, FinalImage->Info.ImageHandle, SDR->Info.Extent, FinalImage->Info.Extent);
+    
+    TonemapOutputImage->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    TonemapOutputImage->CopyImageRegion(CommandBuffer, PresentColorAttachment->Info.ImageHandle, TonemapOutputImage->Info.Extent, PresentColorAttachment->Info.Extent);
 }

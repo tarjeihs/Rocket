@@ -8,6 +8,6 @@ class IMesh
 public:
     virtual ~IMesh() = default;
 
-    virtual void CreateMesh(FGeometry& Geometry) = 0;
-    virtual void UpdateMesh(FGeometry& Geometry) = 0;
+    virtual void CreateMesh(FSubmesh& Submesh) = 0;
+    virtual void UpdateMesh(FSubmesh& Submesh) = 0;
 };

@@ -4,9 +4,6 @@
 #include "Renderer/RHI.h"
 #include "Renderer/Vulkan/VulkanTexture2D.h"
 #include "Renderer/Vulkan/VkMesh.h"
-#include "Renderer/Vulkan/VkRenderer.h"
-#include "Format/GLTF.h"
-#include "Types/Vertex.h"
 
 template<>
 struct TRHIAPI<IMesh>

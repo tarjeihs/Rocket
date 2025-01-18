@@ -3,7 +3,7 @@
 
 #include "Renderer/Vulkan/VulkanDevice.h"
 
-void PVulkanCommandPool::Create(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags)
+void FVkCommandPool::Initialize(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags)
 {
 	// Create a command pool for command buffers to be submitted to the graphics queue.
 	VkCommandPoolCreateInfo CommandPoolCreateInfo = {};
@@ -16,18 +16,18 @@ void PVulkanCommandPool::Create(uint32_t QueueFamilyIndex, VkCommandPoolCreateFl
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create command pool.");
 }
 
-void PVulkanCommandPool::Destroy()
+void FVkCommandPool::Shutdown()
 {
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), CommandPool, nullptr);
 	CommandPool = VK_NULL_HANDLE;
 }
 
-VkCommandPool PVulkanCommandPool::GetVkCommandPool() const
+VkCommandPool FVkCommandPool::GetVkCommandPool() const
 {
 	return CommandPool;
 }
 
-void PVulkanCommandBuffer::Create(PVulkanCommandPool* CommandPool)
+void FVkCommandBuffer::Initialize(FVkCommandPool* CommandPool)
 {
 	VkCommandBufferAllocateInfo CommandBufferAllocateInfo{};
 	CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -39,24 +39,24 @@ void PVulkanCommandBuffer::Create(PVulkanCommandPool* CommandPool)
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate command buffers.");
 }
 
-void PVulkanCommandBuffer::Destroy(PVulkanCommandPool* CommandPool)
+void FVkCommandBuffer::Shutdown(FVkCommandPool* CommandPool)
 {
 	vkFreeCommandBuffers(GetRHI()->GetDevice()->GetVkDevice(), CommandPool->GetVkCommandPool(), 1, &CommandBuffer);
 	CommandBuffer = VK_NULL_HANDLE;
 }
 
-VkCommandBuffer PVulkanCommandBuffer::GetVkCommandBuffer() const
+VkCommandBuffer FVkCommandBuffer::GetVkCommandBuffer() const
 {
 	return CommandBuffer;
 }
 
-void PVulkanCommandBuffer::ResetCommandBuffer()
+void FVkCommandBuffer::ResetCommandBuffer()
 {
 	VkResult Result = vkResetCommandBuffer(CommandBuffer, 0);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to reset command buffer.");
 }
 
-void PVulkanCommandBuffer::BeginCommandBuffer()
+void FVkCommandBuffer::BeginCommandBuffer()
 {
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
 	CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -68,7 +68,7 @@ void PVulkanCommandBuffer::BeginCommandBuffer()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to begin recording command buffer.");
 }
 
-void PVulkanCommandBuffer::EndCommandBuffer()
+void FVkCommandBuffer::EndCommandBuffer()
 {
 	VkResult Result = vkEndCommandBuffer(CommandBuffer);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to finalize command buffer.");

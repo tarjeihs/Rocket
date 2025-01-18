@@ -9,8 +9,9 @@
 #include "Renderer/Vulkan/VulkanShader.h"
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanSwapchain.h"
+#include "Types/Vertex.h"
 
-void FVkOpaqueScriptableRendererPipeline::Initialize(FVkPipelineLayout* PipelineLayout)
+void FVkOpaqueGfxPipeline::Initialize(FVkPipelineLayout* PipelineLayout)
 {
 	TUniquePtr<FVkShader> VertexShader = MakeUnique<FVkShader>();
 	TUniquePtr<FVkShader> PixelShader = MakeUnique<FVkShader>();
@@ -25,37 +26,76 @@ void FVkOpaqueScriptableRendererPipeline::Initialize(FVkPipelineLayout* Pipeline
 		RK_ENGINE_DIR "/Shaders/HLSL/OpaquePS.hlsl", EShaderStage::Pixel
 	};
 
-	// TODO: Add more customization options here...
+    TArray<FVkVertexAttribute> Attributes
+	{
+		{
+			0,
+			0,
+			VK_FORMAT_R32G32B32_SFLOAT,
+			offsetof(FVertex, Position),
+            sizeof(FVertex)
+		},
+		{
+			0,
+			1,
+			VK_FORMAT_R32G32B32_SFLOAT,
+			offsetof(FVertex, Normal),
+            sizeof(FVertex)
+		},
+		{
+			0,
+			2,
+			VK_FORMAT_R32G32_SFLOAT,
+			offsetof(FVertex, TexCoord),
+            sizeof(FVertex)
+		},
+        {
+            0,
+            3,
+            VK_FORMAT_R32G32B32_SFLOAT,
+            offsetof(FVertex, Tangent),
+            sizeof(FVertex)
+        },
+        {
+            0,
+            4,
+            VK_FORMAT_R32G32B32_SFLOAT,
+            offsetof(FVertex, Bitangent),
+            sizeof(FVertex)
+        }
+	};
+    
 	FVkPipelineCreateInfo PipelineCreateInfo
 	{
 		{
 			VertexShader.Get(), 
 			PixelShader.Get()
 		},
+        Attributes,
 		PipelineLayout
 	};
 
 	VertexShader->Init(VertexShaderCreateInfo);
 	PixelShader->Init(PixelShaderCreateInfo);
 
-	Pipeline = MakeUnique<FVkPipeline>();
+	Pipeline = MakeUnique<FVkPipelineGfx>();
 	Pipeline->Initialize(PipelineCreateInfo);
 
     VertexShader->Free();
     PixelShader->Free();
 }
 
-void FVkOpaqueScriptableRendererPipeline::Shutdown()
+void FVkOpaqueGfxPipeline::Shutdown()
 {
 	Pipeline->Shutdown();
 }
 
-void FVkOpaqueScriptableRendererPipeline::Execute()
+void FVkOpaqueGfxPipeline::Execute()
 {
-    PROFILE_FUNC_SCOPE("FVkOpaqueScriptableRendererPipeline::Execute")
+    PROFILE_FUNC_SCOPE("FVkOpaqueStaticMeshGfxPipeline::Execute")
 
-    PVulkanCommandBuffer* CommandBuffer = GetRHI()->GetRenderer()->GetCommandBuffer();
-    FVkMeshAllocator* MeshAllocator = GetRHI()->GetRenderer()->GetMeshAllocator();
+    FVkCommandBuffer* CommandBuffer = GetRHI()->GetRenderer()->GetCommandBuffer();
+    FVkStaticMeshBuffer* MeshAllocator = GetRHI()->GetRenderer()->GetMeshAllocator();
 	VkDeviceSize Offsets[] = { 0 };
 
     VkRenderingAttachmentInfo ColorAttachment = {};
@@ -67,7 +107,7 @@ void FVkOpaqueScriptableRendererPipeline::Execute()
     ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     ColorAttachment.clearValue = { 0.0033f, 0.0033f, 0.0033f, 1.0f };
 
-    VkRenderingAttachmentInfo DepthAttachment{};
+    VkRenderingAttachmentInfo DepthAttachment = {};
     DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     DepthAttachment.pNext = nullptr;
     DepthAttachment.imageView = GetRHI()->GetRenderer()->GetDepthAttachmentD32()->Info.ImageViewHandle;
@@ -86,7 +126,7 @@ void FVkOpaqueScriptableRendererPipeline::Execute()
     RenderingInfo.pDepthAttachment = &DepthAttachment;
     RenderingInfo.pStencilAttachment = nullptr;
 
-    VkViewport Viewport{};
+    VkViewport Viewport = {};
     Viewport.x = 0;
     Viewport.y = 0;
     Viewport.width = GetRHI()->GetRenderer()->GetSwapchain()->Info.SwapchainImageExtent.width;
@@ -105,8 +145,8 @@ void FVkOpaqueScriptableRendererPipeline::Execute()
     vkCmdSetScissor(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &Scissor);
     
     vkCmdBindPipeline(CommandBuffer->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline->Info.Handle);
-	vkCmdBindVertexBuffers(CommandBuffer->GetVkCommandBuffer(), 0, 1, &MeshAllocator->Info.VertexBuffer->Info.Handle, Offsets);
-	vkCmdBindIndexBuffer(CommandBuffer->GetVkCommandBuffer(), MeshAllocator->Info.IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(CommandBuffer->GetVkCommandBuffer(), 0, 1, &MeshAllocator->Info.VertexBuffer->Info.Handle, Offsets);             // Memory->BindVertexBuffer("Vertex")
+	vkCmdBindIndexBuffer(CommandBuffer->GetVkCommandBuffer(), MeshAllocator->Info.IndexBuffer->Info.Handle, 0, VK_INDEX_TYPE_UINT32);       // Memory->BindIndexBuffer("Index")
 	
 	MeshAllocator->DrawIndexedIndirect(CommandBuffer);
 

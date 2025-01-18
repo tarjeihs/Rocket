@@ -11,6 +11,8 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VkOverlay.h"
+#include "Renderer/Vulkan/VkRendererFrontend.h"
+#include "Renderer/Common/Memory.h"
 #include "Types/UniquePtr.h"
 #include "Utils/Profiler.h"
 
@@ -18,6 +20,12 @@ void FVkRenderer::Init()
 {
 	Swapchain = MakeUnique<PVulkanSwapchain>();
 	Swapchain->Init();
+
+	GMemory = new FVkMemory();
+	GMemory->Initialize();
+
+	RendererFrontend = new FVkRendererFrontend();
+	RendererFrontend->Initialize(GMemory);
 
 	PipelineLayout												= new FVkPipelineLayout();
 	DescriptorSet 												= new FVkDescriptorSet();
@@ -40,9 +48,9 @@ void FVkRenderer::Init()
 	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
 	{
 		{
-    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	16.0f },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 	16.0f },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 	16.0f },
+    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			16.0f },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			16.0f },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	16.0f },
 		},
 		1,
 		VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
@@ -60,49 +68,76 @@ void FVkRenderer::Init()
 	DescriptorSet->Initialize(DescriptorSetCreateInfo);
 	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
 
-	FVkImageCreateInfo ColorAttachment16CreateInfo = 
+	//FVkImageCreateInfo IntermediateColorAttachmentCreateInfo = 
+	//{
+	//	VK_IMAGE_LAYOUT_UNDEFINED,
+	//	VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+	//	VK_IMAGE_ASPECT_COLOR_BIT,
+	//	GetSwapchain()->Info.SwapchainImageExtent,
+	//	VK_FORMAT_R16G16B16A16_SFLOAT
+	//};
+	//
+	//FVkImageCreateInfo PresentColorAttachmentCreateInfo = 
+	//{
+	//	VK_IMAGE_LAYOUT_UNDEFINED,
+	//	VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+	//	VK_IMAGE_ASPECT_COLOR_BIT,
+	//	GetSwapchain()->Info.SwapchainImageExtent,
+	//	GetSwapchain()->Info.SwapchainSurfaceFormat.format
+	//};
+	//
+	//FVkImageCreateInfo DepthAttachment16CreateInfo = 
+	//{
+	//	VK_IMAGE_LAYOUT_UNDEFINED,
+	//	VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	//	VK_IMAGE_ASPECT_DEPTH_BIT,
+	//	GetSwapchain()->Info.SwapchainImageExtent,
+	//	VK_FORMAT_D32_SFLOAT
+	//};
+
+	FImageCreateInfo IntermediateColorAttachmentCreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		GetSwapchain()->Info.SwapchainImageExtent,
-		VK_FORMAT_R16G16B16A16_SFLOAT
-	};
-	
-	FVkImageCreateInfo ColorAttachment8CreateInfo = 
-	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		GetSwapchain()->Info.SwapchainImageExtent,
-		VK_FORMAT_B8G8R8A8_SRGB
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R16G16B16A16_SFLOAT
 	};
 
-	FVkImageCreateInfo DepthAttachment16CreateInfo = 
+	FImageCreateInfo PresentColorAttachmentCreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_DEPTH_BIT,
-		GetSwapchain()->Info.SwapchainImageExtent,
-		VK_FORMAT_D32_SFLOAT
+		EImageLayout::Undefined,
+		EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::A2B10G10R10_UNORM_PACK32
 	};
 
-	ColorAttachment16 = MakeUnique<FVkImage>();
-	ColorAttachment16->Initialize(ColorAttachment16CreateInfo);
+	FImageCreateInfo DepthAttachment16CreateInfo =
+	{
+		EImageLayout::Undefined,
+		EImageUsage::DepthStencilAttachment,
+		EImageAspect::Depth,
+		{1280,720},
+		EImageFormat::D32_SFLOAT
+	};
 
-	ColorAttachment8 = MakeUnique<FVkImage>();
-	ColorAttachment8->Initialize(ColorAttachment8CreateInfo);
+	IntermediateColorAttachment = MakeUnique<FVkImage>();
+	IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
+
+	PresentColorAttachment = MakeUnique<FVkImage>();
+	PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
 
 	DepthAttachmentD32 = MakeUnique<FVkImage>();
 	DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
 
 	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
     {
-        CommandPool[Index] = MakeUnique<PVulkanCommandPool>();
-	    CommandPool[Index]->Create(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        CommandPool[Index] = MakeUnique<FVkCommandPool>();
+	    CommandPool[Index]->Initialize(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	    CommandBuffer[Index] = MakeUnique<PVulkanCommandBuffer>();
-	    CommandBuffer[Index]->Create(CommandPool[Index].Get());
+	    CommandBuffer[Index] = MakeUnique<FVkCommandBuffer>();
+	    CommandBuffer[Index]->Initialize(CommandPool[Index].Get());
 
         VkFenceCreateInfo FenceCreateInfo = {};
 	    FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -124,11 +159,11 @@ void FVkRenderer::Init()
 	    RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
     }
 
-	ImmediateCommandPool = MakeUnique<PVulkanCommandPool>();
-	ImmediateCommandPool->Create(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	ImmediateCommandPool = MakeUnique<FVkCommandPool>();
+	ImmediateCommandPool->Initialize(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	ImmediateCommandBuffer = MakeUnique<PVulkanCommandBuffer>();
-	ImmediateCommandBuffer->Create(ImmediateCommandPool.Get());
+	ImmediateCommandBuffer = MakeUnique<FVkCommandBuffer>();
+	ImmediateCommandBuffer->Initialize(ImmediateCommandPool.Get());
 
 	VkFenceCreateInfo ImmediateFenceCreateInfo = {};
 	ImmediateFenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -138,7 +173,7 @@ void FVkRenderer::Init()
 	VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &ImmediateFenceCreateInfo, nullptr, &ImmediateRenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create immediate render fence.");
 
-	MeshAllocator = MakeUnique<FVkMeshAllocator>();
+	MeshAllocator = MakeUnique<FVkStaticMeshBuffer>();
 	MeshAllocator->Initialize();
 
 	GOverlay = new FVkOverlay();
@@ -152,8 +187,8 @@ void FVkRenderer::Shutdown()
 
     Swapchain->Shutdown();
 
-	ColorAttachment16->Shutdown();
-	ColorAttachment8->Shutdown();
+	IntermediateColorAttachment->Shutdown();
+	PresentColorAttachment->Shutdown();
 	DepthAttachmentD32->Shutdown();
 
 	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout->Info.Handle, VK_NULL_HANDLE);
@@ -182,8 +217,8 @@ void FVkRenderer::Render()
 
     BeginFrame();
 
-    ColorAttachment16->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	ColorAttachment8->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	PresentColorAttachment->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     DepthAttachmentD32->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
 	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
@@ -196,14 +231,14 @@ void FVkRenderer::Render()
 		Pipeline->Execute();
 	}
 
-    ColorAttachment16->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    ColorAttachment8->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    
+    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    PresentColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	
 	GOverlay->Execute();
-
-	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    ColorAttachment8->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, ColorAttachment8->Info.Extent, Swapchain->Info.SwapchainImageExtent);
-	Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    
+	Swapchain->Info.Backbuffer[GetNextImageIndex()]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    PresentColorAttachment->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, PresentColorAttachment->Info.Extent, Swapchain->Info.SwapchainImageExtent);
+	Swapchain->Info.Backbuffer[GetNextImageIndex()]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     EndFrame();
 
@@ -217,41 +252,41 @@ void FVkRenderer::Resize()
 	Swapchain->Shutdown();
 	Swapchain->Init();
 
-	FVkImageCreateInfo ColorAttachment16CreateInfo = 
+	FImageCreateInfo IntermediateColorAttachmentCreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		Swapchain->Info.SwapchainImageExtent,
-		VK_FORMAT_R16G16B16A16_SFLOAT
-	};
-	
-	FVkImageCreateInfo ColorAttachment8CreateInfo = 
-	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		Swapchain->Info.SwapchainImageExtent,
-		VK_FORMAT_B8G8R8A8_SRGB
+		EImageLayout::Undefined,
+		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+		EImageAspect::Color,
+		{1280,720},
+		EImageFormat::R16G16B16A16_SFLOAT
 	};
 
-	FVkImageCreateInfo DepthAttachmentCreateInfo = 
+	FImageCreateInfo PresentColorAttachmentCreateInfo =
 	{
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		VK_IMAGE_ASPECT_DEPTH_BIT,
-		Swapchain->Info.SwapchainImageExtent,
-		VK_FORMAT_D32_SFLOAT
+		EImageLayout::Undefined,
+		EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+		EImageAspect::Color,
+		{1280,720},
+		//EImageFormat::R16G16B16A16_SFLOAT
 	};
 
-	ColorAttachment16->Shutdown();
-	ColorAttachment16->Initialize(ColorAttachment16CreateInfo);
+	FImageCreateInfo DepthAttachment16CreateInfo =
+	{
+		EImageLayout::Undefined,
+		EImageUsage::DepthStencilAttachment,
+		EImageAspect::Depth,
+		{1280,720},
+		EImageFormat::D32_SFLOAT
+	};
 
-	ColorAttachment8->Shutdown();
-	ColorAttachment8->Initialize(ColorAttachment8CreateInfo);
+	IntermediateColorAttachment->Shutdown();
+	IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
+
+	PresentColorAttachment->Shutdown();
+	PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
 
 	DepthAttachmentD32->Shutdown();
-	DepthAttachmentD32->Initialize(DepthAttachmentCreateInfo);
+	DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
 }
 
 void FVkRenderer::BeginFrame()
@@ -311,7 +346,7 @@ void FVkRenderer::EndFrame()
 	Result = vkQueuePresentKHR(GetRHI()->GetDevice()->GetGraphicsQueue(), &PresentInfo);
 }
 
-void FVkRenderer::ImmediateSubmit(std::function<void(PVulkanCommandBuffer*)>&& Func)
+void FVkRenderer::ImmediateSubmit(std::function<void(FVkCommandBuffer*)>&& Func)
 {
 	PROFILE_FUNC_SCOPE("FVkRenderer::ImmediateSubmit")
 

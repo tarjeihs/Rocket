@@ -20,6 +20,7 @@ set(INTERMEDIATE_DIR ${CMAKE_BINARY_DIR}/Intermediate)
 set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glm")
 set(SPDLOG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/spdlog")
 set(VMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
+set(MESHOPTIMIZER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/meshoptimizer")
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
 set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
@@ -35,6 +36,14 @@ set(IMGUI_SRC
     ${IMGUI_INCLUDE_DIR}/imgui_widgets.cpp
     ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_glfw.cpp
     ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_vulkan.cpp
+)
+
+set(MESHOPTIMIZER_SRC
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src/vfetchoptimizer.cpp
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src/indexgenerator.cpp
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src/overdrawoptimizer.cpp
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src/vcacheoptimizer.cpp
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src/simplifier.cpp
 )
 
 # Collect all source files for the Engine project
@@ -63,6 +72,7 @@ add_subdirectory(Vendor/glfw)
 add_library(Engine STATIC 
     ${ENGINE_FILES}
     ${IMGUI_SRC}  # Add ImGui source files to the Engine target
+    ${MESHOPTIMIZER_SRC}
 )
 
 set_source_files_properties(${ENGINE_SHADER_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -74,6 +84,7 @@ target_include_directories(Engine PRIVATE
     ${SPDLOG_INCLUDE_DIR}/include
     ${VMA_INCLUDE_DIR}/include
     ${GLFW_INCLUDE_DIR}/include
+    ${MESHOPTIMIZER_INCLUDE_DIR}/src
     ${IMGUI_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}/backends
     ${ENTT_INCLUDE_DIR}/src

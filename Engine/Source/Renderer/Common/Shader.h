@@ -11,7 +11,7 @@ enum class EShaderStage
 
 struct FShaderCreateInfo
 {
-	std::string Path;
+	FString Path;
 	EShaderStage Stage;
 };
 

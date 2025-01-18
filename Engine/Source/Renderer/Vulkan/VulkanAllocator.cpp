@@ -4,7 +4,7 @@
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanInstance.h"
 
-void PVulkanAllocator::Init()
+void FVkAllocator::Init()
 {
     VmaAllocatorCreateInfo AllocatorCreateInfo = {};
 	AllocatorCreateInfo.physicalDevice = GetRHI()->GetDevice()->GetVkPhysicalDevice();
@@ -15,12 +15,12 @@ void PVulkanAllocator::Init()
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create memory allocator.");
 }
 
-void PVulkanAllocator::Shutdown()
+void FVkAllocator::Shutdown()
 {
 	vmaDestroyAllocator(MemoryAllocator);
 }
 
-VmaAllocator PVulkanAllocator::GetMemoryAllocator() const
+VmaAllocator FVkAllocator::GetMemoryAllocator() const
 {
     return MemoryAllocator;
 }

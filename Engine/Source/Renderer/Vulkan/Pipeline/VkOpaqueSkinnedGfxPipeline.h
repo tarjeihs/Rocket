@@ -2,9 +2,9 @@
 
 #include "Renderer/Vulkan/VkScriptableRendererPipeline.h"
 
-struct FVkOpaqueGfxPipeline : public IPipeline2
+struct FVkOpaqueSkinnedMeshGfxPipeline : public IPipeline2
 {
-    virtual void Initialize(FVkPipelineLayout* PipelineLayout) override; 
+    virtual void Initialize(FVkPipelineLayout* PipelineLayout) override;
     virtual void Shutdown() override;
     virtual void Execute() override;
 };

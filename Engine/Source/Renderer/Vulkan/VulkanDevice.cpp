@@ -3,9 +3,8 @@
 
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
-#include <vulkan/vulkan_core.h>
 
-void PVulkanDevice::Init()
+void FVkDevice::Init()
 {
 	uint32_t DeviceCount = 0;
 	vkEnumeratePhysicalDevices(GetRHI()->GetInstance()->GetVkInstance(), &DeviceCount, 0);
@@ -82,21 +81,6 @@ void PVulkanDevice::Init()
 				VkPhysicalDeviceProperties PhysicalDeviceProperties;
     			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 
-				VkPhysicalDeviceMemoryProperties memProperties;
-				vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
-				for (uint32_t i = 0; i < memProperties.memoryHeapCount; ++i) {
-				    std::cout << "Memory Heap " << i << ": Size = " 
-				              << memProperties.memoryHeaps[i].size / (1024 * 1024) << " MiB, "
-				              << ((memProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) ? "Device-local" : "Host-visible") 
-				              << std::endl;
-				}
-
-				for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
-				    std::cout << "Memory Type " << i << ": Heap = " 
-				              << memProperties.memoryTypes[i].heapIndex << ", "
-				              << "Flags = " << memProperties.memoryTypes[i].propertyFlags << std::endl;
-				}
-
 				PLogger::Log(ELogCategory ::LOG_INFO, "Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
 
 				GPU = PhysicalDevice;
@@ -163,59 +147,59 @@ void PVulkanDevice::Init()
 	vkGetDeviceQueue(Device, PresentFamily.value(), 0, &PresentQueue);
 }
 
-void PVulkanDevice::Shutdown()
+void FVkDevice::Shutdown()
 {
 	vkDestroyDevice(Device, nullptr);
 }
 
-VkPhysicalDevice PVulkanDevice::GetVkPhysicalDevice() const
+VkPhysicalDevice FVkDevice::GetVkPhysicalDevice() const
 {
 	return GPU;
 }
 
-VkDevice PVulkanDevice::GetVkDevice() const
+VkDevice FVkDevice::GetVkDevice() const
 {
 	return Device;
 }
 
-VkQueue PVulkanDevice::GetGraphicsQueue() const
+VkQueue FVkDevice::GetGraphicsQueue() const
 {
 	return GraphicsQueue;
 }
 
-VkQueue PVulkanDevice::GetPresentQueue() const
+VkQueue FVkDevice::GetPresentQueue() const
 {
 	return PresentQueue;
 }
 
-std::optional<uint32_t> PVulkanDevice::GetGraphicsFamilyIndex() const
+std::optional<uint32_t> FVkDevice::GetGraphicsFamilyIndex() const
 {
 	return GraphicsFamily;
 }
 
-std::optional<uint32_t> PVulkanDevice::GetPresentFamilyIndex() const
+std::optional<uint32_t> FVkDevice::GetPresentFamilyIndex() const
 {
 	return PresentFamily;
 }
 
-const std::vector<VkSurfaceFormatKHR>& PVulkanDevice::GetSurfaceFormats() const
+const std::vector<VkSurfaceFormatKHR>& FVkDevice::GetSurfaceFormats() const
 {
 	return SurfaceFormats;
 }
 
-const std::vector<VkPresentModeKHR>& PVulkanDevice::GetPresentModes() const
+const std::vector<VkPresentModeKHR>& FVkDevice::GetPresentModes() const
 {
 	return PresentModes;
 }
 
-VkSurfaceCapabilitiesKHR PVulkanDevice::GetSurfaceCapabilities() const
+VkSurfaceCapabilitiesKHR FVkDevice::GetSurfaceCapabilities() const
 {
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GPU, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &SurfaceCapabilities);
 	return SurfaceCapabilities;
 }
 
-VkPhysicalDeviceProperties PVulkanDevice::GetPhysicalDeviceProperties() const
+VkPhysicalDeviceProperties FVkDevice::GetPhysicalDeviceProperties() const
 {
 	VkPhysicalDeviceProperties PhysicalDeviceProperties;
 	vkGetPhysicalDeviceProperties(GPU, &PhysicalDeviceProperties);

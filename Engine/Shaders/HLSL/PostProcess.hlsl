@@ -93,10 +93,10 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     float3 Color = HdrColor.rgb;
 
-    Color = ToACES(Color);
-    Color = ToSRGB(Color);
-    Color = ApplyFilmGrain(CameraBuffer.PP_FilmGrainIntensity.x, Color, Pixel.xy);
-    Color = ApplyChromaticAberration(CameraBuffer.PP_ChromaticAberration, Color, LeftColor.rgb, RightColor.rgb);
+    //Color = ToACES(Color);
+    //Color = ToSRGB(Color);
+    //Color = ApplyFilmGrain(CameraBuffer.PP_FilmGrainIntensity.x, Color, Pixel.xy);
+    //Color = ApplyChromaticAberration(CameraBuffer.PP_ChromaticAberration, Color, LeftColor.rgb, RightColor.rgb);
 
     Output8[1][Pixel] = float4(Color, HdrColor.a);
 }

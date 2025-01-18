@@ -50,11 +50,23 @@ public:
     using TPair = TPair<TKey, TValue>;
     using TOptionalPair = TOptional<TPair>;
 
-    TMap(SizeType BucketSize = DefaultBucketSize)
+    TMap()
     {
-        Buckets.Resize(BucketSize);
+        Buckets.Resize(DefaultBucketSize);
 
         ElementCount = 0;
+    }
+
+    TMap(std::initializer_list<TPair> List)
+    {
+        Buckets.Resize(DefaultBucketSize);
+
+        ElementCount = 0;
+
+        for (const TPair& Pair : List)
+        {
+            Insert(Pair.Key, Pair.Value);
+        }
     }
 
     ~TMap()
@@ -89,6 +101,34 @@ public:
             Resize(BucketSize * 2);
         }
     }
+
+	void Insert(const TKey& Key, TValue&& Value)
+	{
+		SizeType BucketSize = Buckets.GetSize();
+		SizeType BucketIndex = PrimaryHash(Key, BucketSize);
+		SizeType StepSize = SecondaryHash(Key);
+		SizeType StartIndex = BucketIndex;
+
+		while (Buckets[BucketIndex].IsValid())
+		{
+			if (Buckets[BucketIndex]->Key == Key) // Update existing key
+			{
+				Buckets[BucketIndex]->Value = MoveTemp(Value);
+				return;
+			}
+
+			// Probe using double hashing
+			BucketIndex = (BucketIndex + StepSize) % BucketSize;
+		}
+
+		Buckets[BucketIndex] = TPair(Key, MoveTemp(Value));
+		++ElementCount;
+
+		if (static_cast<float>(ElementCount) / BucketSize > 0.75f)
+		{
+			Resize(BucketSize * 2);
+		}
+	}
 
     bool Remove(const TKey& Key)
     {
@@ -159,6 +199,11 @@ public:
         Buckets.Clear();
         Buckets.Resize(DefaultBucketSize);
         ElementCount = 0;
+    }
+
+    SizeType GetSize() const
+    {
+        return ElementCount;
     }
 
     class FIterator

@@ -9,26 +9,42 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
 #include "Renderer/Vulkan/VkRenderer.h"
+#include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Types/UniquePtr.h"
 
 void FVkTexture2D::Initialize(FTexture2DCreateInfo CreateInfo)
 {
-    uint32 Width = 0, Height = 0, Channels = 0;
+    //uint32 Width = 0, Height = 0, Channels = 0, Size = 0;
 
-    VkFormat ImageFormat = VK_FORMAT_UNDEFINED;
-    switch (CreateInfo.ImageFormat)
+    EImageFormat ImageFormat = EImageFormat::None;
+    if (CreateInfo.Bits == 8)
     {
-        case EImageFormat::RGBA32_SRGB: ImageFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
-        case EImageFormat::RGBA32_UNORM: ImageFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
+        switch (CreateInfo.Components)
+        {
+            case 1: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R8_SRGB : EImageFormat::R8_UNORM);  break;
+            case 2: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R8G8_SRGB : EImageFormat::R8G8_UNORM); break;
+            case 3: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R8G8B8_SRGB : EImageFormat::R8G8B8_UNORM); break;
+            case 4: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R8G8B8A8_SRGB : EImageFormat::R8G8B8A8_UNORM); break;
+        }
     }
-    
-    unsigned char* Data = stbi_load(CreateInfo.Path.GetData(), Cast<int32>(&Width), Cast<int32>(&Height), Cast<int32>(&Channels), STBI_rgb_alpha);
+    else if (CreateInfo.Bits == 16)
+    {
+        switch (CreateInfo.Components)
+        {
+            case 1: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R16_SFLOAT : EImageFormat::R16_UNORM); break;
+            case 2: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R16G16_SFLOAT : EImageFormat::R16G16_UNORM); break;
+            case 3: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R16G16B16_SFLOAT : EImageFormat::R16G16B16_UNORM); break;
+            case 4: ImageFormat = (CreateInfo.Format == ETexture2DFormat::SRGB ? EImageFormat::R16G16B16A16_SFLOAT : EImageFormat::R16G16B16A16_UNORM); break;
+        }
+    }
 
-    FVkImageCreateInfo ImageCreateInfo;
-    ImageCreateInfo.ImageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
-    ImageCreateInfo.ImageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    ImageCreateInfo.ImageViewAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-    ImageCreateInfo.Extent = VkExtent2D(Width, Height);
+    //unsigned char* Data = stbi_load(CreateInfo.Path.GetData(), Cast<int32>(&Width), Cast<int32>(&Height), Cast<int32>(&Channels), Size);
+
+    FImageCreateInfo ImageCreateInfo;
+    ImageCreateInfo.Layout = EImageLayout::ReadOnly;
+    ImageCreateInfo.UsageFlags = EImageUsage::Sampled | EImageUsage::TransferDst;
+    ImageCreateInfo.AspectFlags = EImageAspect::Color;
+    ImageCreateInfo.Extent = { CreateInfo.Width, CreateInfo.Height };
     ImageCreateInfo.Format = ImageFormat;
 
     FVkSamplerCreateInfo SamplerCreateInfo;
@@ -39,11 +55,12 @@ void FVkTexture2D::Initialize(FTexture2DCreateInfo CreateInfo)
     FVkSampler* Sampler = new FVkSampler();
     Sampler->Initialize(SamplerCreateInfo);
 
-    FVkBufferCreateInfo BufferCreateInfo =
+    FBufferCreateInfo BufferCreateInfo =
     {
-        .UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        .MemoryUsageFlags = VMA_MEMORY_USAGE_CPU_ONLY,
-        .Size = (SizeType)Width * (SizeType)Height * STBI_rgb_alpha
+        EBufferUsageFlag::None,
+        EBufferTransferFlag::Read,
+        EBufferMemoryFlag::Host,
+        (SizeType)CreateInfo.Width * (SizeType)CreateInfo.Height * CreateInfo.Components
     };
 
     TUniquePtr<FVkBuffer> StagingBuffer = MakeUnique<FVkBuffer>();
@@ -51,10 +68,10 @@ void FVkTexture2D::Initialize(FTexture2DCreateInfo CreateInfo)
 
     void* MappedData = nullptr;
     vmaMapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Info.Allocation, &MappedData);
-    memcpy(MappedData, Data, Width * Height * Channels);
+    memcpy(MappedData, CreateInfo.Data, CreateInfo.Width * CreateInfo.Height * CreateInfo.Components);
     vmaUnmapMemory(GetRHI()->GetAllocator()->GetMemoryAllocator(), StagingBuffer->Info.Allocation);
     
-    GetRHI()->GetRenderer()->ImmediateSubmit([&](PVulkanCommandBuffer* CommandBuffer)
+    GetRHI()->GetRenderer()->ImmediateSubmit([&](FVkCommandBuffer* CommandBuffer)
     {
         Image->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         
@@ -64,14 +81,14 @@ void FVkTexture2D::Initialize(FTexture2DCreateInfo CreateInfo)
         BufferImageCopy.imageSubresource.mipLevel = 0;
         BufferImageCopy.imageSubresource.baseArrayLayer = 0;
         BufferImageCopy.imageSubresource.layerCount = 1;
-        BufferImageCopy.imageExtent = { Width, Height, 1 };
+        BufferImageCopy.imageExtent = { CreateInfo.Width, CreateInfo.Height, 1 };
         vkCmdCopyBufferToImage(CommandBuffer->GetVkCommandBuffer(), StagingBuffer->Info.Handle, Image->Info.ImageHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &BufferImageCopy);
         
         Image->TransitionImageLayout(CommandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     });
 
-    StagingBuffer->Free();
-    stbi_image_free(Data);
+    StagingBuffer->Shutdown();
+    //stbi_image_free(Data);
 
     Info.Image = Image;
     Info.Sampler = Sampler;
@@ -81,4 +98,12 @@ void FVkTexture2D::Shutdown()
 {
     Info.Image->Shutdown();
     Info.Sampler->Shutdown();
+
+    delete Info.Image;
+    delete Info.Sampler;
+}
+
+int32 FVkTexture2D::GetTextureID() const
+{
+    return 0;
 }

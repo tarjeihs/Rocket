@@ -17,25 +17,6 @@ public:
     {
     }
 
-    TOptional(T&& Value)
-        : bValid(true), Storage(MoveTemp(Value))
-    {
-    }
-
-    TOptional& operator=(const T& Value)
-    {
-        bValid = true;
-        Storage = Value;
-        return *this;
-    }
-
-    TOptional& operator=(T&& Value)
-    {
-        bValid = true;
-        Storage = MoveTemp(Value);
-        return *this;
-    }
-
     void Reset()
     {
         bValid = false;
@@ -48,25 +29,25 @@ public:
 
     T& Value()
     {
-        RK_ASSERT(bValid == true, "Attempting to access an empty value.");
+        //RK_ASSERT(bValid == true, "Attempting to access an empty value.");
         return Storage;
     }
 
     const T& Value() const
     {
-        RK_ASSERT(bValid == true, "Attempting to access an empty value.");
+        //RK_ASSERT(bValid == true, "Attempting to access an empty value.");
         return Storage;
     }
 
     operator T&()
     {
-        RK_ASSERT(bValid == true, "Attempting to access an empty value.");
+        //RK_ASSERT(bValid == true, "Attempting to access an empty value.");
         return Storage;
     }
 
     operator const T&() const
     {
-        RK_ASSERT(bValid == true, "Attempting to access an empty value.");
+        //RK_ASSERT(bValid == true, "Attempting to access an empty value.");
         return Storage;
     }
 

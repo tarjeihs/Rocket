@@ -7,9 +7,9 @@ struct FVSInput
 {
     float3 Position                 : POSITION;
     float3 Normal                   : NORMAL;
-    float2 TexCoord                 : TEXCOORD0;
-    float3 Tangent                  : TEXCOORD1;
-    float3 Bitangent                : TEXCOORD2;
+    float2 TexCoord                 : TEXCOORD;
+    float4 Weight                   : BLENDWEIGHT;
+    int4 Indices                    : BLENDINDICES;
 };
 
 struct FVSOutput
@@ -18,9 +18,8 @@ struct FVSOutput
     float3 WorldSpacePosition       : WORLD_POS;
     float3 Normal                   : NORMAL;
     float2 TexCoord                 : TEXCOORD0;
-    float3 Tangent                  : TEXCOORD1;
-    float3 Bitangent                : TEXCOORD2;
-    uint32 InstanceID               : COLOR0;
+    float4 Weight                   : BLENDWEIGHT;
+    int4 Indices                    : BLENDINDICES;
 };
 
 struct FGlobalStorageBuffer
@@ -38,10 +37,8 @@ struct FCameraStorageBuffer
 
 struct FMaterialStorageBuffer
 {
-    int32 AlbedoTextureID;
-    int32 NormalTextureID;
-    int32 RoughnessTextureID;
-    int32 MetallicTextureID;
+    uint32 AlbedoTextureID;
+    uint32 NormalTextureID;
 };
 
 struct FInstanceStorageBuffer
@@ -50,15 +47,22 @@ struct FInstanceStorageBuffer
     float4x4 TransformInverseTranspose;
 };
 
+struct FAnimationStorageBuffer
+{
+    float4x4 Transform; // Bone
+};
+
 StructuredBuffer<FGlobalStorageBuffer>      GlobalStorageBuffer[]         : register(t0, space0);
 StructuredBuffer<FCameraStorageBuffer>      CameraStorageBuffer[]         : register(t0, space0);
 StructuredBuffer<FMaterialStorageBuffer>    MaterialStorageBuffer[]       : register(t0, space0);
 StructuredBuffer<FInstanceStorageBuffer>    InstanceStorageBuffer[]       : register(t0, space0);
+StructuredBuffer<FAnimationStorageBuffer>   AnimationStorageBuffer[]       : register(t0, space0);
 
 static const int BINDLESS_BUFFER_INDEX_GLOBAL       = 0;
 static const int BINDLESS_BUFFER_INDEX_CAMERA       = 1;
 static const int BINDLESS_BUFFER_INDEX_MATERIAL     = 2;
 static const int BINDLESS_BUFFER_INDEX_INSTANCE     = 3;
+static const int BINDLESS_BUFFER_INDEX_ANIMATION    = 4;
 
 FVSOutput main(FVSInput Input, uint32 InstanceID : SV_InstanceID)
 {
@@ -78,9 +82,8 @@ FVSOutput main(FVSInput Input, uint32 InstanceID : SV_InstanceID)
     Output.WorldSpacePosition   = WorldSpacePosition.xyz;
     Output.Normal               = normalize(WorldSpaceNormal);
     Output.TexCoord             = Input.TexCoord;
-    Output.Tangent              = Input.Tangent;
-    Output.Bitangent            = Input.Bitangent;
-    Output.InstanceID           = InstanceID;
+    Output.Weight = Input.Weight;
+    Output.Indices = Input.Indices;
 
     return Output;
 }
