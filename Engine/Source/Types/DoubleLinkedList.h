@@ -207,6 +207,16 @@ public:
         return Size == 0;
     }
 
+    TElement* operator[](uint32 Idx) const
+    {
+		TDoubleLinkedListNode<TElement>* Node = Head;
+        for (SizeType Index = 0; Index < Idx; ++Index)
+        {
+            Node = Node->Next;
+        }
+        return &Node->Element;
+    }
+
     class FIterator
     {
     public:

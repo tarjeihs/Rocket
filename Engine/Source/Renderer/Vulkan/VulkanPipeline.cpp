@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "VulkanPipeline.h"
 
+#include "Renderer/Common/Memory.h"
 #include "Renderer/Common/Pipeline.h"
 #include "Renderer/RHI.h"
 #include "Renderer/VulkanRHI.h"
@@ -12,7 +13,6 @@
 #include "Renderer/Vulkan/VulkanSwapchain.h"
 #include "Renderer/Vulkan/VulkanCommand.h"
 #include "Types/Vertex.h"
-#include <Renderer/Common/Memory.h>
 
 void FVkPipelineLayout::Initialize(const FVkPipelineLayoutCreateInfo& CreateInfo)
 {
@@ -229,25 +229,25 @@ void FVkPipelineGfx::Begin(FVkPipelineBeginInfo& BeginInfo)
 	vkCmdSetScissor(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), 0, 1, &Scissor);
 	vkCmdBindPipeline(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Info.Handle);
 
-	for (const TPair<uint32, FString>& Pair : ExecuteInfo.Buffers)
-	{
-		IBuffer* Interface = GMemory->GetBuffer(Pair.Value, GetRHI()->GetRenderer()->GetFrameIndex());
-
-		FVkBuffer* Buffer = Cast<FVkBuffer>(Interface);
-		FVkMemory* Memory = Cast<FVkMemory>(GMemory);
-
-		Memory->Info.DescriptorSet->WriteBuffer(0, Pair.Key, Buffer);
-	}
-
-	for (const TPair<uint32, FString>& Pair : ExecuteInfo.Images)
-	{
-		IImage* Interface = GMemory->GetImage(Pair.Value, GetRHI()->GetRenderer()->GetFrameIndex());
-
-		FVkImage* Image = Cast<FVkImage>(Interface);
-		FVkMemory* Memory = Cast<FVkMemory>(GMemory);
-
-		Memory->Info.DescriptorSet->WriteImage(1, Pair.Key, Image);
-	}
+	//for (const TPair<uint32, FString>& Pair : ExecuteInfo.Buffers)
+	//{
+	//	IBuffer* Interface = GMemory->GetBuffer(Pair.Value, GetRHI()->GetRenderer()->GetFrameIndex());
+	//
+	//	FVkBuffer* Buffer = Cast<FVkBuffer>(Interface);
+	//	FVkMemory* Memory = Cast<FVkMemory>(GMemory);
+	//
+	//	Memory->Info.DescriptorSet->WriteBuffer(0, Pair.Key, Buffer);
+	//}
+	//
+	//for (const TPair<uint32, FString>& Pair : ExecuteInfo.Images)
+	//{
+	//	IImage* Interface = GMemory->GetImage(Pair.Value, GetRHI()->GetRenderer()->GetFrameIndex());
+	//
+	//	FVkImage* Image = Cast<FVkImage>(Interface);
+	//	FVkMemory* Memory = Cast<FVkMemory>(GMemory);
+	//
+	//	Memory->Info.DescriptorSet->WriteImage(1, Pair.Key, Image);
+	//}
 }
 
 void FVkPipelineGfx::End(FVkPipelineEndInfo& EndInfo)

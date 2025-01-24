@@ -73,7 +73,7 @@ namespace Utils
 	}
 }
 
-void FVkImage::Initialize(FImageCreateInfo& CreateInfo)
+void FVkImage::Initialize(const FImageCreateInfo& CreateInfo)
 {
 	VkImageCreateInfo ImageCreateInfo = {};
 	ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

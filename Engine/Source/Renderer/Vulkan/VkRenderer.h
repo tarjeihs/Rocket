@@ -27,7 +27,7 @@ class FVkDescriptorSetLayout;
 class IPipeline2;
 class FVkSceneInstanceManager;
 
-class FVkRenderer : public IRenderer
+class FVkRenderer
 {
 public:
     using Super = FVkRenderer;
@@ -46,8 +46,8 @@ public:
     void Render();
     virtual void Resize();
 
-    virtual void Bind() = 0;
-    virtual void BindImGui() = 0;
+    virtual void Bind() {};
+    virtual void BindImGui() {};
 
     inline FVkImage* GetColorAttachment16() const;
     inline FVkImage* GetDepthAttachmentD32() const;
@@ -81,8 +81,6 @@ public:
     TUniquePtr<FVkOverlay>                               ImGui;
         
     SizeType                                            FrameIndex = 0;
-
-    class IRendererFrontend*                            RendererFrontend;
 
 
 

@@ -65,19 +65,19 @@ FImageCreateInfo ToneMappingOutputCreateInfo =
 	EImageAspect::Color
 };
 
-void FVkRendererFrontend::Initialize(IMemory* Memory)
-{
-	ToneMappingInputCreateInfo.Extent = {1280,720};
-	ToneMappingInputCreateInfo.Format = EImageFormat::R16G16B16A16_SFLOAT;
-	ToneMappingOutputCreateInfo.Extent = {1280,720};
-	ToneMappingOutputCreateInfo.Format = EImageFormat::R16G16B16A16_SFLOAT;
-
-	Memory->AddBuffer(GlobalBufferCreateInfo, "Global", CONCURRENT_FRAME_COUNT);
-	//Memory->AddBuffer(CameraBufferCreateInfo, "Camera", CONCURRENT_FRAME_COUNT);
-	//Memory->AddBuffer(MaterialBufferCreateInfo, "Material", CONCURRENT_FRAME_COUNT);
-	//Memory->AddBuffer(InstanceBufferCreateInfo, "Instance", CONCURRENT_FRAME_COUNT);
-	//
-	//Memory->AddImage(ToneMappingInputCreateInfo, 0, FrameIdx);
-	//Memory->AddImage(ToneMappingOutputCreateInfo, 1, FrameIdx);
-	//Memory->WriteBuffer("Global", 0, GetFrameIndex());
-}
+//void FVkRendererFrontend::Initialize(IMemory* Memory)
+//{
+//	ToneMappingInputCreateInfo.Extent = {1280,720};
+//	ToneMappingInputCreateInfo.Format = EImageFormat::R16G16B16A16_SFLOAT;
+//	ToneMappingOutputCreateInfo.Extent = {1280,720};
+//	ToneMappingOutputCreateInfo.Format = EImageFormat::R16G16B16A16_SFLOAT;
+//
+//	//Memory->AddBuffer(GlobalBufferCreateInfo, "Global", CONCURRENT_FRAME_COUNT);
+//	//Memory->AddBuffer(CameraBufferCreateInfo, "Camera", CONCURRENT_FRAME_COUNT);
+//	//Memory->AddBuffer(MaterialBufferCreateInfo, "Material", CONCURRENT_FRAME_COUNT);
+//	//Memory->AddBuffer(InstanceBufferCreateInfo, "Instance", CONCURRENT_FRAME_COUNT);
+//	//
+//	//Memory->AddImage(ToneMappingInputCreateInfo, 0, FrameIdx);
+//	//Memory->AddImage(ToneMappingOutputCreateInfo, 1, FrameIdx);
+//	//Memory->WriteBuffer("Global", 0, GetFrameIndex());
+//}

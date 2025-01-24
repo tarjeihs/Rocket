@@ -78,6 +78,6 @@ struct FImageCreateInfo
 
 struct IImage
 {
-	virtual void Initialize(FImageCreateInfo& CreateInfo) = 0;
+	virtual void Initialize(const FImageCreateInfo& CreateInfo) = 0;
 	virtual void Shutdown() = 0;
 };

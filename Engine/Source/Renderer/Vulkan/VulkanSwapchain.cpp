@@ -20,10 +20,10 @@ namespace Utils
 			}
 
 			// Prefer SRGB if available (results in more accurate perceived colors and is the golden standard).
-			//if (Format.format == VK_FORMAT_B8G8R8A8_SRGB && Format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-			//{
-			//	return Format;
-			//}
+			if (Format.format == VK_FORMAT_B8G8R8A8_SRGB && Format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			{
+				return Format;
+			}
 		}
 		return Formats[0];
 	}

@@ -42,7 +42,7 @@ namespace Utils
     }
 }
 
-void FVkBuffer::Initialize(FBufferCreateInfo& CreateInfo)
+void FVkBuffer::Initialize(const FBufferCreateInfo& CreateInfo)
 {
 	PROFILE_FUNC_SCOPE("FVkBuffer::Initialize")
 

@@ -11,10 +11,10 @@
 #include "Renderer/Vulkan/VulkanImage.h"
 #include "Renderer/Vulkan/VulkanDescriptor.h"
 #include "Renderer/Vulkan/VkOverlay.h"
-#include "Renderer/Vulkan/VkRendererFrontend.h"
 #include "Renderer/Common/Memory.h"
 #include "Types/UniquePtr.h"
 #include "Utils/Profiler.h"
+#include "VkMemory.h"
 
 void FVkRenderer::Init()
 {
@@ -24,140 +24,33 @@ void FVkRenderer::Init()
 	GMemory = new FVkMemory();
 	GMemory->Initialize();
 
-	RendererFrontend = new FVkRendererFrontend();
-	RendererFrontend->Initialize(GMemory);
+	for (SizeType Frame = 0; Frame < CONCURRENT_FRAME_COUNT; ++Frame)
+	{		
+		CommandPool[Frame] = MakeUnique<FVkCommandPool>();
+		CommandPool[Frame]->Initialize(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	PipelineLayout												= new FVkPipelineLayout();
-	DescriptorSet 												= new FVkDescriptorSet();
-	DescriptorSetLayout 										= new FVkDescriptorSetLayout();
-	DescriptorPool 												= new FVkDescriptorPool();
+		CommandBuffer[Frame] = MakeUnique<FVkCommandBuffer>();
+		CommandBuffer[Frame]->Initialize(CommandPool[Frame].Get());
 
-	FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo =
-	{{
-		{ EVkDescriptorType::StructuredBuffer, 	16 },
-		{ EVkDescriptorType::RWTexture2D, 		16 },
-		{ EVkDescriptorType::Texture2D, 		16 },
-	}};
+		VkFenceCreateInfo FenceCreateInfo = {};
+		FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		FenceCreateInfo.pNext = VK_NULL_HANDLE;
+		FenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	FVkDescriptorSetCreateInfo DescriptorSetCreateInfo =
-	{
-		DescriptorPool,
-		DescriptorSetLayout
-	};
+		VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
+		SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		SemaphoreCreateInfo.pNext = VK_NULL_HANDLE;
+		SemaphoreCreateInfo.flags = 0;
 
-	FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
-	{
-		{
-    		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			16.0f },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			16.0f },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	16.0f },
-		},
-		1,
-		VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
-	};
+		VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &FenceCreateInfo, nullptr, &RenderFence[Frame]);
+		RK_ASSERT(Result == VK_SUCCESS, "Failed to create render fence.");
 
-	FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo =
-	{
-		{ 
-			DescriptorSetLayout
-		}
-	};
+		Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &SwapchainSemaphore[Frame]);
+		RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain semaphore.");
 
-	DescriptorPool->Initialize(DescriptorPoolCreateInfo);
-	DescriptorSetLayout->Initialize(DescriptorSetLayoutCreateInfo);
-	DescriptorSet->Initialize(DescriptorSetCreateInfo);
-	PipelineLayout->Initialize(PipelineLayoutCreateInfo);
-
-	//FVkImageCreateInfo IntermediateColorAttachmentCreateInfo = 
-	//{
-	//	VK_IMAGE_LAYOUT_UNDEFINED,
-	//	VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-	//	VK_IMAGE_ASPECT_COLOR_BIT,
-	//	GetSwapchain()->Info.SwapchainImageExtent,
-	//	VK_FORMAT_R16G16B16A16_SFLOAT
-	//};
-	//
-	//FVkImageCreateInfo PresentColorAttachmentCreateInfo = 
-	//{
-	//	VK_IMAGE_LAYOUT_UNDEFINED,
-	//	VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-	//	VK_IMAGE_ASPECT_COLOR_BIT,
-	//	GetSwapchain()->Info.SwapchainImageExtent,
-	//	GetSwapchain()->Info.SwapchainSurfaceFormat.format
-	//};
-	//
-	//FVkImageCreateInfo DepthAttachment16CreateInfo = 
-	//{
-	//	VK_IMAGE_LAYOUT_UNDEFINED,
-	//	VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	//	VK_IMAGE_ASPECT_DEPTH_BIT,
-	//	GetSwapchain()->Info.SwapchainImageExtent,
-	//	VK_FORMAT_D32_SFLOAT
-	//};
-
-	FImageCreateInfo IntermediateColorAttachmentCreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
-		EImageAspect::Color,
-		{1280,720},
-		EImageFormat::R16G16B16A16_SFLOAT
-	};
-
-	FImageCreateInfo PresentColorAttachmentCreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
-		EImageAspect::Color,
-		{1280,720},
-		EImageFormat::A2B10G10R10_UNORM_PACK32
-	};
-
-	FImageCreateInfo DepthAttachment16CreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::DepthStencilAttachment,
-		EImageAspect::Depth,
-		{1280,720},
-		EImageFormat::D32_SFLOAT
-	};
-
-	IntermediateColorAttachment = MakeUnique<FVkImage>();
-	IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
-
-	PresentColorAttachment = MakeUnique<FVkImage>();
-	PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
-
-	DepthAttachmentD32 = MakeUnique<FVkImage>();
-	DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
-
-	for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
-    {
-        CommandPool[Index] = MakeUnique<FVkCommandPool>();
-	    CommandPool[Index]->Initialize(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-	    CommandBuffer[Index] = MakeUnique<FVkCommandBuffer>();
-	    CommandBuffer[Index]->Initialize(CommandPool[Index].Get());
-
-        VkFenceCreateInfo FenceCreateInfo = {};
-	    FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	    FenceCreateInfo.pNext = VK_NULL_HANDLE;
-	    FenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
-	    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	    SemaphoreCreateInfo.pNext = VK_NULL_HANDLE;
-	    SemaphoreCreateInfo.flags = 0;
-
-        VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &FenceCreateInfo, nullptr, &RenderFence[Index]);
-	    RK_ASSERT(Result == VK_SUCCESS, "Failed to create render fence.");
-
-	    Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &SwapchainSemaphore[Index]);
-	    RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain semaphore.");
-
-	    Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore[Index]);
-	    RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
-    }
+		Result = vkCreateSemaphore(GetRHI()->GetDevice()->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore[Frame]);
+		RK_ASSERT(Result == VK_SUCCESS, "Failed to create render semaphore.");
+	}
 
 	ImmediateCommandPool = MakeUnique<FVkCommandPool>();
 	ImmediateCommandPool->Initialize(GetRHI()->GetDevice()->GetGraphicsFamilyIndex().value(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -173,29 +66,105 @@ void FVkRenderer::Init()
 	VkResult Result = vkCreateFence(GetRHI()->GetDevice()->GetVkDevice(), &ImmediateFenceCreateInfo, nullptr, &ImmediateRenderFence);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create immediate render fence.");
 
-	MeshAllocator = MakeUnique<FVkStaticMeshBuffer>();
-	MeshAllocator->Initialize();
+	//PipelineLayout												= new FVkPipelineLayout();
+	//DescriptorSet 												= new FVkDescriptorSet();
+	//DescriptorSetLayout 										= new FVkDescriptorSetLayout();
+	//DescriptorPool 												= new FVkDescriptorPool();
+	//
+	//FVkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo =
+	//{{
+	//	{ EVkDescriptorType::StructuredBuffer, 	16 },
+	//	{ EVkDescriptorType::RWTexture2D, 		16 },
+	//	{ EVkDescriptorType::Texture2D, 		16 },
+	//}};
+	//
+	//FVkDescriptorSetCreateInfo DescriptorSetCreateInfo =
+	//{
+	//	DescriptorPool,
+	//	DescriptorSetLayout
+	//};
+	//
+	//FVkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = 
+	//{
+	//	{
+    //		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			16.0f },
+	//		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			16.0f },
+	//		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	16.0f },
+	//	},
+	//	1,
+	//	VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT
+	//};
+	//
+	//FVkPipelineLayoutCreateInfo PipelineLayoutCreateInfo =
+	//{
+	//	{ 
+	//		DescriptorSetLayout
+	//	}
+	//};
+	//
+	//DescriptorPool->Initialize(DescriptorPoolCreateInfo);
+	//DescriptorSetLayout->Initialize(DescriptorSetLayoutCreateInfo);
+	//DescriptorSet->Initialize(DescriptorSetCreateInfo);
+	//PipelineLayout->Initialize(PipelineLayoutCreateInfo);
 
-	GOverlay = new FVkOverlay();
-	GOverlay->Init();
+	//FImageCreateInfo IntermediateColorAttachmentCreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+	//	EImageAspect::Color,
+	//	{1280,720},
+	//	EImageFormat::R16G16B16A16_SFLOAT
+	//};
+	//
+	//FImageCreateInfo PresentColorAttachmentCreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+	//	EImageAspect::Color,
+	//	{1280,720},
+	//	EImageFormat::A2B10G10R10_UNORM_PACK32
+	//};
+	//
+	//FImageCreateInfo DepthAttachment16CreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::DepthStencilAttachment,
+	//	EImageAspect::Depth,
+	//	{1280,720},
+	//	EImageFormat::D32_SFLOAT
+	//};
+	//
+	//IntermediateColorAttachment = MakeUnique<FVkImage>();
+	//IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
+	//
+	//PresentColorAttachment = MakeUnique<FVkImage>();
+	//PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
+	//
+	//DepthAttachmentD32 = MakeUnique<FVkImage>();
+	//DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
+
+	//MeshAllocator = MakeUnique<FVkStaticMeshBuffer>();
+	//MeshAllocator->Initialize();
+	//
+	//GOverlay = new FVkOverlay();
+	//GOverlay->Init();
 }
 
 void FVkRenderer::Shutdown()
 {
-	GOverlay->Shutdown();
-	delete GOverlay;
+	//GOverlay->Shutdown();
+	//delete GOverlay;
 
     Swapchain->Shutdown();
+	GMemory->Shutdown();
 
-	IntermediateColorAttachment->Shutdown();
-	PresentColorAttachment->Shutdown();
-	DepthAttachmentD32->Shutdown();
+	//IntermediateColorAttachment->Shutdown();
+	//PresentColorAttachment->Shutdown();
+	//DepthAttachmentD32->Shutdown();
 
-	vkDestroyPipelineLayout(GetRHI()->GetDevice()->GetVkDevice(), PipelineLayout->Info.Handle, VK_NULL_HANDLE);
-
-	DescriptorSet->Shutdown();
-	DescriptorSetLayout->Shutdown();
-	DescriptorPool->Shutdown();
+	//DescriptorSet->Shutdown();
+	//DescriptorSetLayout->Shutdown();
+	//DescriptorPool->Shutdown();
 
     for (SizeType Index = 0; Index < CONCURRENT_FRAME_COUNT; ++Index)
     {
@@ -208,7 +177,7 @@ void FVkRenderer::Shutdown()
 	vkDestroyFence(GetRHI()->GetDevice()->GetVkDevice(), ImmediateRenderFence, nullptr);
 	vkDestroyCommandPool(GetRHI()->GetDevice()->GetVkDevice(), ImmediateCommandPool->GetVkCommandPool(), nullptr);
 
-	MeshAllocator->Shutdown();
+	//MeshAllocator->Shutdown();
 }
 
 void FVkRenderer::Render()
@@ -217,27 +186,29 @@ void FVkRenderer::Render()
 
     BeginFrame();
 
-    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	PresentColorAttachment->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    DepthAttachmentD32->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    //IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	//PresentColorAttachment->TransitionImageLayout(GetCommandBuffer(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //DepthAttachmentD32->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
-	vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayout->Info.Handle, 0, 1, &DescriptorSet->Info.Handle, 0, 0);
+	//vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, Memory->Info.PipelineLayout->Info.Handle, 0, 1, &Memory->Info.DescriptorSet->Info.Handle, 0, 0);
+	//vkCmdBindDescriptorSets(GetRHI()->GetRenderer()->GetCommandBuffer()->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, Memory->Info.PipelineLayout->Info.Handle, 0, 1, &Memory->Info.DescriptorSet->Info.Handle, 0, 0);
 
-    Bind(); // Bind descriptor sets, update buffers, etc...
+    //Bind(); // Bind descriptor sets, update buffers, etc...
 	
+	GMemory->Execute();
+
 	for (const auto& Pipeline : ScriptableRendererPipelineData)
 	{
 		Pipeline->Execute();
 	}
 
-    IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    PresentColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    //IntermediateColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    //PresentColorAttachment->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	
-	GOverlay->Execute();
+	//GOverlay->Execute();
     
 	Swapchain->Info.Backbuffer[GetNextImageIndex()]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    PresentColorAttachment->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, PresentColorAttachment->Info.Extent, Swapchain->Info.SwapchainImageExtent);
+    //PresentColorAttachment->CopyImageRegion(CommandBuffer[FrameIndex].Get(), Swapchain->Info.Backbuffer[NextImageIndex[FrameIndex]]->Info.ImageHandle, PresentColorAttachment->Info.Extent, Swapchain->Info.SwapchainImageExtent);
 	Swapchain->Info.Backbuffer[GetNextImageIndex()]->TransitionImageLayout(CommandBuffer[FrameIndex].Get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     EndFrame();
@@ -252,41 +223,41 @@ void FVkRenderer::Resize()
 	Swapchain->Shutdown();
 	Swapchain->Init();
 
-	FImageCreateInfo IntermediateColorAttachmentCreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
-		EImageAspect::Color,
-		{1280,720},
-		EImageFormat::R16G16B16A16_SFLOAT
-	};
-
-	FImageCreateInfo PresentColorAttachmentCreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
-		EImageAspect::Color,
-		{1280,720},
-		//EImageFormat::R16G16B16A16_SFLOAT
-	};
-
-	FImageCreateInfo DepthAttachment16CreateInfo =
-	{
-		EImageLayout::Undefined,
-		EImageUsage::DepthStencilAttachment,
-		EImageAspect::Depth,
-		{1280,720},
-		EImageFormat::D32_SFLOAT
-	};
-
-	IntermediateColorAttachment->Shutdown();
-	IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
-
-	PresentColorAttachment->Shutdown();
-	PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
-
-	DepthAttachmentD32->Shutdown();
-	DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
+	//FImageCreateInfo IntermediateColorAttachmentCreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::Storage | EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+	//	EImageAspect::Color,
+	//	{1280,720},
+	//	EImageFormat::R16G16B16A16_SFLOAT
+	//};
+	//
+	//FImageCreateInfo PresentColorAttachmentCreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::TransferDst | EImageUsage::TransferSrc | EImageUsage::ColorAttachment,
+	//	EImageAspect::Color,
+	//	{1280,720},
+	//	//EImageFormat::R16G16B16A16_SFLOAT
+	//};
+	//
+	//FImageCreateInfo DepthAttachment16CreateInfo =
+	//{
+	//	EImageLayout::Undefined,
+	//	EImageUsage::DepthStencilAttachment,
+	//	EImageAspect::Depth,
+	//	{1280,720},
+	//	EImageFormat::D32_SFLOAT
+	//};
+	//
+	//IntermediateColorAttachment->Shutdown();
+	//IntermediateColorAttachment->Initialize(IntermediateColorAttachmentCreateInfo);
+	//
+	//PresentColorAttachment->Shutdown();
+	//PresentColorAttachment->Initialize(PresentColorAttachmentCreateInfo);
+	//
+	//DepthAttachmentD32->Shutdown();
+	//DepthAttachmentD32->Initialize(DepthAttachment16CreateInfo);
 }
 
 void FVkRenderer::BeginFrame()

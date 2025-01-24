@@ -169,7 +169,7 @@ public:
         return false;
     }
 
-    TValue* Find(const TKey& Key)
+    const TValue* Find(const TKey& Key) const
     {
         SizeType BucketSize = Buckets.GetSize();
         SizeType BucketIndex = PrimaryHash(Key, BucketSize);

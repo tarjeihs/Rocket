@@ -28,6 +28,17 @@ public:
         }
     }
 
+    TArray(const void* InData, SizeType InSize)
+        : Data(nullptr), Size(0), Capacity(0)
+    {
+        Reserve(InSize);
+        const TElement* Source = static_cast<const TElement*>(InData);
+        for (SizeType Index = 0; Index < InSize; ++Index)
+        {
+            Add(Source[Index]);
+        }
+    }
+
     ~TArray()
     {
         Clear();

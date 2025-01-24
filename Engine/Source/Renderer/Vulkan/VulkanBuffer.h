@@ -16,7 +16,7 @@ class FVkBuffer : public IBuffer
 public:
     FVkBufferInfo Info;
 
-    void Initialize(FBufferCreateInfo& CreateInfo) override;
+    void Initialize(const FBufferCreateInfo& CreateInfo) override;
     void Shutdown() override;
     void Submit(const void* Data, size_t Size, size_t Offset = 0) override;
 };

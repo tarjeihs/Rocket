@@ -7,7 +7,8 @@ class ISubsystem
 public:
     virtual ~ISubsystem() = default;
 
-    virtual void OnAttach() {}
+    virtual void OnAwake() {}
+    virtual void OnStart() {}
     virtual void OnDetach() {}
     virtual void OnUpdate(float DeltaTime) {}
 };
@@ -36,10 +37,10 @@ private:
 };
 
 #define REGISTER_SUBSYSTEM(ClassName) \
-    static struct ClassName##AutoRegister \
+static struct ClassName##AutoRegister \
+{ \
+    ClassName##AutoRegister() \
     { \
-        ClassName##AutoRegister() \
-        { \
-            SSubsystemStaticRegistry::GetStaticRegistry().AddSubsystem(new ClassName()); \
-        } \
-    } ClassName##AutoRegisterInstance;
+        SSubsystemStaticRegistry::GetStaticRegistry().AddSubsystem(new ClassName()); \
+    } \
+} ClassName##AutoRegisterInstance;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include "EngineTypes.h"
 
 enum class EBufferUsageFlag : int8
 {
@@ -50,7 +51,7 @@ class IBuffer
 public:
     virtual ~IBuffer() = default;
 
-    virtual void Initialize(FBufferCreateInfo& CreateInfo) = 0;
+    virtual void Initialize(const FBufferCreateInfo& CreateInfo) = 0;
     virtual void Shutdown() = 0;
     virtual void Submit(const void* Data, size_t Size, size_t Offset = 0) = 0;
 };

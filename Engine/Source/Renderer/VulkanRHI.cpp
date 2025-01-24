@@ -4,7 +4,8 @@
 #include "Renderer/Vulkan/VulkanInstance.h"
 #include "Renderer/Vulkan/VulkanDevice.h"
 #include "Renderer/Vulkan/VulkanAllocator.h"
-#include "Renderer/Vulkan/VkForwardRenderer.h"
+//#include "Renderer/Vulkan/VkForwardRenderer.h"
+#include "Vulkan/VkRenderer.h"
 
 void PVulkanRHI::Init()
 {
@@ -16,7 +17,8 @@ void PVulkanRHI::Init()
 	Instance = new FVkInstance();
 	Device = new FVkDevice();
 	Allocator = new FVkAllocator();
-	Renderer = new FVkForwardRenderer();
+	//Renderer = new FVkForwardRenderer();
+	Renderer = new FVkRenderer();
 
 	Instance->Init();
 	Device->Init();

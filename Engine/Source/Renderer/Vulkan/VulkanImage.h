@@ -28,7 +28,7 @@ struct FVkImage : public IImage
 {
 	FVkImageInfo Info;
 
-	virtual void Initialize(FImageCreateInfo& CreateInfo) override;
+	virtual void Initialize(const FImageCreateInfo& CreateInfo) override;
 	virtual void Shutdown() override;
 
 	void TransitionImageLayout(FVkCommandBuffer* CommandBuffer, VkImageLayout CurrentLayout, VkImageLayout NewLayout, VkAccessFlags2 SrcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT, VkAccessFlags2 DstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT, VkPipelineStageFlags2 SrcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VkPipelineStageFlags2 DstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);

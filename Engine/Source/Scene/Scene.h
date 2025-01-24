@@ -19,7 +19,7 @@ public:
 		Registry = new PRegistry();
 
 #if RK_DEBUG
-		GOverlay->OnRender.Bind(this, &PScene::OnImGuiRender);
+//		GOverlay->OnRender.Bind(this, &PScene::OnImGuiRender);
 #endif
 	}
 

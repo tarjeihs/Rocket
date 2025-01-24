@@ -14,6 +14,11 @@ void PEngine::Start()
 
 	PLogger::Init();
 
+	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
+	{
+		Subsystem->OnAwake();
+	}
+
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
 	Window = new PGenericWindow(WindowSpecification);
@@ -26,7 +31,7 @@ void PEngine::Start()
 
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
 	{
-		Subsystem->OnAttach();
+		Subsystem->OnStart();
 	}
 }
 
