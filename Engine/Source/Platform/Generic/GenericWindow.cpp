@@ -6,7 +6,7 @@
 #include "Core/Camera.h"
 #include "GLFW/glfw3.h"
 #include "Scene/Scene.h"
-#include "Renderer/VulkanRHI.h"
+#include "../../Renderer/Vulkan/VulkanRHI.h"
 
 void PGenericWindow::CreateNativeWindow()
 {

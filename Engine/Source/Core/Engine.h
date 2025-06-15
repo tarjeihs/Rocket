@@ -15,7 +15,7 @@ static const char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1280;
 static constexpr uint32_t VIEWPORT_HEIGHT = 720;
 
-class PEngine
+class CEngine
 {
 public:
 	STimer Time;
@@ -29,32 +29,32 @@ public:
 	inline IWindow* GetWindow();
 	inline IRHI* GetRHI();
 	
-	inline friend PEngine* GetEngine();
+	inline friend CEngine* GetEngine();
 	
 private:
 	PScene* Scene;
 	IWindow* Window;
-	IRHI* RHI;
+	IRHI* Renderer;
 
-	static PEngine* GEngine;
+	static CEngine* GEngine;
 };
 
-inline PScene* PEngine::GetScene()
+inline PScene* CEngine::GetScene()
 {
 	return Scene;
 }
 
-inline IRHI* PEngine::GetRHI()
+inline IRHI* CEngine::GetRHI()
 {
-	return RHI;
+	return Renderer;
 }
 
-inline IWindow* PEngine::GetWindow()
+inline IWindow* CEngine::GetWindow()
 {
 	return Window;
 }
 
-inline PEngine* GetEngine() 
+inline CEngine* GetEngine()
 {
-	return PEngine::GEngine;
+	return CEngine::GEngine;
 }

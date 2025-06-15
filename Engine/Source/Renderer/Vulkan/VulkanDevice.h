@@ -1,50 +1,35 @@
 #pragma once
 
-#include <optional>
-#include <vector>
+#include "Renderer/Common/RHIDevice.h"
 
-class PVulkanPipelineStateLayoutManager;
-class PVulkanDescriptorSetLayoutManager;
-class PVulkanDescriptorSetObjectManager;
-class PVulkanPipelineStateObjectManager;
+class CVulkanViewport;
 
-class FVkDevice
+class CVulkanDevice : public IRHIDevice
 {
 public:
-    FVkDevice()
-    {
-        GPU = nullptr;
-        Device = nullptr;
-        GraphicsQueue = nullptr;
-        PresentQueue = nullptr;
-        GraphicsFamily = 0;
-        PresentFamily = 0;
-    }
+    // IRHIDevice interface
+    virtual void* GetNativeInstance() const final override;
+    virtual void WaitUntilIdle() const final override;
 
-    void Init();
-    void Shutdown();
+    void CreateInstance();
+    void CreateDevice(CVulkanViewport* Viewport);
 
-    VkPhysicalDevice GetVkPhysicalDevice() const;
-    VkDevice GetVkDevice() const;
-    VkQueue GetGraphicsQueue() const;
-    VkQueue GetPresentQueue() const;
-    std::optional<uint32_t> GetGraphicsFamilyIndex() const;
-    std::optional<uint32_t> GetPresentFamilyIndex() const;
-    const std::vector<VkSurfaceFormatKHR>& GetSurfaceFormats() const;
-    const std::vector<VkPresentModeKHR>& GetPresentModes() const;
-    VkSurfaceCapabilitiesKHR GetSurfaceCapabilities() const;
-    VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const;
+    void FreeInstance();
+    void FreeDevice();
 
-private:
-    VkDevice Device;
-    VkPhysicalDevice GPU;
+    bool GetGraphicsQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t>& OutGraphicsQueueFamily);
+    bool GetPresentQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t>& OutPresentQueueFamily);
 
-    VkQueue GraphicsQueue;
-    VkQueue PresentQueue;
+    void GetGraphicsQueue(VkSurfaceKHR Surface, VkQueue& OutGraphicsQueue);
+    void GetPresentQueue(VkSurfaceKHR Surface, VkQueue& OutPresentQueue);
 
-    std::optional<uint32_t> GraphicsFamily;
-    std::optional<uint32_t> PresentFamily;
+    VkInstance Instance;
+    VkPhysicalDevice PhysicalDevice;
+    VkDevice LogicalDevice;
+    VkDebugUtilsMessengerEXT DebugCallback;
+    VmaAllocator Allocator;
 
-    std::vector<VkSurfaceFormatKHR> SurfaceFormats;
-    std::vector<VkPresentModeKHR> PresentModes;
+    std::vector<const char*> ValidationLayerExtensions;
+    std::vector<const char*> InstanceExtensions;
+    std::vector<const char*> PhysicalDeviceExtensions;
 };

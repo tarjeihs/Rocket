@@ -12,7 +12,7 @@
 
 static std::shared_ptr<spdlog::logger> GLogger;
 
-void PLogger::Init()
+void FLogger::Init()
 {
 	spdlog::set_pattern("%^[%T] %n: %v%$");
 
@@ -20,7 +20,7 @@ void PLogger::Init()
 	GLogger->set_level(spdlog::level::trace);
 }
 
-void PLogger::LogImpl(ELogCategory LogCat, const std::string& Message)
+void FLogger::LogImpl(ELogCategory LogCat, const std::string& Message)
 {
 	switch (LogCat)
 	{

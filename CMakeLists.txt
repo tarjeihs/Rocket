@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
-project(Rocket)
+
+project(Rocket LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,7 +70,8 @@ find_package(Vulkan REQUIRED)
 add_subdirectory(Vendor/glfw)
 
 # Target Engine project
-add_library(Engine STATIC 
+#add_library(Engine STATIC
+add_executable(Engine
     ${ENGINE_FILES}
     ${IMGUI_SRC}  # Add ImGui source files to the Engine target
     ${MESHOPTIMIZER_SRC}
@@ -119,44 +121,9 @@ endif()
 target_compile_definitions(Engine PRIVATE
     _CRT_SECURE_NO_WARNINGS
     GLFW_INCLUDE_VULKAN
+    RK_BUILD_DLL
+    RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
 )
-
-# Platform-specific settings
-if(MSVC)
-    add_compile_options(/MP)
-    target_compile_options(Engine PRIVATE /std:c++20)
-
-    set(CMAKE_CXX_FLAGS_DEBUG "/D_DEBUG /MDd /Zi /Ob0 /Od /RTC1")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Ob2 /DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DIST "/MD /O2 /Ob2 /DNDEBUG")
-
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "")
-    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
-
-    target_compile_definitions(Engine PRIVATE
-        RK_BUILD_DLL
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
-else()
-    # Non-MSVC compilers (GCC, Clang)
-    target_compile_options(Engine PRIVATE -std=c++20)
-
-    # -gdwarf required by Windows GDB debug information (symbols, breakpoints)
-    # -gcodeview required by Windows MSVS debug information (symbols, breakpoints)
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -gdwarf -gcodeview")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DIST "-O2 -DNDEBUG")
-
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "")
-    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
-
-    target_compile_definitions(Engine PRIVATE
-        RK_BUILD_DLL
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
-endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Required MS extension for compiling dxcapi and suppress nullability. Enables time-trace to track compilation timers.
@@ -174,5 +141,3 @@ foreach(CONFIG_TYPE IN ITEMS Debug Release Dist)
         target_compile_definitions(Engine PRIVATE RK_DIST)
     endif()
 endforeach()
-
-message("[ROCKET] Using ${CMAKE_CXX_COMPILER_ID} as CMake compiler")

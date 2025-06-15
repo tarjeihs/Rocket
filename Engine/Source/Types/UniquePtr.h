@@ -9,6 +9,11 @@ public:
     {
     }
 
+    TUniquePtr(std::nullptr_t)
+        : Pointer(nullptr)
+    {
+    }
+
     ~TUniquePtr()
     {
         delete Pointer;
@@ -55,6 +60,12 @@ public:
 		return *this;
 	}
 
+    TUniquePtr& operator=(std::nullptr_t)
+    {
+        Reset();
+        return *this;
+    }
+
     TPointer& operator*() const
     {
         return *Pointer;
@@ -86,7 +97,7 @@ public:
 private:
     TPointer* Pointer;
 
-	// Granting access to the private members for TUniquePtr<U> where U is derived from TPointer
+	// Granting access to private members for TUniquePtr<U> where U is derived from TPointer
 	template<typename U> friend class TUniquePtr;
 };
 

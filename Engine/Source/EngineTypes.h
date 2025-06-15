@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "Math/Vector.h"
+
 using SizeType = size_t;
 
 using uint64 = uint64_t;
@@ -14,6 +16,9 @@ using int64 = int64_t;
 using int32 = int32_t;
 using int16 = int16_t;
 using int8 = int8_t;
+
+using FVector64 = TVector<double>;
+using FVector32 = TVector<float>;
 
 static constexpr int32 INDEX_Invalid = 0xffffffff;
 

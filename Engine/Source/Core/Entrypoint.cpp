@@ -2,7 +2,7 @@
 
 int main()
 {
-    PEngine* Engine = new PEngine();
+    CEngine* Engine = new CEngine();
 
     Engine->Start();
 

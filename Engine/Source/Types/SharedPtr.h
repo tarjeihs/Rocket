@@ -102,7 +102,7 @@ public:
 
     bool IsValid() const
     {
-        return Pointer != nullptr && PointerReferenceCounter->StrongCounter != nullptr;
+        return Pointer != nullptr && PointerReferenceCounter->StrongCounter != 0;
     }
 
     FPointerReferenceCounter* GetPointerReferenceCounter() const

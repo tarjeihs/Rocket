@@ -3,30 +3,25 @@
 
 #include "Core/Subsystem.h"
 #include "Platform/Generic/GenericWindow.h"
-#include "Renderer/VulkanRHI.h"
+#include "../Renderer/Vulkan/VulkanRHI.h"
 #include "Utils/Profiler.h"
 
-PEngine* PEngine::GEngine = nullptr;
+CEngine* CEngine::GEngine = nullptr;
 
-void PEngine::Start()
+void CEngine::Start()
 {
 	GEngine = this;
 
-	PLogger::Init();
-
-	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
-	{
-		Subsystem->OnAwake();
-	}
+	FLogger::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
 	Window = new PGenericWindow(WindowSpecification);
-	RHI = new PVulkanRHI();
+	Renderer = new CVulkanRHI();
 	Scene = new PScene();
 
 	Window->CreateNativeWindow();
-	RHI->Init();
+	Renderer->Init();
 	Scene->Init();
 
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
@@ -35,7 +30,7 @@ void PEngine::Start()
 	}
 }
 
-void PEngine::Run()
+void CEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
@@ -50,23 +45,23 @@ void PEngine::Run()
 			Subsystem->OnUpdate(Timestep.GetDeltaTime());
 		}
 
-		RHI->Render();
+		Renderer->Render();
 	}
 }
 
-void PEngine::Stop()
+void CEngine::Stop()
 {
 	for (ISubsystem* Subsystem : SSubsystemStaticRegistry::GetStaticRegistry().GetSubsystems())
 	{
 		Subsystem->OnDetach();
 	}
 
-	RHI->Shutdown();
+	Renderer->Shutdown();
 	Scene->Cleanup();
 	Window->DestroyNativeWindow();
 
 	delete Scene;
-	delete RHI;
+	delete Renderer;
 	delete Window;
 
 	PProfiler::Flush();

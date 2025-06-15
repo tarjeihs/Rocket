@@ -1,6 +1,6 @@
 #include "EnginePCH.h"
 #include "GLTF.h"
-
+/*
 #include "Renderer/Common/Geometry.h"
 #include <Renderer/Common/Texture2D.h>
 #include <Renderer/Common/RHIAPI.h>
@@ -254,4 +254,4 @@ void GLTF::Import(const FString& Path, FPrefab& Prefab)
             Prefab.Submeshes.Add(Submesh);
         }
     }
-}
+}*/

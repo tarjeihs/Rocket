@@ -1,101 +1,135 @@
-#include "EnginePCH.h"
 #include "VulkanDevice.h"
 
-#include "Renderer/Vulkan/VulkanInstance.h"
-#include "Renderer/Vulkan/VulkanDescriptor.h"
+#include "VulkanViewport.h"
 
-void FVkDevice::Init()
+static VkResult BindDebugCallback(VkInstance Instance, const VkDebugUtilsMessengerCreateInfoEXT* CreateInfo, const VkAllocationCallbacks* Allocator, VkDebugUtilsMessengerEXT* DebugCallback)
 {
+	auto Func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkCreateDebugUtilsMessengerEXT");
+	if (Func != nullptr)
+	{
+		return Func(Instance, CreateInfo, Allocator, DebugCallback);
+	}
+	return VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+
+static void UnbindDebugCallback(VkInstance Instance, VkDebugUtilsMessengerEXT DebugCallback, const VkAllocationCallbacks* Allocator)
+{
+	auto Func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkDestroyDebugUtilsMessengerEXT");
+	if (Func != nullptr)
+	{
+		Func(Instance, DebugCallback, Allocator);
+	}
+}
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
+{
+	switch (Severity)
+	{
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:	{ RK_LOG_DEBUG("[VL] {}", CallbackData->pMessage); break; }
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:		{ RK_LOG_INFO("[VL] {}", CallbackData->pMessage);   break; }
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:	{ RK_LOG_WARNING("[VL] {}", CallbackData->pMessage); break; }
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:		{ RK_LOG_ERROR("[VL] {}", CallbackData->pMessage);  break; }
+		default: break;
+	}
+	return VK_FALSE;
+}
+
+void * CVulkanDevice::GetNativeInstance() const
+{
+	return Instance;
+}
+
+void CVulkanDevice::WaitUntilIdle() const
+{
+	vkDeviceWaitIdle(LogicalDevice);
+}
+
+void CVulkanDevice::CreateInstance()
+{
+	InstanceExtensions.push_back("VK_EXT_swapchain_colorspace");
+	PhysicalDeviceExtensions.push_back("VK_KHR_swapchain");
+
+#if VALIDATION_LAYER
+	InstanceExtensions.push_back("VK_EXT_debug_utils");
+	ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
+#endif
+
+	// GLFW required Vulkan extensions
+	uint32_t GlfwExtensionCount = 0;
+	const char** GlfwExtensions = glfwGetRequiredInstanceExtensions(&GlfwExtensionCount);
+	InstanceExtensions.insert(InstanceExtensions.end(), GlfwExtensions, GlfwExtensions + GlfwExtensionCount);
+
+	VkApplicationInfo ApplicationInfo = {};
+	ApplicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	ApplicationInfo.pApplicationName = "Rocket Engine";
+	ApplicationInfo.applicationVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
+	ApplicationInfo.pEngineName = "No Engine";
+	ApplicationInfo.engineVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
+	ApplicationInfo.apiVersion = VK_API_VERSION_1_3;
+
+	VkDebugUtilsMessengerCreateInfoEXT DebugMessengerCreateInfo{};
+	DebugMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	DebugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	DebugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	DebugMessengerCreateInfo.pfnUserCallback = ExecDebugCallback;
+
+	VkInstanceCreateInfo InstanceCreateInfo{};
+	InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
+	InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(InstanceExtensions.size());
+	InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
+	InstanceCreateInfo.enabledLayerCount = ValidationLayerExtensions.size();
+	InstanceCreateInfo.ppEnabledLayerNames = ValidationLayerExtensions.data();
+	InstanceCreateInfo.pNext = &DebugMessengerCreateInfo;
+
+	VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
+
+#if VALIDATION_LAYER
+	Result = BindDebugCallback(Instance, &DebugMessengerCreateInfo, nullptr, &DebugCallback);
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to create debug callback.");
+#endif
+}
+
+void CVulkanDevice::CreateDevice(CVulkanViewport* Viewport)
+{
+	std::optional<uint32> GraphicsQueueFamily;
+	std::optional<uint32> PresentQueueFamily;
+
+	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
+	std::vector<VkPresentModeKHR> PresentModes;
+
 	uint32_t DeviceCount = 0;
-	vkEnumeratePhysicalDevices(GetRHI()->GetInstance()->GetVkInstance(), &DeviceCount, 0);
+	vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
 
 	std::vector<VkPhysicalDevice> PhysicalDevices(DeviceCount);
-	vkEnumeratePhysicalDevices(GetRHI()->GetInstance()->GetVkInstance(), &DeviceCount, PhysicalDevices.data());
+	vkEnumeratePhysicalDevices(Instance, &DeviceCount, PhysicalDevices.data());
 
-	for (VkPhysicalDevice PhysicalDevice : PhysicalDevices)
+	for (VkPhysicalDevice GPU : PhysicalDevices)
 	{
-		uint32_t QueueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
+		GetGraphicsQueueFamily(GPU, Viewport->Surface, GraphicsQueueFamily);
+		GetPresentQueueFamily(GPU, Viewport->Surface, PresentQueueFamily);
 
-		std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
-		
-		for (uint32_t Index = 0; Index < QueueFamilyCount; Index++)
+		Viewport->GetSurfaceFormats(GPU, SurfaceFormats);
+		Viewport->GetPresentModes(GPU, PresentModes);
+
+		if (!SurfaceFormats.empty() && !PresentModes.empty() && GraphicsQueueFamily.has_value() && PresentQueueFamily.has_value())
 		{
-			const VkQueueFamilyProperties& FamilyProperty = QueueFamilies[Index];
-			VkBool32 PresentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, Index, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentSupport);
-			
-			if (FamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			{
-				GraphicsFamily = Index;
-			}
+			VkPhysicalDeviceProperties PhysicalDeviceProperties;
+			vkGetPhysicalDeviceProperties(GPU, &PhysicalDeviceProperties);
 
-			if (PresentSupport)
-			{
-				PresentFamily = Index;
-			}
-
-			if (GraphicsFamily.has_value() && PresentFamily.has_value())
-			{
-				break;
-			}
-		}
-
-		uint32_t ExtensionCount;
-		vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, nullptr);
-
-		std::vector<VkExtensionProperties> AvailableExtensions(ExtensionCount);
-		vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
-
-		bool bExtensionSupport = std::all_of(GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.begin(), GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.end(), [&AvailableExtensions](const std::string& RequiredExtension)
-		{
-			return std::any_of(AvailableExtensions.begin(), AvailableExtensions.end(), [&RequiredExtension](const VkExtensionProperties& Extension)
-			{
-				return RequiredExtension == Extension.extensionName;
-			});
-		});
-
-		if (bExtensionSupport)
-		{
-			uint32_t FormatCount;
-			uint32_t PresentModeCount;
-		
-			vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &FormatCount, nullptr);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, nullptr);
-
-			if (FormatCount)
-			{
-				SurfaceFormats.resize(FormatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &FormatCount, SurfaceFormats.data());
-			}
-
-			if (PresentModeCount)
-			{
-				PresentModes.resize(PresentModeCount);
-				vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &PresentModeCount, PresentModes.data());
-			}
-
-			if (!SurfaceFormats.empty() && !PresentModes.empty() && GraphicsFamily.has_value() && PresentFamily.has_value())
-			{
-				VkPhysicalDeviceProperties PhysicalDeviceProperties;
-    			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
-
-				PLogger::Log(ELogCategory ::LOG_INFO, "Using Physical Device: {}", PhysicalDeviceProperties.deviceName);
-
-				GPU = PhysicalDevice;
-				break;
-			}
+			PhysicalDevice = GPU;
+			break;
 		}
 	}
 
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
-	std::set<uint32_t> QueueFamilies { GraphicsFamily.value(), PresentFamily.value() };
+	std::set<uint32_t> QueueFamilies = { GraphicsQueueFamily.value(), PresentQueueFamily.value() };
 
 	float QueuePriority = 1.0f;
 	for (uint32_t QueueFamily : QueueFamilies)
 	{
-		VkDeviceQueueCreateInfo QueueFamilyCreateInfo{};
+		VkDeviceQueueCreateInfo QueueFamilyCreateInfo = {};
 		QueueFamilyCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		QueueFamilyCreateInfo.queueFamilyIndex = QueueFamily;
 		QueueFamilyCreateInfo.queueCount = 1;
@@ -104,13 +138,13 @@ void FVkDevice::Init()
 	}
 
 	// Vulkan 1.3 features
-	VkPhysicalDeviceVulkan13Features Features_1_3{};
+	VkPhysicalDeviceVulkan13Features Features_1_3 = {};
 	Features_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 	Features_1_3.dynamicRendering = VK_TRUE;
 	Features_1_3.synchronization2 = VK_TRUE;
 
 	// Vulkan 1.2 features
-	VkPhysicalDeviceVulkan12Features Features_1_2{};
+	VkPhysicalDeviceVulkan12Features Features_1_2 = {};
 	Features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	Features_1_2.bufferDeviceAddress = VK_TRUE;
 	Features_1_2.bufferDeviceAddressCaptureReplay = VK_TRUE;
@@ -124,7 +158,7 @@ void FVkDevice::Init()
 	// Chain the features together
 	Features_1_3.pNext = &Features_1_2;
 
-	VkPhysicalDeviceFeatures DeviceFeatures{};
+	VkPhysicalDeviceFeatures DeviceFeatures = {};
 	DeviceFeatures.shaderInt64 = VK_TRUE;
 	DeviceFeatures.samplerAnisotropy = VK_TRUE;
 	DeviceFeatures.multiDrawIndirect = VK_TRUE;
@@ -135,73 +169,111 @@ void FVkDevice::Init()
 	DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
 	DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
 	DeviceCreateInfo.pNext = &Features_1_3;
-	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.size());
-	DeviceCreateInfo.ppEnabledExtensionNames = GetRHI()->ExtensionFamily.PhysicalDeviceExtensions.data();
-	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetRHI()->ExtensionFamily.ValidationLayerExtensions.size());
-	DeviceCreateInfo.ppEnabledLayerNames = GetRHI()->ExtensionFamily.ValidationLayerExtensions.data();
+	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(PhysicalDeviceExtensions.size());
+	DeviceCreateInfo.ppEnabledExtensionNames = PhysicalDeviceExtensions.data();
+	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayerExtensions.size());
+	DeviceCreateInfo.ppEnabledLayerNames = ValidationLayerExtensions.data();
 
-	VkResult Result = vkCreateDevice(GPU, &DeviceCreateInfo, nullptr, &Device);
-	RK_ASSERT(Result == VK_SUCCESS, "Failed to create logical device.");
+	VkResult Result = vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &LogicalDevice);
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
-	vkGetDeviceQueue(Device, GraphicsFamily.value(), 0, &GraphicsQueue);
-	vkGetDeviceQueue(Device, PresentFamily.value(), 0, &PresentQueue);
+	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
+	AllocatorCreateInfo.physicalDevice = PhysicalDevice;
+	AllocatorCreateInfo.device = LogicalDevice;
+	AllocatorCreateInfo.instance = Instance;
+	AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+	Result = vmaCreateAllocator(&AllocatorCreateInfo, &Allocator);
+	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize memory allocator.");
 }
 
-void FVkDevice::Shutdown()
+void CVulkanDevice::FreeInstance()
 {
-	vkDestroyDevice(Device, nullptr);
+#if VALIDATION_LAYER
+	UnbindDebugCallback(Instance, DebugCallback, nullptr);
+#endif
+
+	vkDestroyInstance(Instance, nullptr);
+
+	Instance = nullptr;
+	DebugCallback = nullptr;
 }
 
-VkPhysicalDevice FVkDevice::GetVkPhysicalDevice() const
+void CVulkanDevice::FreeDevice()
 {
-	return GPU;
+	vmaDestroyAllocator(Allocator);
+	vkDestroyDevice(LogicalDevice, nullptr);
+
+	PhysicalDevice = nullptr;
+	LogicalDevice = nullptr;
 }
 
-VkDevice FVkDevice::GetVkDevice() const
+bool CVulkanDevice::GetGraphicsQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t> &OutGraphicsQueueFamily)
 {
-	return Device;
+	uint32 QueueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
+
+	for (uint32 Index = 0; Index < QueueFamilyCount; Index++)
+	{
+		if (QueueFamilies[Index].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			OutGraphicsQueueFamily = Index;
+			RK_LOG_INFO("An appropriate graphics queue family has been found.");
+			return true;
+		}
+	}
+
+	return false;
 }
 
-VkQueue FVkDevice::GetGraphicsQueue() const
+bool CVulkanDevice::GetPresentQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t> &OutPresentQueueFamily)
 {
-	return GraphicsQueue;
+	uint32 QueueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
+
+	for (uint32 Index = 0; Index < QueueFamilyCount; ++Index)
+	{
+		VkBool32 PresentSupport = VK_FALSE;
+		vkGetPhysicalDeviceSurfaceSupportKHR(InPhysicalDevice, Index, Surface, &PresentSupport);
+
+		if (PresentSupport)
+		{
+			OutPresentQueueFamily = Index;
+			RK_LOG_INFO("An appropriate present queue family has been found.");
+			return true;
+		}
+	}
+
+	return false;
 }
 
-VkQueue FVkDevice::GetPresentQueue() const
+void CVulkanDevice::GetGraphicsQueue(VkSurfaceKHR Surface, VkQueue &OutGraphicsQueue)
 {
-	return PresentQueue;
+	RK_ASSERT(PhysicalDevice != nullptr, "Physical device cannot be null.");
+
+	std::optional<uint32_t> GraphicsQueueFamily;
+	bool Success = GetGraphicsQueueFamily(PhysicalDevice, Surface, GraphicsQueueFamily);
+
+	if (Success)
+	{
+		vkGetDeviceQueue(LogicalDevice, GraphicsQueueFamily.value(), 0, &OutGraphicsQueue);
+	}
 }
 
-std::optional<uint32_t> FVkDevice::GetGraphicsFamilyIndex() const
+void CVulkanDevice::GetPresentQueue(VkSurfaceKHR Surface, VkQueue &OutPresentQueue)
 {
-	return GraphicsFamily;
-}
+	RK_ASSERT(PhysicalDevice != nullptr, "Physical device cannot be null.");
 
-std::optional<uint32_t> FVkDevice::GetPresentFamilyIndex() const
-{
-	return PresentFamily;
-}
+	std::optional<uint32_t> PresentQueueFamily;
+	bool Success = GetPresentQueueFamily(PhysicalDevice, Surface, PresentQueueFamily);
 
-const std::vector<VkSurfaceFormatKHR>& FVkDevice::GetSurfaceFormats() const
-{
-	return SurfaceFormats;
-}
-
-const std::vector<VkPresentModeKHR>& FVkDevice::GetPresentModes() const
-{
-	return PresentModes;
-}
-
-VkSurfaceCapabilitiesKHR FVkDevice::GetSurfaceCapabilities() const
-{
-	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GPU, GetRHI()->GetInstance()->GetVkSurfaceKHR(), &SurfaceCapabilities);
-	return SurfaceCapabilities;
-}
-
-VkPhysicalDeviceProperties FVkDevice::GetPhysicalDeviceProperties() const
-{
-	VkPhysicalDeviceProperties PhysicalDeviceProperties;
-	vkGetPhysicalDeviceProperties(GPU, &PhysicalDeviceProperties);
-	return PhysicalDeviceProperties;
+	if (Success)
+	{
+		vkGetDeviceQueue(LogicalDevice, PresentQueueFamily.value(), 0, &OutPresentQueue);
+	}
 }
