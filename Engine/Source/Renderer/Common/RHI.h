@@ -16,9 +16,8 @@ public:
     virtual void Resize() = 0;
     virtual void Render() = 0;
 
-    virtual IRHIDevice* GetDevice() const = 0;
-    virtual IRHIViewport* GetViewport() const = 0;
-    virtual IRHICommandList* GetCommandList() const = 0;
+    virtual IRHIDevice* GetDevice() = 0;
+    virtual IRHIViewport* GetViewport(uint32_t Index = 0) = 0;
 };
 
 #define RK_RHI VULKAN
@@ -37,3 +36,6 @@ TRHI* GetRHI()
     IRHI* Renderer = GetEngine()->GetRHI();
     return static_cast<TRHI*>(Renderer);
 }
+
+#define FRAME_IN_FLIGHT  2
+#define DEBUG_VALIDATION 1

@@ -7,6 +7,8 @@ class IRHIViewport
 public:
     virtual ~IRHIViewport() = default;
 
-    virtual void Swap(IRHICommandList& CmdList) = 0;
-    virtual void Present(IRHICommandList& CmdList) = 0;
+    virtual void BeginFrame() = 0;
+    virtual void EndFrame() = 0;
+    virtual void Present() = 0;
+    virtual void Resize() = 0;
 };

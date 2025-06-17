@@ -47,7 +47,6 @@
 #include "Scene/Entity.h"
 #include "Scene/Registry.h"
 #include "Renderer/Common/RHI.h"
-#include "Renderer/Settings.h"
 #include "Math/Math.h"
 #include "Utils/FileSystem.h"
 #include "Utils/Hash.h"

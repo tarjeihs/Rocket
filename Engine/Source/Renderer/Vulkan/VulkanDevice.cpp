@@ -1,6 +1,8 @@
 #include "VulkanDevice.h"
 
 #include "VulkanViewport.h"
+#include "VulkanQueue.h"
+#include "VulkanRHI.h"
 
 static VkResult BindDebugCallback(VkInstance Instance, const VkDebugUtilsMessengerCreateInfoEXT* CreateInfo, const VkAllocationCallbacks* Allocator, VkDebugUtilsMessengerEXT* DebugCallback)
 {
@@ -34,6 +36,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSever
 	return VK_FALSE;
 }
 
+void * CVulkanDevice::GetNativeDevice() const
+{
+	return PhysicalDevice;
+}
+
+void * CVulkanDevice::GetNativeDriver() const
+{
+	return LogicalDevice;
+}
+
 void * CVulkanDevice::GetNativeInstance() const
 {
 	return Instance;
@@ -44,12 +56,12 @@ void CVulkanDevice::WaitUntilIdle() const
 	vkDeviceWaitIdle(LogicalDevice);
 }
 
-void CVulkanDevice::CreateInstance()
+void CVulkanDevice::Initialize()
 {
 	InstanceExtensions.push_back("VK_EXT_swapchain_colorspace");
 	PhysicalDeviceExtensions.push_back("VK_KHR_swapchain");
 
-#if VALIDATION_LAYER
+#if DEBUG_VALIDATION
 	InstanceExtensions.push_back("VK_EXT_debug_utils");
 	ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
 #endif
@@ -61,7 +73,7 @@ void CVulkanDevice::CreateInstance()
 
 	VkApplicationInfo ApplicationInfo = {};
 	ApplicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	ApplicationInfo.pApplicationName = "Rocket Engine";
+	ApplicationInfo.pApplicationName = "Rocket";
 	ApplicationInfo.applicationVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
 	ApplicationInfo.pEngineName = "No Engine";
 	ApplicationInfo.engineVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
@@ -73,7 +85,7 @@ void CVulkanDevice::CreateInstance()
 	DebugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	DebugMessengerCreateInfo.pfnUserCallback = ExecDebugCallback;
 
-	VkInstanceCreateInfo InstanceCreateInfo{};
+	VkInstanceCreateInfo InstanceCreateInfo = {};
 	InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
 	InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(InstanceExtensions.size());
@@ -85,54 +97,77 @@ void CVulkanDevice::CreateInstance()
 	VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
 
-#if VALIDATION_LAYER
+#if DEBUG_VALIDATION
 	Result = BindDebugCallback(Instance, &DebugMessengerCreateInfo, nullptr, &DebugCallback);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to create debug callback.");
 #endif
-}
-
-void CVulkanDevice::CreateDevice(CVulkanViewport* Viewport)
-{
-	std::optional<uint32> GraphicsQueueFamily;
-	std::optional<uint32> PresentQueueFamily;
-
-	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
-	std::vector<VkPresentModeKHR> PresentModes;
 
 	uint32_t DeviceCount = 0;
 	vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
 
-	std::vector<VkPhysicalDevice> PhysicalDevices(DeviceCount);
-	vkEnumeratePhysicalDevices(Instance, &DeviceCount, PhysicalDevices.data());
+	std::vector<VkPhysicalDevice> AllPhysicalDevices(DeviceCount);
+	vkEnumeratePhysicalDevices(Instance, &DeviceCount, AllPhysicalDevices.data());
 
-	for (VkPhysicalDevice GPU : PhysicalDevices)
+	std::vector<VkPhysicalDevice> DiscreteDevices;
+	std::vector<VkPhysicalDevice> IntegratedDevices;
+	std::vector<VkPhysicalDevice> VirtualDevices;
+
+	for (VkPhysicalDevice GPU : AllPhysicalDevices)
 	{
-		GetGraphicsQueueFamily(GPU, Viewport->Surface, GraphicsQueueFamily);
-		GetPresentQueueFamily(GPU, Viewport->Surface, PresentQueueFamily);
+		VkPhysicalDeviceProperties GPUProperties;
+		vkGetPhysicalDeviceProperties(GPU, &GPUProperties);
 
-		Viewport->GetSurfaceFormats(GPU, SurfaceFormats);
-		Viewport->GetPresentModes(GPU, PresentModes);
+		if (GPUProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) DiscreteDevices.push_back(GPU);
+		if (GPUProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) IntegratedDevices.push_back(GPU);
+		if (GPUProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) VirtualDevices.push_back(GPU);
+	}
 
-		if (!SurfaceFormats.empty() && !PresentModes.empty() && GraphicsQueueFamily.has_value() && PresentQueueFamily.has_value())
+	std::vector<VkPhysicalDevice> AvailablePhysicalDevices;
+	AvailablePhysicalDevices.insert(AvailablePhysicalDevices.end(), DiscreteDevices.begin(), DiscreteDevices.end());
+	AvailablePhysicalDevices.insert(AvailablePhysicalDevices.end(), IntegratedDevices.begin(), IntegratedDevices.end());
+	AvailablePhysicalDevices.insert(AvailablePhysicalDevices.end(), VirtualDevices.begin(), VirtualDevices.end());
+
+	for (VkPhysicalDevice CurrentPhysicalDevice : AvailablePhysicalDevices)
+	{
+		uint32_t ExtensionCount;
+		vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, nullptr);
+
+		std::vector<VkExtensionProperties> AvailableExtensions(ExtensionCount);
+		vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
+
+		std::unordered_set<std::string_view> Filter;
+		Filter.insert(PhysicalDeviceExtensions.begin(), PhysicalDeviceExtensions.end());
+
+		for (VkExtensionProperties Extension : AvailableExtensions)
 		{
-			VkPhysicalDeviceProperties PhysicalDeviceProperties;
-			vkGetPhysicalDeviceProperties(GPU, &PhysicalDeviceProperties);
+			if (Filter.contains(Extension.extensionName))
+			{
+				Filter.erase(Extension.extensionName);
+			}
+		}
 
-			PhysicalDevice = GPU;
+		if (Filter.empty())
+		{
+			PhysicalDevice = CurrentPhysicalDevice;
 			break;
 		}
 	}
 
-	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
-	std::set<uint32_t> QueueFamilies = { GraphicsQueueFamily.value(), PresentQueueFamily.value() };
+	uint32 QueueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
 
-	float QueuePriority = 1.0f;
-	for (uint32_t QueueFamily : QueueFamilies)
+	std::vector<VkQueueFamilyProperties> QueueFamiliesProperties(QueueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamiliesProperties.data());
+
+	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
+
+	for (int Index = 0; Index < QueueFamilyCount; Index++)
 	{
+		float QueuePriority = 1.0f;
 		VkDeviceQueueCreateInfo QueueFamilyCreateInfo = {};
 		QueueFamilyCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		QueueFamilyCreateInfo.queueFamilyIndex = QueueFamily;
 		QueueFamilyCreateInfo.queueCount = 1;
+		QueueFamilyCreateInfo.queueFamilyIndex = Index;
 		QueueFamilyCreateInfo.pQueuePriorities = &QueuePriority;
 		QueueCreateInfos.push_back(QueueFamilyCreateInfo);
 	}
@@ -174,7 +209,7 @@ void CVulkanDevice::CreateDevice(CVulkanViewport* Viewport)
 	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayerExtensions.size());
 	DeviceCreateInfo.ppEnabledLayerNames = ValidationLayerExtensions.data();
 
-	VkResult Result = vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &LogicalDevice);
+	Result = vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &LogicalDevice);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
 	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
@@ -184,96 +219,80 @@ void CVulkanDevice::CreateDevice(CVulkanViewport* Viewport)
 	AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 	Result = vmaCreateAllocator(&AllocatorCreateInfo, &Allocator);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize memory allocator.");
+
+	for (uint32 Index = 0; Index < QueueFamilyCount; Index++)
+	{
+		if ((QueueFamiliesProperties[Index].queueFlags & 0xF) == 0xF) // Raster + Compute + Transfer + Sparse
+		{
+			Queue[ERHIQueueClass::Graphics].Capabilities.Engine = Index;
+			vkGetDeviceQueue(GetLogicalDevice(), Index, 0, &Queue[ERHIQueueClass::Graphics].Queue);
+		}
+		else if ((QueueFamiliesProperties[Index].queueFlags & 0xE) == 0xE) // Compute + Transfer + Sparse
+		{
+			Queue[ERHIQueueClass::Compute].Capabilities.Engine = Index;
+			vkGetDeviceQueue(GetLogicalDevice(), Index, 0, &Queue[ERHIQueueClass::Compute].Queue);
+		}
+		else if ((QueueFamiliesProperties[Index].queueFlags & 0xC) == 0xC) // Transfer + Sparse
+		{
+			Queue[ERHIQueueClass::Transfer].Capabilities.Engine = Index;
+			vkGetDeviceQueue(GetLogicalDevice(), Index, 0, &Queue[ERHIQueueClass::Transfer].Queue);
+		}
+	}
 }
 
-void CVulkanDevice::FreeInstance()
+void CVulkanDevice::Shutdown()
 {
-#if VALIDATION_LAYER
+	vmaDestroyAllocator(Allocator);
+	vkDestroyDevice(LogicalDevice, nullptr);
+
+#if DEBUG_VALIDATION
 	UnbindDebugCallback(Instance, DebugCallback, nullptr);
 #endif
 
 	vkDestroyInstance(Instance, nullptr);
 
-	Instance = nullptr;
-	DebugCallback = nullptr;
-}
-
-void CVulkanDevice::FreeDevice()
-{
-	vmaDestroyAllocator(Allocator);
-	vkDestroyDevice(LogicalDevice, nullptr);
-
 	PhysicalDevice = nullptr;
 	LogicalDevice = nullptr;
+	DebugCallback = nullptr;
+	Instance = nullptr;
 }
 
-bool CVulkanDevice::GetGraphicsQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t> &OutGraphicsQueueFamily)
+IRHIQueue * CVulkanDevice::GetGraphicsQueue()
 {
-	uint32 QueueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
-
-	for (uint32 Index = 0; Index < QueueFamilyCount; Index++)
-	{
-		if (QueueFamilies[Index].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-		{
-			OutGraphicsQueueFamily = Index;
-			RK_LOG_INFO("An appropriate graphics queue family has been found.");
-			return true;
-		}
-	}
-
-	return false;
+	return &Queue.at(ERHIQueueClass::Graphics);
 }
 
-bool CVulkanDevice::GetPresentQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t> &OutPresentQueueFamily)
+IRHIQueue * CVulkanDevice::GetComputeQueue()
 {
-	uint32 QueueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> QueueFamilies(QueueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(InPhysicalDevice, &QueueFamilyCount, QueueFamilies.data());
-
-	for (uint32 Index = 0; Index < QueueFamilyCount; ++Index)
-	{
-		VkBool32 PresentSupport = VK_FALSE;
-		vkGetPhysicalDeviceSurfaceSupportKHR(InPhysicalDevice, Index, Surface, &PresentSupport);
-
-		if (PresentSupport)
-		{
-			OutPresentQueueFamily = Index;
-			RK_LOG_INFO("An appropriate present queue family has been found.");
-			return true;
-		}
-	}
-
-	return false;
+	return &Queue.at(ERHIQueueClass::Compute);
 }
 
-void CVulkanDevice::GetGraphicsQueue(VkSurfaceKHR Surface, VkQueue &OutGraphicsQueue)
+IRHIQueue * CVulkanDevice::GetTransferQueue()
 {
-	RK_ASSERT(PhysicalDevice != nullptr, "Physical device cannot be null.");
-
-	std::optional<uint32_t> GraphicsQueueFamily;
-	bool Success = GetGraphicsQueueFamily(PhysicalDevice, Surface, GraphicsQueueFamily);
-
-	if (Success)
-	{
-		vkGetDeviceQueue(LogicalDevice, GraphicsQueueFamily.value(), 0, &OutGraphicsQueue);
-	}
+	return &Queue.at(ERHIQueueClass::Transfer);
 }
 
-void CVulkanDevice::GetPresentQueue(VkSurfaceKHR Surface, VkQueue &OutPresentQueue)
+IRHIQueue * CVulkanDevice::GetPresentQueue()
 {
-	RK_ASSERT(PhysicalDevice != nullptr, "Physical device cannot be null.");
+	return &Queue.at(ERHIQueueClass::Graphics);
+}
 
-	std::optional<uint32_t> PresentQueueFamily;
-	bool Success = GetPresentQueueFamily(PhysicalDevice, Surface, PresentQueueFamily);
+VkInstance CVulkanDevice::GetRHIVulkanInstance() const
+{
+	return Instance;
+}
 
-	if (Success)
-	{
-		vkGetDeviceQueue(LogicalDevice, PresentQueueFamily.value(), 0, &OutPresentQueue);
-	}
+VkPhysicalDevice CVulkanDevice::GetRHIVulkanPhysicalDevice() const
+{
+	return PhysicalDevice;
+}
+
+VkDevice CVulkanDevice::GetLogicalDevice() const
+{
+	return LogicalDevice;
+}
+
+VmaAllocator CVulkanDevice::GetAllocator() const
+{
+	return Allocator;
 }

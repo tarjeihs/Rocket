@@ -1,27 +1,49 @@
 #pragma once
 
+#include "VulkanDependency.h"
+#include "Renderer/Common/RHIFrame.h"
 #include "Renderer/Common/RHIViewport.h"
 
-class CVulkanDevice;
+class IRHIFence;
+class IRHISemaphore;
+
+struct CVulkanBackbuffer
+{
+    VkImage        image          = VK_NULL_HANDLE;
+    VkImageView    view           = VK_NULL_HANDLE;
+};
+
+struct CVulkanFrame : IRHIFrame
+{
+    FVulkanSemaphore ImageAvailableSemaphore;        // signalled by acquire
+    FVulkanSemaphore RenderFinishedSemaphore;        // signalled by queue
+    FVulkanFence InFlightFence;                      // waited by CPU
+    IRHICommandList* CommandList;                  // primary CB
+    uint32_t ImageIndex = 0;
+};
 
 class CVulkanViewport : public IRHIViewport
 {
 public:
-    virtual void Swap(IRHICommandList& CmdList) override;
-    virtual void Present(IRHICommandList& CmdList) override;
+    virtual void BeginFrame() override;
+    virtual void EndFrame() override;
+    virtual void Present() override;
+    virtual void Resize() override;
 
-    void CreateViewport(CVulkanDevice* Device);
-    void CreateSwapchain(CVulkanDevice* Device);
+    void Initialize();
+    void Shutdown();
 
-    void FreeViewport(CVulkanDevice* Device);
-    void FreeSwapchain(CVulkanDevice* Device);
+    void CreateSwapchain();
+    void DestroySwapchain();
 
-    void GetSurfaceFormats(VkPhysicalDevice InPhysicalDevice, std::vector<VkSurfaceFormatKHR>& OutSurfaceFormats) const;
-    void GetPresentModes(VkPhysicalDevice InPhysicalDevice, std::vector<VkPresentModeKHR>& OutPresentMode) const;
-
-    VkSwapchainKHR SwapchainKHR;
+    VkSwapchainKHR Swapchain;
     VkSurfaceKHR Surface;
+    VkExtent2D Extent;
+    VkPresentModeKHR PresentMode;
+    VkSurfaceFormatKHR SurfaceFormat;
 
-    std::vector<VkImage> Backbuffer;
-    std::vector<VkImageView> BackbufferView;
+    uint32_t FrameIndex = 0;
+
+    std::vector<CVulkanBackbuffer> Backbuffer;
+    std::vector<CVulkanFrame> Frame;
 };

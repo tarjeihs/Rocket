@@ -2,6 +2,7 @@
 
 #include "Renderer/Common/RHI.h"
 
+class CVulkanFrame;
 class CVulkanDevice;
 class CVulkanViewport;
 class CVulkanCommandList;
@@ -15,12 +16,10 @@ public:
     virtual void Resize() final override;
     virtual void Render() final override;
 
-    virtual IRHIDevice* GetDevice() const override;
-    virtual IRHIViewport* GetViewport() const override;
-    virtual IRHICommandList* GetCommandList() const override;
+    virtual IRHIDevice* GetDevice() override;
+    virtual IRHIViewport* GetViewport(uint32_t Index = 0) override;
 
 private:
     TUniquePtr<CVulkanDevice> Device;
-    TUniquePtr<CVulkanViewport> Viewport;
-    TUniquePtr<CVulkanCommandList> CommandList;
+    std::vector<TUniquePtr<CVulkanViewport>> Viewports;
 };

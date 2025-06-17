@@ -1,28 +1,31 @@
 #pragma once
 
+#include "VulkanQueue.h"
 #include "Renderer/Common/RHIDevice.h"
-
-class CVulkanViewport;
 
 class CVulkanDevice : public IRHIDevice
 {
 public:
     // IRHIDevice interface
+    virtual void* GetNativeDevice() const final override;
+    virtual void* GetNativeDriver() const final override;
     virtual void* GetNativeInstance() const final override;
     virtual void WaitUntilIdle() const final override;
 
-    void CreateInstance();
-    void CreateDevice(CVulkanViewport* Viewport);
+    void Initialize();
+    void Shutdown();
 
-    void FreeInstance();
-    void FreeDevice();
+    virtual IRHIQueue *GetGraphicsQueue() override;
+    virtual IRHIQueue *GetComputeQueue() override;
+    virtual IRHIQueue *GetTransferQueue() override;
+    virtual IRHIQueue *GetPresentQueue() override;
 
-    bool GetGraphicsQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t>& OutGraphicsQueueFamily);
-    bool GetPresentQueueFamily(VkPhysicalDevice InPhysicalDevice, VkSurfaceKHR Surface, std::optional<uint32_t>& OutPresentQueueFamily);
+    VkInstance GetRHIVulkanInstance() const;
+    VkPhysicalDevice GetRHIVulkanPhysicalDevice() const;
+    VkDevice GetLogicalDevice() const;
+    VmaAllocator GetAllocator() const;
 
-    void GetGraphicsQueue(VkSurfaceKHR Surface, VkQueue& OutGraphicsQueue);
-    void GetPresentQueue(VkSurfaceKHR Surface, VkQueue& OutPresentQueue);
-
+private:
     VkInstance Instance;
     VkPhysicalDevice PhysicalDevice;
     VkDevice LogicalDevice;
@@ -32,4 +35,6 @@ public:
     std::vector<const char*> ValidationLayerExtensions;
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> PhysicalDeviceExtensions;
+
+    std::unordered_map<ERHIQueueClass, CVulkanQueue> Queue;
 };

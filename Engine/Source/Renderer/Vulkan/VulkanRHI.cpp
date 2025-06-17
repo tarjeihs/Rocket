@@ -8,50 +8,46 @@
 void CVulkanRHI::Init()
 {
 	Device = MakeUnique<CVulkanDevice>();
-	Viewport = MakeUnique<CVulkanViewport>();
+	Device->Initialize();
 
-	Device->CreateInstance();
-	Viewport->CreateViewport(Device.Get());
-
-	Device->CreateDevice(Viewport.Get());
-	Viewport->CreateSwapchain(Device.Get());
+	Viewports.push_back(MakeUnique<CVulkanViewport>());
+	Viewports[0]->Initialize();
 }
 
 void CVulkanRHI::Shutdown()
 {
 	Device->WaitUntilIdle();
 
-	Viewport->FreeSwapchain(Device.Get());
-	Viewport->FreeViewport(Device.Get());
+	for (const auto& Viewport : Viewports)
+	{
+		Viewport->Shutdown();
+	}
 
-	Device->FreeDevice();
-	Device->FreeInstance();
+	Device->Shutdown();
 }
 
 void CVulkanRHI::Resize()
 {
-	Device->WaitUntilIdle();
-
-	Viewport->FreeSwapchain(Device.Get());
-	Viewport->CreateSwapchain(Device.Get());
+	//Device->WaitUntilIdle();
 }
 
 void CVulkanRHI::Render()
 {
 
+	for (const auto& Viewport : Viewports)
+	{
+		Viewport->BeginFrame();
+		Viewport->EndFrame();
+		Viewport->Present();
+	}
 }
 
-IRHIDevice* CVulkanRHI::GetDevice() const
+IRHIDevice* CVulkanRHI::GetDevice()
 {
 	return Device.Get();
 }
 
-IRHIViewport* CVulkanRHI::GetViewport() const
+IRHIViewport* CVulkanRHI::GetViewport(uint32_t Index)
 {
-	return Viewport.Get();
-}
-
-IRHICommandList* CVulkanRHI::GetCommandList() const
-{
-	return CommandList.Get();
+	return Viewports[Index].Get();
 }
