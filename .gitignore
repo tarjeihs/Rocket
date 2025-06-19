@@ -6,40 +6,10 @@
 !/.git*
 
 # Do not ignore source, config and plugins dirs.
-!/Binaries/**
-!/Editor/**
-!/Engine/**
-!/Vendor/**
+!/Config/**
+!/Source/**
 
-# Explicitly ignore the Build directory
-/Build/
-
+# Do not ignore README.md, CMakeLists.txt or CMakePresets.json
+!README.md
 !CMakeLists.txt
-!Build.bat
-
-# Windows
-ehthumbs.db
-Thumbs.db
-
-# Mac OS X
-.DS_Store
-.DS_Store?
-.AppleDouble
-.LSOverride
-._*
-
-# Linux
-*~
-.directory
-
-# vim
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
-*.un~
-Session.vim
-.netrwhist
-
-# Visual Studio project files
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
+!CMakePresets.json
