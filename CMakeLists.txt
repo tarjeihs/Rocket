@@ -200,5 +200,5 @@ add_custom_command(
     TARGET Rocket POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_BINARY_DIR}/compile_commands.json
-        ${CMAKE_SOURCE_DIR}/compile_commands.json
+        ${CMAKE_BINARY_DIR}/../compile_commands.json
 )
