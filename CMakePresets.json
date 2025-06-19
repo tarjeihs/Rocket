@@ -1,0 +1,32 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": { "major": 3, "minor": 23, "patch": 0 },
+
+    "configurePresets": [
+        {
+            "name": "gcc",
+            "displayName": "GCC",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/Build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "clang",
+            "displayName": "Clang",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/Build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        }
+    ],
+
+    "buildPresets": [
+        { "name": "gcc",   "configurePreset": "gcc"   },
+        { "name": "clang", "configurePreset": "clang" }
+    ]
+}
