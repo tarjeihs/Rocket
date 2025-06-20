@@ -6,7 +6,7 @@
 
 CEngine* CEngine::GEngine = nullptr;
 
-ERHIType RHIType = ERHIType::Vulkan;
+ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
 
 void CEngine::Start()
 {
@@ -15,19 +15,13 @@ void CEngine::Start()
 	FLogger::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
-    
-    IRHIModule* RHIModule = nullptr;
-
-    switch (RHIType)
-    {
-        case ERHIType::Vulkan: RHIModule = CreateVulkanRHIModule(); break;
-    }
-    GRHI = RHIModule->CreateRHI();
 	
 	Window = new PGenericWindow(WindowSpecification);
 	Scene = new PScene();
 
-	//Window->CreateNativeWindow();
+	SetRHIModule(ERHIInterfaceType::Vulkan);
+
+	Window->CreateNativeWindow();
     GRHI->Init();
 	Scene->Init();
 }
@@ -36,9 +30,9 @@ void CEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
-		Window->Poll();
+		//Window->Poll();
 
-        GRHI->Render();
+        GRHI->Tick(0.0f);
 	}
 }
 
