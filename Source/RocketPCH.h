@@ -45,4 +45,3 @@
 #include "Scene/Public/Component.h"
 #include "Scene/Public/Entity.h"
 #include "Scene/Public/Registry.h"
-#include "RHI/Common/RHI.h"

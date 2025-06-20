@@ -2,8 +2,11 @@
 #include "Core/Public/Engine.h"
 
 #include "IO/Public/GLFWWindow.h"
+#include "RHI/Public/Common/RHI.h"
 
 CEngine* CEngine::GEngine = nullptr;
+
+ERHIType RHIType = ERHIType::Vulkan;
 
 void CEngine::Start()
 {
@@ -12,12 +15,20 @@ void CEngine::Start()
 	FLogger::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
+    
+    IRHIModule* RHIModule = nullptr;
+
+    switch (RHIType)
+    {
+        case ERHIType::Vulkan: RHIModule = CreateVulkanRHIModule(); break;
+    }
+    GRHI = RHIModule->CreateRHI();
 	
 	Window = new PGenericWindow(WindowSpecification);
 	Scene = new PScene();
 
-	Window->CreateNativeWindow();
-	Renderer->Init();
+	//Window->CreateNativeWindow();
+    GRHI->Init();
 	Scene->Init();
 }
 
@@ -27,18 +38,17 @@ void CEngine::Run()
 	{
 		Window->Poll();
 
-		Renderer->Render();
+        GRHI->Render();
 	}
 }
 
 void CEngine::Stop()
 {
-	Renderer->Shutdown();
+    GRHI->Shutdown();
 	Scene->Cleanup();
 	Window->DestroyNativeWindow();
 
 	delete Scene;
-	delete Renderer;
 	delete Window;
 
 	GEngine = nullptr;

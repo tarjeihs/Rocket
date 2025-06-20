@@ -7,7 +7,6 @@
 
 class PScene;
 class IWindow;
-class IRHI;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1280;
@@ -22,14 +21,12 @@ public:
 
 	inline PScene* GetScene();
 	inline IWindow* GetWindow();
-	inline IRHI* GetRHI();
 	
 	inline friend CEngine* GetEngine();
 	
 private:
 	PScene* Scene;
 	IWindow* Window;
-	IRHI* Renderer;
 
 	static CEngine* GEngine;
 };
@@ -37,11 +34,6 @@ private:
 inline PScene* CEngine::GetScene()
 {
 	return Scene;
-}
-
-inline IRHI* CEngine::GetRHI()
-{
-	return Renderer;
 }
 
 inline IWindow* CEngine::GetWindow()

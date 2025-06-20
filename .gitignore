@@ -4,9 +4,14 @@
 # Do not ignore git files in the root of the repo.
 !/.git*
 
+!/Config/
+!/Source/
+!/Plugins/
+
 # Do not ignore source, config and plugins dirs.
 !/Config/**
 !/Source/**
+!/Plugins/**
 
 # Do not ignore README.md, CMakeLists.txt or CMakePresets.json
 !README.md
