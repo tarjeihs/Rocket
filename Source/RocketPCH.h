@@ -30,10 +30,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 #include <vulkan/vulkan_core.h>
 #include <vk_mem_alloc.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -45,3 +45,4 @@
 #include "Scene/Public/Component.h"
 #include "Scene/Public/Entity.h"
 #include "Scene/Public/Registry.h"
+#include "IO/Public/Window.h"

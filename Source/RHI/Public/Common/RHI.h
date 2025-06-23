@@ -1,5 +1,8 @@
 #pragma once
 
+class IRHICommandListContext;
+class FRHICommandList;
+
 enum class ERHIInterfaceType : uint8_t
 {
     None = 0,
@@ -22,6 +25,8 @@ public:
     [[nodiscard]] virtual const char* GetVersion() const  = 0;
     [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
+
+    virtual void RHIWaitUntilIdle() const = 0;
 };
 
 class IRHIModule

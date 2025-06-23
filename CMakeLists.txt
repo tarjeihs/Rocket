@@ -3,6 +3,18 @@ project(Rocket LANGUAGES C CXX)
 
 include(FetchContent)
 
+if (DEFINED ENV{DISPLAY})
+    set(SURFACE_BACKEND_MACRO _GLFW_X11=1)
+    set(SURFACE_BACKEND_LIBS ${X11_LIBRARIES} dl m)
+    set(SURFACE_BACKEND_INCLUDES ${X11_INCLUDE_DIRS})
+endif()
+
+#if (DEFINED ENV{WAYLAND_DISPLAY})
+#    set(SURFACE_BACKEND_MACRO _GLFW_WAYLAND=1)
+#    set(SURFACE_BACKEND_LIBS ${WAYLAND_LIBRARIES} dl m)
+#    set(SURFACE_BACKEND_INCLUDES ${WAYLAND_INCLUDE_DIRS})
+#endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -50,6 +62,13 @@ if(NOT imgui_src_POPULATED)
     )
 endif()
 
+if(NOT vma_src_POPULATED)
+    FetchContent_Populate(vma_src
+        GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+        GIT_TAG        v3.3.0
+    )
+endif()
+
 if(NOT glm_src_POPULATED)
     FetchContent_Populate(glm_src
         GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -64,13 +83,6 @@ if(NOT entt_src_POPULATED)
     )
 endif()
 
-if(NOT vma_src_POPULATED)
-    FetchContent_Populate(vma_src
-        GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-        GIT_TAG        v3.3.0
-    )
-endif()
-
 if(NOT spdlog_src_POPULATED)
     FetchContent_Populate(spdlog_src
         GIT_REPOSITORY https://github.com/gabime/spdlog
@@ -80,9 +92,9 @@ endif()
 
 add_library(glfw STATIC)
 add_library(imgui STATIC)
+add_library(vma::vma INTERFACE IMPORTED GLOBAL)
 add_library(glm::glm INTERFACE IMPORTED GLOBAL)
 add_library(entt::entt INTERFACE IMPORTED GLOBAL)
-add_library(vma::vma INTERFACE IMPORTED GLOBAL)
 add_library(spdlog::spdlog INTERFACE IMPORTED GLOBAL)
 add_executable(Rocket)
 
@@ -97,28 +109,20 @@ target_sources(glfw PRIVATE
     ${glfw_src_SOURCE_DIR}/src/vulkan.c
     ${glfw_src_SOURCE_DIR}/src/window.c
 
-    $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:
+    ${glfw_src_SOURCE_DIR}/src/posix_time.c
+    ${glfw_src_SOURCE_DIR}/src/posix_thread.c
+    ${glfw_src_SOURCE_DIR}/src/egl_context.c
+    ${glfw_src_SOURCE_DIR}/src/linux_joystick.c
     ${glfw_src_SOURCE_DIR}/src/x11_init.c
     ${glfw_src_SOURCE_DIR}/src/x11_monitor.c
     ${glfw_src_SOURCE_DIR}/src/x11_window.c
     ${glfw_src_SOURCE_DIR}/src/xkb_unicode.c
-    ${glfw_src_SOURCE_DIR}/src/posix_time.c
-    ${glfw_src_SOURCE_DIR}/src/posix_thread.c
     ${glfw_src_SOURCE_DIR}/src/glx_context.c
-    ${glfw_src_SOURCE_DIR}/src/egl_context.c
     ${glfw_src_SOURCE_DIR}/src/osmesa_context.c
-    ${glfw_src_SOURCE_DIR}/src/linux_joystick.c 
-    >
 
-    $<$<BOOL:${WIN32}>:
-    ${glfw_src_SOURCE_DIR}/src/win32_init.c
-    ${glfw_src_SOURCE_DIR}/src/win32_module.c
-    ${glfw_src_SOURCE_DIR}/src/win32_monitor.c
-    ${glfw_src_SOURCE_DIR}/src/win32_window.c
-    ${glfw_src_SOURCE_DIR}/src/win32_time.c
-    ${glfw_src_SOURCE_DIR}/src/win32_thread.c
-    ${glfw_src_SOURCE_DIR}/src/win32_joystick.c
-    >
+    ${glfw_src_SOURCE_DIR}/src/wl_init.c
+    ${glfw_src_SOURCE_DIR}/src/wl_monitor.c
+    ${glfw_src_SOURCE_DIR}/src/wl_window.c
 
     # “Null” stub backend (required by platform.c)
     ${glfw_src_SOURCE_DIR}/src/null_init.c 
@@ -146,25 +150,30 @@ set_target_properties(glfw PROPERTIES
 set_target_properties(imgui PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${imgui_src_SOURCE_DIR}"
 )
+set_target_properties(vma::vma PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${vma_src_SOURCE_DIR}/include"
+)
 set_target_properties(glm::glm PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${glm_src_SOURCE_DIR}"
 )
 set_target_properties(entt::entt PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${entt_src_SOURCE_DIR}/single_include"
 )
-set_target_properties(vma::vma PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${vma_src_SOURCE_DIR}/include"
-)
 set_target_properties(spdlog::spdlog PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${spdlog_src_SOURCE_DIR}/include"
 )
+
+target_compile_definitions(glfw PRIVATE 
+    _CRT_SECURE_NO_WARNINGS
+    ${SURFACE_BACKEND_MACRO}
+)
+
 target_include_directories(Rocket
     PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/Source
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
 target_compile_definitions(Rocket PRIVATE
-    #GLFW_INCLUDE_VULKAN
     RK_ROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"
     RK_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\"
 )
@@ -172,7 +181,7 @@ target_compile_definitions(Rocket PRIVATE
 target_link_libraries(Rocket PRIVATE 
     glfw 
     imgui 
-    vma::vma 
+    vma::vma
     glm::glm 
     entt::entt 
     spdlog::spdlog
@@ -194,6 +203,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_include_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/Include)
     target_link_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/Lib)
     target_link_libraries(Rocket PRIVATE vulkan-1)
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(Rocket PRIVATE RK_DEBUG)
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_definitions(Rocket PRIVATE RK_RELEASE)
 endif()
 
 add_custom_command(

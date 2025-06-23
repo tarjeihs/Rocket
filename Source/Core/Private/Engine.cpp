@@ -16,7 +16,7 @@ void CEngine::Start()
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 	
-	Window = new PGenericWindow(WindowSpecification);
+	Window = new CGLFWWindow(WindowSpecification);
 	Scene = new PScene();
 
 	SetRHIModule(ERHIInterfaceType::Vulkan);
@@ -30,7 +30,7 @@ void CEngine::Run()
 {
 	while (!Window->ShouldClose())
 	{
-		//Window->Poll();
+		Window->Poll();
 
         GRHI->Tick(0.0f);
 	}

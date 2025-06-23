@@ -1,7 +1,7 @@
 #include "RocketPCH.h"
 #include "RHI/Public/Vulkan/VulkanRHIModule.h"
 
-#include "RHI/Public/Vulkan/VulkanRHI.h"
+#include "VulkanRHI.h"
 
 IRHI* FVulkanRHIModule::CreateRHI()
 {

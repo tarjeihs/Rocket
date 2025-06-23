@@ -2,10 +2,14 @@
 
 #include "IO/Public/Window.h"
 
-class PGenericWindow : public IWindow
+#ifndef _GLFW_WAYLAND
+	#define _GLFW_WAYLAND
+#endif
+
+class CGLFWWindow : public IWindow
 {
 public:
-	PGenericWindow(const SWindowSpecification& InWindowSpecification)
+	CGLFWWindow(const SWindowSpecification& InWindowSpecification)
 		: IWindow(InWindowSpecification)
 	{
 	}

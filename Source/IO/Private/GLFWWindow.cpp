@@ -3,19 +3,24 @@
 
 #include "Core/Public/Assert.h"
 #include "Core/Public/Camera.h"
+#include "Core/Public/KeyCode.h"
 #include "Scene/Public/Scene.h"
-#include "IO/Public/Input.h"
 
-void PGenericWindow::CreateNativeWindow()
+void CGLFWWindow::CreateNativeWindow()
 {
+	glfwSetErrorCallback([](int code, const char* desc)
+	{
+		fprintf(stderr, "GLFW error %d: %s\n", code, desc);
+	});
+
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     NativeWindow = glfwCreateWindow(WindowSpecification.Width, WindowSpecification.Height, WindowSpecification.Name, nullptr, nullptr);
     RK_ASSERT(NativeWindow, "Failed to create GLFW window");
 
-    glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
-	
+    //glfwMakeContextCurrent((GLFWwindow*)NativeWindow);
+
 	glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
 	{
 		if (KeyCode == RK_KEY_ESCAPE)
@@ -75,48 +80,48 @@ void PGenericWindow::CreateNativeWindow()
 	GetWindow()->SetIsFocused(true);
 }
 
-void PGenericWindow::DestroyNativeWindow()
+void CGLFWWindow::DestroyNativeWindow()
 {
     glfwDestroyWindow((GLFWwindow*)NativeWindow);
     glfwTerminate();
 }
 
-void PGenericWindow::Poll()
+void CGLFWWindow::Poll()
 {
     glfwPollEvents();
 }
 
-bool PGenericWindow::ShouldClose() const
+bool CGLFWWindow::ShouldClose() const
 {
     return glfwWindowShouldClose((GLFWwindow*)NativeWindow);
 }
 
-bool PGenericWindow::IsMinimized() const
+bool CGLFWWindow::IsMinimized() const
 {
     return bIsMinimized;
 }
 
-void PGenericWindow::SetIsMinimized(bool bMinimized)
+void CGLFWWindow::SetIsMinimized(bool bMinimized)
 {
 	bIsMinimized = bMinimized;
 }
 
-void PGenericWindow::SetIsFocused(bool bFocused)
+void CGLFWWindow::SetIsFocused(bool bFocused)
 {
 	bIsFocused = bFocused;
 }
 
-void PGenericWindow::WaitEventOrTimeout(float TimeoutSeconds)
+void CGLFWWindow::WaitEventOrTimeout(float TimeoutSeconds)
 {
 	glfwWaitEventsTimeout(TimeoutSeconds);
 }
 
-bool PGenericWindow::IsFocused() const
+bool CGLFWWindow::IsFocused() const
 {
     return bIsFocused;
 }
 
-void PGenericWindow::SetFocus(bool bFocus)
+void CGLFWWindow::SetFocus(bool bFocus)
 {
 	glfwFocusWindow((GLFWwindow*)NativeWindow);
 }
