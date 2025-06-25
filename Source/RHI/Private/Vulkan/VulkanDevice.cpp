@@ -3,7 +3,6 @@
 
 #include "RHI/Private/Vulkan/VulkanQueue.h"
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include <vulkan/vulkan_core.h>
 
 FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
     : PhysicalDevice(InPhysicalDevice)
@@ -14,6 +13,11 @@ FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
 FVulkanDevice::~FVulkanDevice()
 {
 	Shutdown();
+}
+
+void FVulkanDevice::WaitUntilIdle() const
+{
+	vkDeviceWaitIdle(Device);
 }
 
 void FVulkanDevice::Initialize()
@@ -91,21 +95,25 @@ void FVulkanDevice::Initialize()
             continue;
         }
 
-        Queues.push_back(new FVulkanQueue(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
+        Queues.push_back(std::make_unique<FVulkanQueue>(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
     }
 }
 
 void FVulkanDevice::Shutdown()
 {
+	Queues.clear();
+
+	vmaDestroyAllocator(Allocator);
+	vkDestroyDevice(Device, nullptr);
 }
 
 FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags QueueFlags) const
 {
-    for (FVulkanQueue* Queue : Queues)
+    for (const std::unique_ptr<FVulkanQueue>& Queue : Queues)
     {
         if ((Queue->GetQueueFlags() & QueueFlags) == QueueFlags)
         {
-            return Queue;
+            return Queue.get();
         }
     }
 	return nullptr;
@@ -129,9 +137,4 @@ FVulkanQueue* FVulkanDevice::GetTransferQueue() const
 FVulkanQueue* FVulkanDevice::GetPresentQueue() const
 {
     return GetQueue(VK_QUEUE_GRAPHICS_BIT);
-}
-
-void FVulkanDevice::WaitUntilIdle() const
-{
-    vkDeviceWaitIdle(Device);
 }

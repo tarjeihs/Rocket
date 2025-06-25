@@ -9,6 +9,11 @@ class TDelegate
 public:
     using TFunc = std::function<void(TArgs...)>;
 
+    ~TDelegate()
+    {
+        Clear();
+    }
+
     void Bind(TFunc&& Func)
     {
         size_t HashID = Hash(Func);

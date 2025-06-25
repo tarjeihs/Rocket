@@ -21,7 +21,6 @@ public:
     inline VkSurfaceFormatKHR GetSurfaceFormat() const;
 
     inline VkSemaphore GetImageAcquiredSemaphore() const;
-    inline uint32_t GetImageIndex() const;
     inline VkSemaphore GetRenderFinishedSemaphore() const;
     inline VkImage GetImage() const;
     inline VkImageView GetImageView() const;
@@ -31,8 +30,8 @@ private:
     void DestroySwapchain();
     
 private:
-    VkSwapchainKHR Swapchain;
     VkSurfaceKHR Surface;
+    VkSwapchainKHR Swapchain;
     VkExtent2D Extent;
     VkPresentModeKHR PresentMode;
     VkSurfaceFormatKHR SurfaceFormat;
@@ -42,10 +41,10 @@ private:
     std::vector<VkSemaphore> ImageAcquiredSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
 
-    uint32_t CurrentImageIndex = UINT32_MAX;
-    uint32_t SemaphoreIndex = 0;
-    uint32_t NumAcquireCalls = 0;
-    uint32_t NumPresentCalls = 0;
+    uint32_t CurrentImageIndex;
+    uint32_t SemaphoreIndex ;
+    uint32_t NumAcquireCalls;
+    uint32_t NumPresentCalls;
 };
 
 inline VkSurfaceKHR FVulkanViewport::GetVkSurface() const

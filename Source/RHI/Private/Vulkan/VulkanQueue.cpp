@@ -14,24 +14,12 @@ FVulkanQueue::FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, b
     QueueIndex(InQueueIndex),
     NextTimelineSemaphoreValue(1)
 {
-    vkGetDeviceQueue(Device.GetVkDevice(), InQueueFamilyIndex, 0, &Handle);
-
-    VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
-    TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    TimelineSemaphoreCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    TimelineSemaphoreCreateInfo.initialValue  = 0;
-    
-    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
-    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    SemaphoreCreateInfo.pNext = &TimelineSemaphoreCreateInfo;
-    vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
-
-    CommandBufferPool = new FVulkanCommandBufferPool(Device, *this);
+    Init();
 }
 
 FVulkanQueue::~FVulkanQueue()
 {
-
+    Shutdown();
 }
 
 void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
@@ -93,19 +81,19 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
         VkResult Result = vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
         RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
-        CommandBufferPayloads.push(Payload);
+        SubmissionQueue.push(Payload);
     }
 }
 
 void FVulkanQueue::Await()
 {
-    if (CommandBufferPayloads.empty())
+    if (SubmissionQueue.empty())
     {
         return;
     }
 
-    FVulkanCommandBufferPayload* Payload = CommandBufferPayloads.front();
-    CommandBufferPayloads.pop();
+    FVulkanCommandBufferPayload* Payload = SubmissionQueue.front();
+    SubmissionQueue.pop();
 
     // At most two command-buffer submissions overlap (keeps latency down).
 
@@ -122,4 +110,33 @@ void FVulkanQueue::Await()
     }
 
     delete Payload;
+}
+
+void FVulkanQueue::Init()
+{
+    vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
+
+    VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
+    TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    TimelineSemaphoreCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    TimelineSemaphoreCreateInfo.initialValue  = 0;
+
+    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
+    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    SemaphoreCreateInfo.pNext = &TimelineSemaphoreCreateInfo;
+    vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
+
+    CommandBufferPool = std::make_unique<FVulkanCommandBufferPool>(Device, *this);
+}
+
+void FVulkanQueue::Shutdown()
+{
+    while (!SubmissionQueue.empty())
+    {
+        FVulkanCommandBufferPayload* Payload = SubmissionQueue.front();
+        SubmissionQueue.pop();
+        delete Payload;
+    }
+
+    CommandBufferPool = nullptr;
 }

@@ -1,15 +1,22 @@
 #pragma once
 
+#include "Core/Public/Delegate.h"
+
 class FVulkanDevice;
 struct FVulkanCommandBuffer;
 struct FVulkanCommandBufferPool;
 
 struct FVulkanCommandBufferPayload
 {
+    VkPipelineStageFlags2 PipelineStage = VK_PIPELINE_STAGE_2_NONE_KHR;
+
     std::vector<VkSemaphore> WaitSemaphores;
     std::vector<VkSemaphore> SignalSemaphores;
     std::vector<FVulkanCommandBuffer*> CommandBuffers;
     uint64_t TimelineSemaphoreValue;
+
+    TDelegate<> PreSubmitCallback;
+    TDelegate<> PostExecuteCallback;
 };
 
 // Wait -> Execute -> Signal is the allowed forward transition.

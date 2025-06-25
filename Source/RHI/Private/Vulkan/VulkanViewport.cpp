@@ -8,7 +8,11 @@
 FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
-    Surface(nullptr)
+    Surface(nullptr),
+    CurrentImageIndex(UINT32_MAX),
+    SemaphoreIndex(0),
+    NumAcquireCalls(0),
+    NumPresentCalls(0)
 {
     VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GetWindow()->GetNativeWindow()), nullptr, &Surface);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
@@ -56,10 +60,7 @@ FVulkanViewport::~FVulkanViewport()
 {
     DestroySwapchain();
 
-    if (Surface != VK_NULL_HANDLE)
-    {
-        vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
-    }
+    vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
 void FVulkanViewport::CreateSwapchain()
@@ -80,12 +81,11 @@ void FVulkanViewport::CreateSwapchain()
         Extent = SurfaceCapabilities.currentExtent;
     }
 
-    uint32_t ImageCount = SurfaceCapabilities.minImageCount + 1;
+    uint32_t ImageCount = SurfaceCapabilities.minImageCount;
     if (SurfaceCapabilities.maxImageCount > 0 && ImageCount > SurfaceCapabilities.maxImageCount)
     {
         ImageCount = SurfaceCapabilities.maxImageCount;
     }
-    uint32_t FrameCount = std::min(3u, ImageCount - 1);
 
     VkSwapchainCreateInfoKHR SwapchainCreateInfo = {};
     SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -120,6 +120,7 @@ void FVulkanViewport::CreateSwapchain()
     VkResult Result = vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain.");
 
+    RK_LOG_DEBUG("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
 
     vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
     Images.resize(ImageCount);
@@ -150,17 +151,17 @@ void FVulkanViewport::CreateSwapchain()
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
     SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    ImageAcquiredSemaphores.resize(FrameCount);
+    ImageAcquiredSemaphores.resize(ImageCount - 1);
     RenderFinishedSemaphores.resize(ImageCount);
 
-    for (uint32_t i = 0; i < FrameCount; ++i)
+    for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
     {
-        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[i]);
+        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
     }
 
-    for (uint32_t i = 0; i < ImageCount; ++i)
+    for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
     {
-        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[i]);
+        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
     }
 }
 
@@ -176,6 +177,7 @@ bool FVulkanViewport::Acquire()
         CreateSwapchain();
         return false;
     }
+
     ++NumAcquireCalls;
     return true;
 }
@@ -215,13 +217,15 @@ void FVulkanViewport::DestroySwapchain()
         vkDestroyImageView(Device.GetVkDevice(), view, nullptr);
     }
 
-    if (Swapchain != VK_NULL_HANDLE)
-    {
-        vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
-    }
+    vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
 
     Views.clear();
     Images.clear();
     ImageAcquiredSemaphores.clear();
     RenderFinishedSemaphores.clear();
+
+    CurrentImageIndex = UINT32_MAX;
+    SemaphoreIndex = 0;
+    NumAcquireCalls = 0;
+    NumPresentCalls = 0;
 }

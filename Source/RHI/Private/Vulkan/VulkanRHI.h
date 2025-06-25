@@ -2,9 +2,9 @@
 
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
 
-class FVulkanViewport;
 class FVulkanDevice;
-class FVulkanCommandBufferContext;
+class FVulkanViewport;
+class FVulkanRenderGraph;
 
 class CVulkanRHI : public IVulkanRHIMinimal
 {
@@ -56,6 +56,7 @@ private:
 
     FVulkanDevice* Device;
     FVulkanViewport* Viewport;
+    FVulkanRenderGraph* RenderGraph;
 
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;

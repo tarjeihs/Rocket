@@ -139,5 +139,11 @@ void FVulkanCommandBufferPool::Initialize()
 
 void FVulkanCommandBufferPool::Shutdown()
 {
+    for (FVulkanCommandBuffer* CommandBuffer : FreeCommandBuffers)
+    {
+        delete CommandBuffer;
+    }
+    FreeCommandBuffers.clear();
+
     vkDestroyCommandPool(Device.GetVkDevice(), Handle, nullptr); 
 }

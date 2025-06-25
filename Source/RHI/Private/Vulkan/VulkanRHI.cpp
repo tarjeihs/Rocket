@@ -1,6 +1,7 @@
 #include "RocketPCH.h"
 #include "VulkanRHI.h"
 
+#include "VulkanRenderGraph.h"
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
 #include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
 #include "RHI/Private/Vulkan/VulkanCommandList.h"
@@ -117,11 +118,18 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
+    RenderGraph = new FVulkanRenderGraph();
 }
 
 void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
+
+    delete Viewport;
+    delete Device;
+
+    Viewport = nullptr;
+    Device = nullptr;
 }
 
 void CVulkanRHI::Tick(float DeltaTime)
@@ -130,22 +138,56 @@ void CVulkanRHI::Tick(float DeltaTime)
 
     if (Viewport->Acquire())
     {
+        //FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
+        //FVulkanCommandBufferContext Ctx(*CommandBufferPool);
+        //Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
+        //
+        //    FVulkanCommandListContext CmdListContext(Ctx.GetCurrentCommandBuffer()->GetHandle());
+        //    FRHICommandList CmdList(CmdListContext);
+        //
+        //    CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(Viewport->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        //    CmdList.Enqueue<FVulkanCommandBeginRendering>(Viewport->GetImageView());
+        //    CmdList.Enqueue<FVulkanCommandEndRendering>();
+        //    CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(Viewport->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        //
+        //    std::vector<uint8_t> Bytes = CmdList.Flush();
+        //    FRHICommandListExecutor::Execute(CmdList.GetContext(), std::move(Bytes));
+        //
+        //Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
+
+
+
+
+
+
+        const FRGResourceAccess Writes[] = { };
+        const FRGResourceAccess Reads[] = { };
+
+        FVulkanRGBuilder Builder = RenderGraph->GetMutableBuilder();
+        //auto Color = Builder.CreateTexture({1024, 1024, VK_FORMAT_B8G8R8A8_UNORM, "RT", VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT });
+
+        //const FRGResourceAccess Writes[] = { WriteImage(Color) };
+        //const FRGResourceAccess Reads[] = { ReadImage(Color) };
+
+        Builder.AddPass("GBuffer", EVulkanQueueType::Graphics, {}, { }, [&](FRHICommandList& RHICmdList)
+        {
+            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
+            RHICmdList.Enqueue<FVulkanCommandEndRendering>();
+        });
+
+        Builder.AddPass("Present", EVulkanQueueType::Graphics, { }, {}, [&](FRHICommandList& RHICmdList)
+        {
+            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        });
+
+        RenderGraph->Compile();
+
         FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
         FVulkanCommandBufferContext Ctx(*CommandBufferPool);
+
         Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
-
-            FVulkanCommandBuffer* CommandBuffer = Ctx.GetCurrentCommandBuffer();
-            FVulkanCommandListContext CmdListContext(Ctx.GetCurrentCommandBuffer()->GetHandle());
-            FRHICommandList CmdList(CmdListContext);
-
-            CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(Viewport->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            CmdList.Enqueue<FVulkanCommandBeginRendering>(Viewport->GetImageView());
-            CmdList.Enqueue<FVulkanCommandEndRendering>();
-            CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(Viewport->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-            std::vector<uint8_t> Bytes = CmdList.Flush();
-            FRHICommandListExecutor::Execute(CmdList.GetContext(), std::move(Bytes));
-
+        RenderGraph->Execute(Ctx);
         Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
 
         GetDevice()->GetGraphicsQueue()->Submit(Ctx);

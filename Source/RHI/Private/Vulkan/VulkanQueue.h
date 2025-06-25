@@ -7,23 +7,6 @@ class FVulkanCommandBufferPayload;
 class FVulkanCommandBufferPool;
 class FVulkanCommandBufferContext;
 
-//enum class EVulkanQueueFamily : uint8_t
-//{
-//    Undefined = 0,
-//    Graphics = 1 << 0,
-//    Compute = 1 << 1,
-//    Transfer = 1 << 2,
-//    Sparse = 1 << 3
-//};
-//
-//inline EVulkanQueueFamily operator|(EVulkanQueueFamily lhs, EVulkanQueueFamily rhs) { return static_cast<EVulkanQueueFamily>(static_cast<std::underlying_type_t<EVulkanQueueFamily>>(lhs) | static_cast<std::underlying_type_t<EVulkanQueueFamily>>(rhs)); }
-//inline EVulkanQueueFamily operator&(EVulkanQueueFamily lhs, EVulkanQueueFamily rhs) { return static_cast<EVulkanQueueFamily>(static_cast<std::underlying_type_t<EVulkanQueueFamily>>(lhs) & static_cast<std::underlying_type_t<EVulkanQueueFamily>>(rhs) ); }
-//inline EVulkanQueueFamily operator~(EVulkanQueueFamily value) { return static_cast<EVulkanQueueFamily>(~static_cast<std::underlying_type_t<EVulkanQueueFamily>>(value)); }
-//
-//inline EVulkanQueueFamily& operator|=(EVulkanQueueFamily& lhs, EVulkanQueueFamily rhs) { lhs = lhs | rhs; return lhs; }
-//inline EVulkanQueueFamily& operator&=(EVulkanQueueFamily& lhs, EVulkanQueueFamily rhs) { lhs = lhs & rhs; return lhs; }
-//inline EVulkanQueueFamily& operator^=(EVulkanQueueFamily& lhs, EVulkanQueueFamily rhs) { lhs = lhs ^ rhs; return lhs; }
-
 class FVulkanQueue
 {
 private:
@@ -49,6 +32,10 @@ public:
     inline FVulkanCommandBufferPool* GetCommandBufferPool() const;
 
 private:
+    void Init();
+    void Shutdown();
+
+private:
     VkQueue Handle;
     bool Present;
     uint32_t QueueFamilyIndex;
@@ -57,8 +44,8 @@ private:
     VkSemaphore TimelineSemaphore;
     uint64_t NextTimelineSemaphoreValue;
 
-    FVulkanCommandBufferPool* CommandBufferPool;
-    std::queue<FVulkanCommandBufferPayload*> CommandBufferPayloads;
+    std::unique_ptr<FVulkanCommandBufferPool> CommandBufferPool;
+    std::queue<FVulkanCommandBufferPayload*> SubmissionQueue;
 };
 
 inline VkQueue FVulkanQueue::GetHandle() const
@@ -98,5 +85,5 @@ VkSemaphore FVulkanQueue::GetTimelineSemaphore() const
 
 inline FVulkanCommandBufferPool* FVulkanQueue::GetCommandBufferPool() const
 {
-    return CommandBufferPool;
+    return CommandBufferPool.get();
 }

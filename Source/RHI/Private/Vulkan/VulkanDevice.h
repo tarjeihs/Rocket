@@ -13,13 +13,13 @@ public:
     FVulkanDevice(VkPhysicalDevice InPhysicalDevice);
     ~FVulkanDevice();
 
+    void WaitUntilIdle() const;
+
     FVulkanQueue* GetQueue(VkQueueFlags QueueFlags) const;
     FVulkanQueue* GetGraphicsQueue() const;
     FVulkanQueue* GetComputeQueue() const;
     FVulkanQueue* GetTransferQueue() const;
     FVulkanQueue* GetPresentQueue() const;
-
-    void WaitUntilIdle() const;
 
     inline VkDevice GetVkDevice() const;
     inline VkPhysicalDevice GetVkPhysicalDevice() const;
@@ -34,7 +34,7 @@ private:
     VkDevice Device;
     VmaAllocator Allocator;
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
-    std::vector<FVulkanQueue*> Queues;
+    std::vector<std::unique_ptr<FVulkanQueue>> Queues;
 };
 
 inline VkDevice FVulkanDevice::GetVkDevice() const
