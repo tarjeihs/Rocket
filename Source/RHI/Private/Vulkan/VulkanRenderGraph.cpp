@@ -3,6 +3,7 @@
 
 #include "VulkanCommandBuffer.h"
 #include "VulkanCommandList.h"
+#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
 
 void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorType Type, VkDeviceSize Size)
 {
@@ -61,7 +62,7 @@ void FVulkanRGBuilder::AddPass(std::string Name, EVulkanQueueType Queue, std::sp
     FRGPass Pass = {};
     Pass.Name = Name;
     Pass.Reads.assign(Reads.begin(), Reads.end());
-    Pass.Queue = Queue;                 // <── MISSING LINE
+    Pass.Queue = Queue;
     Pass.Writes.assign(Writes.begin(), Writes.end());
     Pass.RecordFn = std::move(Lambda);
     RenderGraph.Passes.push_back(Pass);
@@ -70,6 +71,7 @@ void FVulkanRGBuilder::AddPass(std::string Name, EVulkanQueueType Queue, std::sp
 FRGResourceHandle FVulkanRGBuilder::CreateTexture(const FRGTextureDesc& D)
 {
     FRGResource R{};
+    R.InitialLayout = D.InitialLayout;
 
     VkImageCreateInfo ImageCreateInfo = {};
     ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -140,7 +142,20 @@ FVulkanRenderGraph::FVulkanRenderGraph()
     CreatePoolAllocator(*ImagePoolAllocator, EPoolAllocatorType::Image, 128 * 1024 * 1024);
 }
 
-FVulkanRGBuilder& FVulkanRenderGraph::GetMutableBuilder()
+FVulkanRenderGraph::~FVulkanRenderGraph()
+{
+    DestroyPoolAllocator(*ImagePoolAllocator);
+
+    delete ImagePoolAllocator;
+
+    for (FRGResource& Resource : Resources)
+    {
+        vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.Image, nullptr);
+        vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.ImageView, nullptr);
+    }
+}
+
+FVulkanRGBuilder &FVulkanRenderGraph::GetMutableBuilder()
 {
     return Builder;
 }
@@ -153,6 +168,19 @@ void FVulkanRenderGraph::Begin()
 void FVulkanRenderGraph::End()
 {
 //    Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
+    for (FRGResource resource : Resources)
+    {
+        vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.Image, nullptr);
+        vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.ImageView, nullptr);
+    }
+
+    Passes.clear();
+    Resources.clear();
+    CompiledPayloads.clear();
+
+    ResetPoolAllocator(*ImagePoolAllocator);
+
+    GCounter = 0;
 }
 
 void FVulkanRenderGraph::Compile()
@@ -193,6 +221,32 @@ void FVulkanRenderGraph::Compile()
 
             auto& ImgState = ImageStates[A.Resource.Index];
             const VkImage imgHandle = Resources[A.Resource.Index].Image;
+
+            if (ImgState.FirstUse && ImgState.CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+            {
+                ImgState.CurrentLayout = Resources[A.Resource.Index].InitialLayout;
+            }
+
+
+            if (ImgState.FirstUse)
+            {
+                if (ImgState.CurrentLayout != A.Layout)
+                {
+                    FRGBarrier B;
+                    B.Image      = imgHandle;
+                    B.OldLayout  = ImgState.CurrentLayout;   // UNDEFINED
+                    B.NewLayout  = A.Layout;
+                    B.SrcStage   = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;      // nothing to wait for
+                    B.DstStage   = A.StageMask;                            // what this pass needs
+                    Payload.BeginBarriers.push_back(B);
+                }
+
+                ImgState.CurrentLayout    = A.Layout;
+                ImgState.CurrentQueue     = P.Queue;
+                ImgState.LastPayloadIndex = static_cast<int32_t>(CompiledPayloads.size());
+                ImgState.FirstUse         = false;
+                return;                     // DONE – no “diff” logic needed
+            }
 
             //-----------------------------------------------------------
             // If this is NOT the first use, check whether we need:
@@ -300,7 +354,5 @@ void FVulkanRenderGraph::Execute(FVulkanCommandBufferContext& FrameCtx)
         FRHICommandListExecutor::Execute(CmdCtx, CmdList.Flush());
     }
 
-    Passes.clear();
-    Resources.clear();
-    CompiledPayloads.clear();
+    // todo: calculate vma statistics at the end of the frame.
 }

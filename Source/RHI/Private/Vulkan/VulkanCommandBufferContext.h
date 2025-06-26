@@ -39,7 +39,7 @@ private:
     FVulkanCommandBufferPool& Pool;
 
 public:
-    FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
+    explicit FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
 
     FVulkanCommandBuffer* GetCurrentCommandBuffer();
     FVulkanCommandBufferPool* GetCommandBufferPool();
@@ -55,7 +55,7 @@ public:
     void AddSignalSemaphore(std::span<VkSemaphore> ReadySemaphores);
 
 private:
-    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    std::vector<FVulkanCommandBufferPayload*> Payloads; // todo: std_shared_ptr for memory leak
     EVulkanCommandBufferContextState CurrentState;
     FVulkanCommandBufferPayload* CurrentPayload;
 };

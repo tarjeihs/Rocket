@@ -56,7 +56,7 @@ private:
 
     FVulkanDevice* Device;
     FVulkanViewport* Viewport;
-    FVulkanRenderGraph* RenderGraph;
+    FVulkanRenderGraph* RenderGraph; // todo: not to be kept as a persistent object, but local
 
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;

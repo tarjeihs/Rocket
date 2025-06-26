@@ -64,7 +64,7 @@ void FVulkanCommandBufferContext::Finalize(std::vector<FVulkanCommandBufferPaylo
     Payloads.clear();
     CurrentPayload = nullptr;
 
-    NewPayload();
+    //NewPayload();
 }
 
 void FVulkanCommandBufferContext::AddWaitSemaphore(VkSemaphore WaitSemaphore)

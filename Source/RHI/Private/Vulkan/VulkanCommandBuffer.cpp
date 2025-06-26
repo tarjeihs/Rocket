@@ -7,7 +7,8 @@
 
 FVulkanCommandBuffer::FVulkanCommandBuffer(FVulkanCommandBufferPool& InPool)
     : Pool(InPool),
-    State(EVulkanCommandBufferState::NotAllocated)
+    State(EVulkanCommandBufferState::NotAllocated),
+    PoolID(UINT32_MAX)
 {
     Alloc();
 }
@@ -84,9 +85,18 @@ void FVulkanCommandBuffer::Submit()
     State = EVulkanCommandBufferState::Submitted;
 }
 
+void FVulkanCommandBuffer::Finish()
+{
+    assert(State == EVulkanCommandBufferState::Submitted);
+
+    // todo: calculate submission time
+
+    State = EVulkanCommandBufferState::NeedReset;
+}
+
 void FVulkanCommandBuffer::Reset()
 {
-    assert(EVulkanCommandBufferState::NeedReset);
+    //assert(State == EVulkanCommandBufferState::NeedReset);
 
     vkResetCommandBuffer(Handle, 0);
 
@@ -107,20 +117,35 @@ FVulkanCommandBufferPool::~FVulkanCommandBufferPool()
 
 FVulkanCommandBuffer* FVulkanCommandBufferPool::Acquire()
 {
+    FVulkanCommandBuffer* CommandBuffer = nullptr;
+
     if (FreeCommandBuffers.empty())
     {
-        FVulkanCommandBuffer* CommandBuffer = new FVulkanCommandBuffer(*this);
-        return CommandBuffer;
+        CommandBuffer = new FVulkanCommandBuffer(*this);
     }
-
-    FVulkanCommandBuffer* CommandBuffer = FreeCommandBuffers.back();
-    FreeCommandBuffers.pop_back();
+    else 
+    {
+        CommandBuffer = FreeCommandBuffers.front();
+        FreeCommandBuffers.front() = FreeCommandBuffers.back();
+        FreeCommandBuffers.pop_back();
+    }
+    CommandBuffer->SetPoolID(UsedCommandBuffers.size());
+    UsedCommandBuffers.push_back(CommandBuffer);
     return CommandBuffer;
 }
 
 void FVulkanCommandBufferPool::Recycle(FVulkanCommandBuffer* CommandBuffer)
 {
     CommandBuffer->Reset();
+
+    if (CommandBuffer->GetPoolID() != UsedCommandBuffers.size() - 1)
+    {
+        FVulkanCommandBuffer* Temp = UsedCommandBuffers[UsedCommandBuffers.size() - 1];
+        UsedCommandBuffers[CommandBuffer->GetPoolID()] = Temp;
+        Temp->SetPoolID(CommandBuffer->GetPoolID());
+    }
+
+    UsedCommandBuffers.pop_back();
 
     FreeCommandBuffers.push_back(CommandBuffer);
 }
@@ -139,11 +164,16 @@ void FVulkanCommandBufferPool::Initialize()
 
 void FVulkanCommandBufferPool::Shutdown()
 {
-    for (FVulkanCommandBuffer* CommandBuffer : FreeCommandBuffers)
+    for (FVulkanCommandBuffer* UsedCommandBuffer : UsedCommandBuffers)
     {
-        delete CommandBuffer;
+        delete UsedCommandBuffer;
     }
-    FreeCommandBuffers.clear();
+
+    for (FVulkanCommandBuffer* FreeCommandBuffer : FreeCommandBuffers)
+    {
+        delete FreeCommandBuffer;
+    }
 
     vkDestroyCommandPool(Device.GetVkDevice(), Handle, nullptr); 
+    Handle = nullptr;
 }

@@ -21,6 +21,7 @@ struct FRGResource
 {
     VkImage Image;
     VkImageView ImageView;
+    VkImageLayout      InitialLayout    = VK_IMAGE_LAYOUT_UNDEFINED;
     // or
     VkBuffer Buffer;
 };
@@ -40,7 +41,7 @@ struct FRGResourceAccess
     VkImageLayout          Layout;        // Only for images (optional)
 };
 
-struct FRGTextureDesc  { uint32_t W, H; VkFormat Fmt; std::string Name; VkImageUsageFlags UsageFlags; VkImageAspectFlags AspectFlags; };
+struct FRGTextureDesc  { uint32_t W, H; VkFormat Fmt; std::string Name; VkImageLayout InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED; VkImageUsageFlags UsageFlags; VkImageAspectFlags AspectFlags; };
 struct FRGBufferDesc   { size_t   Size;  VkBufferUsageFlags Flags;     };
 
 struct FRGPass
@@ -125,6 +126,7 @@ class FVulkanRenderGraph
 {
 public:
     FVulkanRenderGraph();
+    ~FVulkanRenderGraph();
 
     FVulkanRGBuilder& GetMutableBuilder();
 
@@ -138,6 +140,7 @@ public:
     std::vector<FRGResource> Resources;
     std::vector<FRGCompiledPayload> CompiledPayloads;
 
+    // todo: one allocator per FIF - must not be shared between frames, as we are currently doing.
     FVulkanPoolAllocator* ImagePoolAllocator;
     FVulkanPoolAllocator* BufferPoolAllocator;
 

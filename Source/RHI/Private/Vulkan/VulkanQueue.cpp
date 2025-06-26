@@ -58,7 +58,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
             CommandBufferSubmitInfos.push_back(CommandBufferSubmitInfo);
             CommandBuffer->Submit();
         }
-        
+
         uint64_t TimelineValue = NextTimelineSemaphoreValue++;
         Payload->TimelineSemaphoreValue = TimelineValue;
 
@@ -95,8 +95,6 @@ void FVulkanQueue::Await()
     FVulkanCommandBufferPayload* Payload = SubmissionQueue.front();
     SubmissionQueue.pop();
 
-    // At most two command-buffer submissions overlap (keeps latency down).
-
     VkSemaphoreWaitInfo SemaphoreWaitInfo = {};
     SemaphoreWaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
     SemaphoreWaitInfo.semaphoreCount = 1;
@@ -106,7 +104,9 @@ void FVulkanQueue::Await()
 
     for (FVulkanCommandBuffer* CB : Payload->CommandBuffers)
     {
-        CB->Reset();
+        CB->Finish();
+
+        CommandBufferPool->Recycle(CB);
     }
 
     delete Payload;
@@ -139,4 +139,6 @@ void FVulkanQueue::Shutdown()
     }
 
     CommandBufferPool = nullptr;
+
+    vkDestroySemaphore(Device.GetVkDevice(), TimelineSemaphore, nullptr);
 }

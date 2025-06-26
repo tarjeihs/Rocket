@@ -33,6 +33,7 @@ public:
     void End();
 
     void Submit();
+    void Finish();
     void Reset();
 
     inline EVulkanCommandBufferState GetState() const;
@@ -43,10 +44,16 @@ private:
     void Alloc();
     void Free();
 
+    inline uint32_t GetPoolID() const;
+    inline void SetPoolID(const uint32_t InPoolID);
+
 private:
     EVulkanCommandBufferState State;
     VkCommandBuffer Handle;
     double SubmissionTime;
+    uint32_t PoolID;
+
+    friend class FVulkanCommandBufferPool;
 };
 
 class FVulkanCommandBufferPool
@@ -70,7 +77,9 @@ private:
 
 private:
     VkCommandPool Handle;
+
     std::vector<FVulkanCommandBuffer*> FreeCommandBuffers;
+    std::vector<FVulkanCommandBuffer*> UsedCommandBuffers;
 };
 
 EVulkanCommandBufferState FVulkanCommandBuffer::GetState() const
@@ -86,6 +95,16 @@ VkCommandBuffer FVulkanCommandBuffer::GetHandle() const
 double FVulkanCommandBuffer::GetSubmissionTime() const
 {
     return SubmissionTime;
+}
+
+inline uint32_t FVulkanCommandBuffer::GetPoolID() const
+{
+    return PoolID;
+}
+
+inline void FVulkanCommandBuffer::SetPoolID(const uint32_t InPoolID)
+{
+    PoolID = InPoolID;
 }
 
 VkCommandPool FVulkanCommandBufferPool::GetHandle() const

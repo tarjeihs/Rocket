@@ -9,6 +9,8 @@ int main()
     Engine->Run();
 
     Engine->Stop();
+
+    delete Engine;
     
     return 0;
 }
