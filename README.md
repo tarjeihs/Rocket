@@ -1,14 +1,14 @@
-# Rocket Engine 🚀
+# Rocket Engine
 
-A powerful, state-of-the-art graphics engine designed to propel your game development to new heights! 🌟
+A powerful, modern and minimalistic graphics engine designed with quick iteration and reusability in mind.
 
-## 🚀 Features
+## Features
 
 - High-performance GPU-driven graphics renderer
 - Modern engine architecture
 - Efficient, lightweight and extremely fast
 
-## 📦 Prerequisites
+## Prerequisites
 
 Make sure you have the following prerequisites installed:
 
@@ -19,5 +19,5 @@ Make sure you have the following prerequisites installed:
 
 Built with C++20. Supported by MSVC, Clang and GCC on both Linux and Windows.
 
-## 📜 License
+## License
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. See the LICENSE file for details.
